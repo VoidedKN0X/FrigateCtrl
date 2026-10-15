@@ -41,7 +41,7 @@ An unofficial Android app for watching and reviewing your [Frigate NVR](https://
 - Hides the app in the recent-apps screen and blocks screenshots and screen recording while the lock is on
 - Video and audio stop as soon as the app leaves the screen
 
-**System health**
+**System health** (the Health tab on the dashboard)
 - Frigate version and uptime, update notice, CPU, memory and GPU load
 - Detector inference speed and temperature, per-camera FPS and skipped frames
 - Disk usage for recordings, clips and cache, plus storage used per camera

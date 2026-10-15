@@ -14,7 +14,7 @@ android {
         targetSdk = 35
         // CI passes the run number so every build installs over the previous one.
         versionCode = System.getenv("VERSION_CODE")?.toIntOrNull() ?: 7
-        versionName = "3.0.0"
+        versionName = "3.1.0"
     }
 
     // Release signing from env (GitHub secrets); falls back to the debug key so the APK is always installable.

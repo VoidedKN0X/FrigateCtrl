@@ -84,7 +84,7 @@ import com.vknxworks.frigatectrl.data.ThemeMode
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(onBack: () -> Unit, onServer: () -> Unit, onLogout: () -> Unit, onHealth: () -> Unit) {
+fun SettingsScreen(onBack: () -> Unit, onServer: () -> Unit, onLogout: () -> Unit) {
     val s = App.settings
     val cs = MaterialTheme.colorScheme
     val ctx = LocalContext.current
@@ -227,14 +227,6 @@ fun SettingsScreen(onBack: () -> Unit, onServer: () -> Unit, onLogout: () -> Uni
             }
 
             Section("Server") {
-                ListItem(
-                    leadingContent = { Icon(Icons.Outlined.MonitorHeart, null) },
-                    headlineContent = { Text("System health") },
-                    supportingContent = { Text("Detectors, storage, camera FPS, CPU and GPU") },
-                    colors = itemColors(),
-                    modifier = Modifier.clickableItem(onHealth),
-                )
-                Divider()
                 ListItem(
                     leadingContent = { Icon(Icons.Outlined.Dns, null) },
                     headlineContent = { Text("Server & login") },

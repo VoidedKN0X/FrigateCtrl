@@ -15,6 +15,17 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MonitorHeart
+import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.outlined.MonitorHeart
+import androidx.compose.material.icons.outlined.Videocam
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -70,6 +81,7 @@ class MainActivity : FragmentActivity() {
 @Composable
 private fun Root(activity: FragmentActivity, lockVm: AppLockViewModel = viewModel()) {
     var route by rememberSaveable { mutableStateOf(if (App.prefs.isConfigured) "cameras" else "setup") }
+    var homeTab by rememberSaveable { mutableStateOf(0) }
 
     fun logout() {
         App.prefs.clear()
@@ -125,7 +137,9 @@ private fun Root(activity: FragmentActivity, lockVm: AppLockViewModel = viewMode
                     onCancel = if (r == "setup-edit") ({ route = "settings" }) else null,
                 )
             }
-            r == "cameras" -> CamerasScreen(
+            r == "cameras" -> HomeScreen(
+                tab = homeTab,
+                onTab = { homeTab = it },
                 onOpen = { route = "camera:$it" },
                 onSettings = { route = "settings" },
             )
@@ -135,12 +149,7 @@ private fun Root(activity: FragmentActivity, lockVm: AppLockViewModel = viewMode
                     onBack = { route = "cameras" },
                     onServer = { route = "setup-edit" },
                     onLogout = ::logout,
-                    onHealth = { route = "health" },
                 )
-            }
-            r == "health" -> {
-                BackHandler { route = "settings" }
-                HealthScreen(onBack = { route = "settings" })
             }
             r.startsWith("camera:") -> {
                 BackHandler { route = "cameras" }
@@ -154,6 +163,41 @@ private fun depth(route: String): Int = when {
     route == "setup" -> 0
     route == "cameras" -> 1
     route == "settings" || route.startsWith("camera:") -> 2
-    route == "health" -> 3
     else -> 3
+}
+
+/** Dashboard: Cameras and System health as bottom tabs. */
+@Composable
+private fun HomeScreen(tab: Int, onTab: (Int) -> Unit, onOpen: (String) -> Unit, onSettings: () -> Unit) {
+    // Back on the Health tab returns to Cameras first.
+    if (tab != 0) BackHandler { onTab(0) }
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        bottomBar = {
+            NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
+                NavigationBarItem(
+                    selected = tab == 0, onClick = { onTab(0) },
+                    icon = { Icon(if (tab == 0) Icons.Filled.Videocam else Icons.Outlined.Videocam, null) },
+                    label = { Text("Cameras") },
+                )
+                NavigationBarItem(
+                    selected = tab == 1, onClick = { onTab(1) },
+                    icon = { Icon(if (tab == 1) Icons.Filled.MonitorHeart else Icons.Outlined.MonitorHeart, null) },
+                    label = { Text("Health") },
+                )
+            }
+        },
+    ) { pad ->
+        AnimatedContent(
+            targetState = tab,
+            transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) },
+            label = "tab",
+        ) { t ->
+            when (t) {
+                0 -> CamerasScreen(onOpen = onOpen, onSettings = onSettings, bottomPadding = pad.calculateBottomPadding())
+                else -> HealthScreen(bottomPadding = pad.calculateBottomPadding())
+            }
+        }
+    }
 }
