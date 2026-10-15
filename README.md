@@ -29,6 +29,12 @@ An unofficial Android app for watching and reviewing your [Frigate NVR](https://
 - Frame previews while scrubbing, and steps of ±0.1 s, 1 s, 10 s and 30 s
 - Previous/next event, 0.5× to 16× speed, a date picker, and an events list with thumbnails
 
+**Security**
+- Optional app lock with a PIN (4–8 digits, stored only as a salted PBKDF2 hash) and fingerprint unlock
+- Locks instantly or after 30 s, 1 min or 5 min in the background; repeated wrong PINs trigger a growing lockout
+- Hides the app in the recent-apps screen and blocks screenshots and screen recording while the lock is on
+- Video and audio stop as soon as the app leaves the screen
+
 **App**
 - Material 3 design with Material You colours, light/dark/system theme and an optional pure-black mode
 - Settings for grid columns, thumbnail refresh, preferring the sub stream, starting muted, keeping the screen on, the timeline's starting zoom, how early events start, and timeline vibration

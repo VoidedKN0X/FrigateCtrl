@@ -28,6 +28,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
@@ -94,6 +96,10 @@ fun LiveView(camera: String, streamName: String, muted: Boolean, modifier: Modif
     }
 
     LaunchedEffect(player, muted) { player?.volume = if (muted) 0f else 1f }
+
+    // Stop streaming (and sound) while the app is in the background; resume when it returns.
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { player?.pause() }
+    LifecycleEventEffect(Lifecycle.Event.ON_START) { player?.play() }
 
     // No picture after a while → try the next method.
     LaunchedEffect(player) {
