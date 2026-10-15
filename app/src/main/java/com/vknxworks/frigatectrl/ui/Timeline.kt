@@ -88,6 +88,8 @@ fun Timeline(
     onScrubEnd: (Double) -> Unit,
     modifier: Modifier = Modifier,
     hapticTicks: Boolean = true,
+    /** Highlighted range (e.g. a clip being selected), in epoch seconds. */
+    selection: Pair<Double, Double>? = null,
 ) {
     val measurer = rememberTextMeasurer()
     val cs = MaterialTheme.colorScheme
@@ -97,6 +99,7 @@ fun Timeline(
     val cMuted = cs.onSurfaceVariant
     val cLine = cs.outlineVariant
     val cHead = cs.onSurface
+    val cSel = cs.primary
     val hapticsOn by rememberUpdatedState(hapticTicks)
     val haptics = LocalHapticFeedback.current
     val start by rememberUpdatedState(onScrubStart)
@@ -269,6 +272,14 @@ fun Timeline(
                 if (r.isAlert) st.alert else st.detection,
                 Offset(a, reviewTop), Size(b - a, reviewH), CornerRadius(reviewH / 2),
             )
+        }
+
+        // --- selection ---
+        selection?.let { (a0, b0) ->
+            val a = x(minOf(a0, b0)).coerceIn(0f, w); val b = x(maxOf(a0, b0)).coerceIn(0f, w)
+            drawRect(cSel.copy(alpha = 0.22f), Offset(a, labelBand), Size(max(2f, b - a), h - labelBand))
+            drawLine(cSel, Offset(a, labelBand), Offset(a, h), 2.dp.toPx())
+            drawLine(cSel, Offset(b, labelBand), Offset(b, h), 2.dp.toPx())
         }
 
         // --- playhead ---

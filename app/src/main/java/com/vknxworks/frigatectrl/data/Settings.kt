@@ -65,6 +65,11 @@ class Settings(context: Context) {
         get() = _awake.value
         set(v) { _awake.value = v; sp.edit().putBoolean("keep_awake", v).apply() }
 
+    private val _pip = bool("auto_pip", true)
+    var autoPip: Boolean
+        get() = _pip.value
+        set(v) { _pip.value = v; sp.edit().putBoolean("auto_pip", v).apply() }
+
     // History
     /** Minutes visible on the timeline when history opens. */
     private val _zoom = int("timeline_minutes", 15)

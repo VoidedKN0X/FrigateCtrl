@@ -22,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -55,7 +56,14 @@ import java.net.URLEncoder
  */
 @OptIn(UnstableApi::class)
 @Composable
-fun LiveView(camera: String, streamName: String, muted: Boolean, modifier: Modifier = Modifier) {
+fun LiveView(
+    camera: String,
+    streamName: String,
+    muted: Boolean,
+    modifier: Modifier = Modifier,
+    zoom: ZoomState = remember { ZoomState() },
+    showNotes: Boolean = true,
+) {
     val ctx = LocalContext.current
     var attempt by remember(camera, streamName) { mutableIntStateOf(0) }
     var mode by remember(camera, streamName, attempt) { mutableIntStateOf(0) } // 0 video, 1 snapshots
@@ -122,26 +130,18 @@ fun LiveView(camera: String, streamName: String, muted: Boolean, modifier: Modif
     }
 
     Box(modifier.background(Color.Black)) {
-        if (player != null) {
-            AndroidView(
-                factory = { c ->
-                    PlayerView(c).apply {
-                        useController = false
-                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                        setShutterBackgroundColor(android.graphics.Color.BLACK)
-                    }
-                },
-                update = { it.player = player },
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
+        if (player != null) PlayerSurface(player, zoom)
         if (!rendered) {
             RemoteImage(
-                App.api.latestJpg(camera, 720), Modifier.fillMaxSize(),
+                App.api.latestJpg(camera, 720),
+                Modifier.fillMaxSize().graphicsLayer {
+                    scaleX = zoom.scale; scaleY = zoom.scale
+                    translationX = zoom.offset.x; translationY = zoom.offset.y
+                },
                 contentScale = ContentScale.Fit, refreshMs = 500,
             )
         }
-        if (mode >= 1) {
+        if (mode >= 1 && showNotes) {
             Column(
                 Modifier.align(Alignment.BottomStart).padding(8.dp).widthIn(max = 320.dp)
                     .clip(RoundedCornerShape(10.dp)).background(Color(0xCC000000))

@@ -1,6 +1,35 @@
 package com.vknxworks.frigatectrl.ui
 
 import android.content.res.Configuration
+import org.json.JSONObject
+import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.Lifecycle
+import androidx.core.content.ContextCompat
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.material3.Switch
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Button
+import androidx.compose.material.icons.outlined.Videocam
+import androidx.compose.material.icons.outlined.CenterFocusStrong
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.GraphicEq
+import androidx.compose.material.icons.outlined.PhotoCamera
+import androidx.compose.material.icons.outlined.FiberManualRecord
+import androidx.compose.material.icons.outlined.Tune
+import androidx.compose.material.icons.outlined.PictureInPictureAlt
+import androidx.compose.material.icons.outlined.MicNone
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.foundation.layout.BoxScope
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.compose.rememberLauncherForActivityResult
+import android.widget.Toast
+import android.content.pm.PackageManager
+import android.Manifest
 import androidx.compose.material3.Surface
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.BadgedBox
@@ -70,7 +99,7 @@ import androidx.compose.ui.unit.dp
 import com.vknxworks.frigatectrl.App
 import com.vknxworks.frigatectrl.data.CameraInfo
 import com.vknxworks.frigatectrl.data.PtzInfo
-import com.vknxworks.frigatectrl.data.PtzSocket
+import com.vknxworks.frigatectrl.data.FrigateSocket
 
 @Composable
 fun CameraScreen(camera: String, onBack: () -> Unit) {
@@ -92,6 +121,7 @@ fun CameraScreen(camera: String, onBack: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun LiveScreen(
     camera: String,
@@ -103,6 +133,7 @@ private fun LiveScreen(
     val api = App.api
     val settings = App.settings
     val cs = MaterialTheme.colorScheme
+    val context = LocalContext.current
     val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     val streams = info?.streams.orEmpty()
@@ -114,31 +145,104 @@ private fun LiveScreen(
     var muted by rememberSaveable { mutableStateOf(settings.startMuted) }
     var streamMenu by remember { mutableStateOf(false) }
     var fullscreen by rememberSaveable { mutableStateOf(false) }
+    var showToggles by remember { mutableStateOf(false) }
+    val zoom = remember(camera) { ZoomState() }
+    val stream = streams.getOrNull(streamIdx)?.streamName ?: camera
 
-    val ptzSocket = remember { PtzSocket(api) }
-    DisposableEffect(ptzSocket) { onDispose { ptzSocket.close() } }
-    LaunchedEffect(ptz) { if (ptz != null) ptzSocket.connect() }
-    val send: (String) -> Unit = { ptzSocket.send(camera, it) }
+    // ---- Frigate websocket: PTZ + camera toggles ----
+    val socket = remember { FrigateSocket(api) }
+    val toggles = remember(camera) { mutableStateMapOf<String, Boolean>() }
+    DisposableEffect(socket) {
+        socket.onMessage = { topic, payload ->
+            if (topic == "camera_activity") {
+                runCatching {
+                    val cfg = JSONObject(payload).optJSONObject(camera)?.optJSONObject("config")
+                    if (cfg != null) CameraToggle.entries.forEach { t ->
+                        if (cfg.has(t.configKey)) toggles[t.feature] = cfg.optBoolean(t.configKey)
+                    }
+                }
+            } else if (topic.startsWith("$camera/") && topic.endsWith("/state")) {
+                val feature = topic.removePrefix("$camera/").removeSuffix("/state")
+                if (CameraToggle.entries.any { it.feature == feature }) toggles[feature] = payload.equals("ON", true)
+            }
+        }
+        socket.connect()
+        socket.requestState()
+        onDispose { socket.onMessage = null; socket.close() }
+    }
+    val send: (String) -> Unit = { socket.send(camera, it) }
 
-    // Alerts in the last 24 h, shown on the History button.
+    // Unreviewed alerts in the last 24 h, shown on the History button.
     var alerts by remember { mutableStateOf<Int?>(null) }
     LaunchedEffect(camera) {
-        alerts = try { api.reviews(camera, nowSec() - 86400, nowSec()).count { it.isAlert } } catch (_: Exception) { null }
+        alerts = try {
+            api.reviews(camera, nowSec() - 86400, nowSec()).count { it.isAlert && !it.reviewed }
+        } catch (_: Exception) { null }
     }
 
-    val stream = streams.getOrNull(streamIdx)?.streamName ?: camera
+    // ---- two-way talk ----
+    var canTalk by remember(stream) { mutableStateOf(false) }
+    LaunchedEffect(stream) { canTalk = api.supportsTwoWayTalk(stream) }
+    val activity = context.findActivity()
+    val talk = remember(stream, activity) { activity?.let { TalkSession(it, stream) } }
+    DisposableEffect(talk) { onDispose { talk?.stop() } }
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { talk?.stop() }
+    val micPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
+        if (ok) talk?.start()
+        else Toast.makeText(context, "Microphone permission is needed to talk", Toast.LENGTH_SHORT).show()
+    }
+    val toggleTalk: () -> Unit = {
+        when (talk?.state) {
+            TalkState.Talking, TalkState.Connecting -> talk?.stop()
+            else -> {
+                if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
+                    talk?.start()
+                else micPermission.launch(Manifest.permission.RECORD_AUDIO)
+            }
+        }
+    }
+    LaunchedEffect(talk?.error) {
+        talk?.error?.let { Toast.makeText(context, "Talk: $it", Toast.LENGTH_LONG).show() }
+    }
+
+    // ---- picture-in-picture ----
+    val enterPip = rememberPipController(settings.autoPip)
+    val inPip = rememberIsInPip()
+    if (inPip) {
+        // Only the picture in the floating window.
+        Box(Modifier.fillMaxSize().background(Color.Black)) {
+            LiveView(camera, stream, muted, Modifier.fillMaxSize(), zoom = zoom, showNotes = false)
+        }
+        return
+    }
+
     val immersive = fullscreen || landscape
     ImmersiveMode(immersive)
     if (fullscreen) BackHandler { fullscreen = false }
 
+    val videoOverlay: @Composable BoxScope.() -> Unit = {
+        if (zoom.zoomed) OverlayChip(
+            "${"%.1f".format(zoom.scale)}× · reset", null,
+            Modifier.align(Alignment.TopEnd).padding(12.dp), onClick = { zoom.reset() },
+        )
+        if (talk?.state == TalkState.Talking) OverlayChip(
+            "TALKING", Status.alert, Modifier.align(Alignment.TopCenter).padding(12.dp), pulse = true,
+        )
+    }
+
     if (immersive) {
-        Box(Modifier.fillMaxSize().background(Color.Black)) {
-            LiveView(camera, stream, muted, Modifier.fillMaxSize())
+        Box(Modifier.fillMaxSize().background(Color.Black).zoomable(zoom)) {
+            LiveView(camera, stream, muted, Modifier.fillMaxSize(), zoom = zoom)
             OverlayChip("LIVE", Status.live, Modifier.align(Alignment.TopStart).padding(16.dp), pulse = true)
-            Row(Modifier.align(Alignment.TopEnd).padding(8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            videoOverlay()
+            Row(Modifier.align(Alignment.BottomEnd).padding(8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (canTalk) VideoIconButton(
+                    if (talk?.state == TalkState.Talking) Icons.Filled.Mic else Icons.Outlined.MicNone, "Talk", onClick = toggleTalk,
+                )
                 VideoIconButton(
                     if (muted) Icons.AutoMirrored.Outlined.VolumeOff else Icons.AutoMirrored.Outlined.VolumeUp, "Audio",
                 ) { muted = !muted }
+                VideoIconButton(Icons.Outlined.PictureInPictureAlt, "Picture in picture", onClick = enterPip)
                 VideoIconButton(Icons.Outlined.History, "History", onClick = onHistory)
                 VideoIconButton(Icons.Outlined.FullscreenExit, "Exit fullscreen") {
                     if (fullscreen) fullscreen = false else onBack()
@@ -169,7 +273,7 @@ private fun LiveScreen(
                 }
             }
             if (streams.size > 1) Box {
-                FilledTonalIconButton({ streamMenu = true }) { Icon(Icons.Outlined.HighQuality, "Stream") }
+                IconButton({ streamMenu = true }) { Icon(Icons.Outlined.HighQuality, "Stream") }
                 DropdownMenu(streamMenu, { streamMenu = false }) {
                     streams.forEachIndexed { i, s ->
                         DropdownMenuItem(
@@ -179,27 +283,30 @@ private fun LiveScreen(
                     }
                 }
             }
+            FilledTonalIconButton({ showToggles = true }) { Icon(Icons.Outlined.Tune, "Camera settings") }
         }
 
         // ---- video ----
         Box(
             Modifier.padding(horizontal = 12.dp).fillMaxWidth().aspectRatio(16f / 9f)
-                .clip(RoundedCornerShape(28.dp)).background(Color.Black)
+                .clip(RoundedCornerShape(28.dp)).background(Color.Black).zoomable(zoom)
         ) {
-            LiveView(camera, stream, muted, Modifier.fillMaxSize())
+            LiveView(camera, stream, muted, Modifier.fillMaxSize(), zoom = zoom)
             OverlayChip("LIVE", Status.live, Modifier.align(Alignment.TopStart).padding(12.dp), pulse = true)
+            videoOverlay()
             Row(Modifier.align(Alignment.BottomEnd).padding(6.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                 VideoIconButton(
                     if (muted) Icons.AutoMirrored.Outlined.VolumeOff else Icons.AutoMirrored.Outlined.VolumeUp,
                     if (muted) "Unmute" else "Mute",
                 ) { muted = !muted }
+                VideoIconButton(Icons.Outlined.PictureInPictureAlt, "Picture in picture", onClick = enterPip)
                 VideoIconButton(Icons.Outlined.Fullscreen, "Fullscreen") { fullscreen = true }
             }
         }
 
         Spacer(Modifier.weight(1f))
 
-        // ---- bottom control dock: presets above PTZ, History bottom-left ----
+        // ---- bottom control dock: presets above PTZ, History bottom-left, Talk bottom-right ----
         Surface(
             shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
             color = cs.surfaceContainerLow,
@@ -222,12 +329,117 @@ private fun LiveScreen(
                             PtzZoomPill(send, p.zoom, p.focus, Modifier.align(if (p.panTilt) Alignment.CenterEnd else Alignment.Center))
                     }
                 }
-                Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 12.dp)) {
+                Row(
+                    Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     HistoryButton(alerts, onHistory)
+                    Spacer(Modifier.weight(1f))
+                    if (canTalk && talk != null) TalkButton(talk.state, toggleTalk)
                 }
             }
         }
     }
+
+    if (showToggles) {
+        ModalBottomSheet(onDismissRequest = { showToggles = false }) {
+            CameraTogglesSheet(info, toggles) { t, on ->
+                toggles[t.feature] = on
+                socket.publish("$camera/${t.feature}/set", if (on) "ON" else "OFF")
+            }
+        }
+    }
+}
+
+/** Settings Frigate lets you switch at runtime over its websocket. */
+private enum class CameraToggle(
+    val feature: String,
+    val configKey: String,
+    val label: String,
+    val description: String,
+    val icon: ImageVector,
+) {
+    Enabled("enabled", "enabled", "Camera", "Turn the whole camera on or off in Frigate", Icons.Outlined.Videocam),
+    Detect("detect", "detect", "Object detection", "Look for people, cars and other objects", Icons.Outlined.CenterFocusStrong),
+    Record("recordings", "record", "Recording", "Save recordings to disk", Icons.Outlined.FiberManualRecord),
+    Snapshots("snapshots", "snapshots", "Snapshots", "Save a picture of each detected object", Icons.Outlined.PhotoCamera),
+    Audio("audio", "audio", "Audio detection", "Listen for sounds like barking or alarms", Icons.Outlined.GraphicEq),
+    Notifications("notifications", "notifications", "Notifications", "Frigate's own push notifications", Icons.Outlined.Notifications),
+}
+
+@Composable
+private fun CameraTogglesSheet(
+    info: CameraInfo?,
+    state: Map<String, Boolean>,
+    onToggle: (CameraToggle, Boolean) -> Unit,
+) {
+    val cs = MaterialTheme.colorScheme
+    val available = CameraToggle.entries.filter {
+        when (it) {
+            CameraToggle.Audio -> info?.hasAudioDetection == true
+            CameraToggle.Notifications -> info?.hasNotifications == true
+            else -> true
+        }
+    }
+    Column(Modifier.padding(bottom = 24.dp)) {
+        Text(
+            "${info?.displayName ?: "Camera"} settings", style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 24.dp),
+        )
+        Text(
+            "Changes apply straight away. Older Frigate versions reset them when Frigate restarts.",
+            style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant,
+            modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 4.dp, bottom = 8.dp),
+        )
+        available.forEach { t ->
+            val on = state[t.feature]
+            ListItem(
+                leadingContent = { Icon(t.icon, null) },
+                headlineContent = { Text(t.label) },
+                supportingContent = { Text(t.description) },
+                trailingContent = {
+                    if (on == null) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                    else Switch(on, { onToggle(t, it) })
+                },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+            )
+        }
+    }
+}
+
+@Composable
+private fun TalkButton(state: TalkState, onClick: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val active = state == TalkState.Talking
+    val connecting = state == TalkState.Connecting
+    val source = remember { MutableInteractionSource() }
+    Button(
+        onClick = onClick,
+        interactionSource = source,
+        contentPadding = PaddingValues(start = 12.dp, end = 16.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (active) Status.alert else cs.primary,
+            contentColor = if (active) Color.White else cs.onPrimary,
+        ),
+        modifier = Modifier.height(40.dp).pressScale(source),
+    ) {
+        if (connecting) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = cs.onPrimary)
+        else Icon(if (active) Icons.Filled.Mic else Icons.Outlined.MicNone, null, Modifier.size(18.dp))
+        Spacer(Modifier.width(6.dp))
+        Text(
+            when (state) { TalkState.Talking -> "Stop talking"; TalkState.Connecting -> "Connecting…"; else -> "Talk" },
+            style = MaterialTheme.typography.labelLarge,
+        )
+    }
+}
+
+private fun android.content.Context.findActivity(): android.app.Activity? {
+    var c: android.content.Context? = this
+    while (c is android.content.ContextWrapper) {
+        if (c is android.app.Activity) return c
+        c = c.baseContext
+    }
+    return null
 }
 
 @Composable

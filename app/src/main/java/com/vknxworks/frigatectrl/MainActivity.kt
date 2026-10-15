@@ -35,6 +35,7 @@ import com.vknxworks.frigatectrl.ui.lock.LockScreen
 import com.vknxworks.frigatectrl.ui.CameraScreen
 import com.vknxworks.frigatectrl.ui.CamerasScreen
 import com.vknxworks.frigatectrl.ui.FrigateTheme
+import com.vknxworks.frigatectrl.ui.HealthScreen
 import com.vknxworks.frigatectrl.ui.SettingsScreen
 import com.vknxworks.frigatectrl.ui.SetupScreen
 import com.vknxworks.frigatectrl.ui.isAppInDarkTheme
@@ -134,7 +135,12 @@ private fun Root(activity: FragmentActivity, lockVm: AppLockViewModel = viewMode
                     onBack = { route = "cameras" },
                     onServer = { route = "setup-edit" },
                     onLogout = ::logout,
+                    onHealth = { route = "health" },
                 )
+            }
+            r == "health" -> {
+                BackHandler { route = "settings" }
+                HealthScreen(onBack = { route = "settings" })
             }
             r.startsWith("camera:") -> {
                 BackHandler { route = "cameras" }
@@ -148,5 +154,6 @@ private fun depth(route: String): Int = when {
     route == "setup" -> 0
     route == "cameras" -> 1
     route == "settings" || route.startsWith("camera:") -> 2
+    route == "health" -> 3
     else -> 3
 }

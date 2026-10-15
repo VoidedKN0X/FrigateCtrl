@@ -63,6 +63,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.outlined.Fingerprint
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Password
+import androidx.compose.material.icons.outlined.PictureInPictureAlt
+import androidx.compose.material.icons.outlined.MonitorHeart
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.OutlinedTextField
@@ -82,7 +84,7 @@ import com.vknxworks.frigatectrl.data.ThemeMode
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(onBack: () -> Unit, onServer: () -> Unit, onLogout: () -> Unit) {
+fun SettingsScreen(onBack: () -> Unit, onServer: () -> Unit, onLogout: () -> Unit, onHealth: () -> Unit) {
     val s = App.settings
     val cs = MaterialTheme.colorScheme
     val ctx = LocalContext.current
@@ -194,6 +196,11 @@ fun SettingsScreen(onBack: () -> Unit, onServer: () -> Unit, onLogout: () -> Uni
                 Divider()
                 Toggle(Icons.AutoMirrored.Outlined.VolumeOff, "Start muted", null, s.startMuted) { s.startMuted = it }
                 Divider()
+                Toggle(
+                    Icons.Outlined.PictureInPictureAlt, "Picture-in-picture",
+                    "Keep the live view floating when you leave the app", s.autoPip,
+                ) { s.autoPip = it }
+                Divider()
                 Toggle(Icons.Outlined.ScreenLockPortrait, "Keep screen on", "While watching live or history", s.keepScreenOn) {
                     s.keepScreenOn = it
                 }
@@ -220,6 +227,14 @@ fun SettingsScreen(onBack: () -> Unit, onServer: () -> Unit, onLogout: () -> Uni
             }
 
             Section("Server") {
+                ListItem(
+                    leadingContent = { Icon(Icons.Outlined.MonitorHeart, null) },
+                    headlineContent = { Text("System health") },
+                    supportingContent = { Text("Detectors, storage, camera FPS, CPU and GPU") },
+                    colors = itemColors(),
+                    modifier = Modifier.clickableItem(onHealth),
+                )
+                Divider()
                 ListItem(
                     leadingContent = { Icon(Icons.Outlined.Dns, null) },
                     headlineContent = { Text("Server & login") },

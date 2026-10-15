@@ -25,6 +25,10 @@ data class CameraInfo(
     val streams: List<StreamOption>,
     val hasOnvif: Boolean,
     val order: Int,
+    /** Audio detection is configured, so it can be toggled. */
+    val hasAudioDetection: Boolean = false,
+    /** Frigate notifications are configured for this camera. */
+    val hasNotifications: Boolean = false,
 ) {
     val displayName: String get() = name.replace('_', ' ').replaceFirstChar { it.uppercase() }
 }
@@ -47,6 +51,7 @@ data class ReviewItem(
     val severity: String,
     val labels: List<String>,
     val thumbPath: String?,
+    val reviewed: Boolean = false,
 ) {
     val isAlert get() = severity == "alert"
 }
@@ -203,8 +208,14 @@ class FrigateApi(private val prefs: Prefs) {
     @Volatile var groups: List<CameraGroup> = emptyList()
         private set
 
+    /** WebRTC ICE servers from go2rtc's config (used for two-way talk); public STUN if none set. */
+    @Volatile var iceServersJson: String = DEFAULT_ICE
+        private set
+
     suspend fun cameras(): List<CameraInfo> {
         val root = JSONObject(getString("/api/config"))
+        iceServersJson = root.optJSONObject("go2rtc")?.optJSONObject("webrtc")?.optJSONArray("ice_servers")
+            ?.takeIf { it.length() > 0 }?.toString() ?: DEFAULT_ICE
         groups = root.optJSONObject("camera_groups")?.let { g ->
             g.keys().asSequence().mapNotNull { k ->
                 val o = g.optJSONObject(k) ?: return@mapNotNull null
@@ -234,6 +245,12 @@ class FrigateApi(private val prefs: Prefs) {
                 streams = streams,
                 hasOnvif = onvifHost.isNotBlank(),
                 order = ui?.optInt("order", 0) ?: 0,
+                hasAudioDetection = c.optJSONObject("audio")?.let {
+                    it.optBoolean("enabled_in_config", false) || it.optBoolean("enabled", false)
+                } ?: false,
+                hasNotifications = c.optJSONObject("notifications")?.let {
+                    it.optBoolean("enabled_in_config", false) || it.optBoolean("enabled", false)
+                } ?: false,
             )
         }
         return list.sortedWith(compareBy({ it.order }, { it.name }))
@@ -269,9 +286,46 @@ class FrigateApi(private val prefs: Prefs) {
                 labels = labels,
                 thumbPath = o.optString("thumb_path").takeIf { it.isNotBlank() }
                     ?.let { p -> if (p.startsWith("/media/frigate")) p.removePrefix("/media/frigate") else p },
+                reviewed = o.optBoolean("has_been_reviewed", false),
             )
         }.sortedBy { it.start }
     }
+
+    /** Mark review items reviewed (or not) for the logged-in user. */
+    suspend fun setReviewed(ids: List<String>, reviewed: Boolean) = withContext(Dispatchers.IO) {
+        if (ids.isEmpty()) return@withContext
+        if (reviewed) {
+            val body = JSONObject().put("ids", JSONArray(ids)).put("reviewed", true).toString()
+            val req = Request.Builder().url(url("/api/reviews/viewed"))
+                .post(body.toRequestBody("application/json".toMediaType())).build()
+            http.newCall(req).execute().use { if (!it.isSuccessful) throw Exception("HTTP ${it.code}") }
+        } else {
+            for (id in ids) {
+                val req = Request.Builder().url(url("/api/review/$id/viewed")).delete().build()
+                http.newCall(req).execute().use { if (!it.isSuccessful) throw Exception("HTTP ${it.code}") }
+            }
+        }
+    }
+
+    /** Raw /api/stats (structure varies a little between Frigate versions, so it's parsed leniently). */
+    suspend fun stats(): JSONObject = JSONObject(getString("/api/stats"))
+
+    /** Per-camera recording storage: { camera: { usage (MB), bandwidth (MB/h), usage_percent } }. */
+    suspend fun recordingStorage(): JSONObject? = try { JSONObject(getString("/api/recordings/storage")) } catch (_: Exception) { null }
+
+    /** True when go2rtc reports a microphone backchannel ("audio, sendonly") for [stream]. */
+    suspend fun supportsTwoWayTalk(stream: String): Boolean = try {
+        val o = JSONObject(getString("/api/go2rtc/streams/" + java.net.URLEncoder.encode(stream, "UTF-8")))
+        val producers = o.optJSONArray("producers")
+        (0 until (producers?.length() ?: 0)).any { i ->
+            val medias = producers!!.optJSONObject(i)?.optJSONArray("medias")
+            (0 until (medias?.length() ?: 0)).any { j -> medias!!.optString(j).contains("audio, sendonly") }
+        }
+    } catch (_: Exception) { false }
+
+    /** An MP4 of any recorded range (works on all Frigate versions this app supports). */
+    fun clipUrl(camera: String, start: Double, end: Double) =
+        url("/api/$camera/start/${"%.1f".format(java.util.Locale.US, start)}/end/${"%.1f".format(java.util.Locale.US, end)}/clip.mp4")
 
     suspend fun version(): String? = try { getString("/api/version").trim().trim('"') } catch (_: Exception) { null }
 
@@ -297,4 +351,8 @@ class FrigateApi(private val prefs: Prefs) {
 
     fun wsUrl(path: String): String =
         url(path).replaceFirst("https://", "wss://").replaceFirst("http://", "ws://")
+
+    private companion object {
+        const val DEFAULT_ICE = "[{\"urls\":\"stun:stun.l.google.com:19302\"}]"
+    }
 }
