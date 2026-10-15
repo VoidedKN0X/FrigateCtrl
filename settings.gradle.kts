@@ -12,5 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "FrigateRemote"
+rootProject.name = "FrigateCtrl"
 include(":app")

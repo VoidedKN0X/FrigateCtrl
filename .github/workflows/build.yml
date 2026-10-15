@@ -55,7 +55,7 @@ jobs:
         run: |
           VERSION=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
           TAG="v${VERSION}-build.${{ github.run_number }}"
-          APK="FrigateRemote-${TAG}.apk"
+          APK="FrigateCtrl-${TAG}.apk"
           cp app/build/outputs/apk/release/app-release.apk "$APK"
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
           echo "TAG=$TAG" >> "$GITHUB_ENV"
@@ -73,19 +73,19 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: FrigateRemote-apk
+          name: FrigateCtrl-apk
           path: ${{ env.APK }}
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.TAG }}
-          name: Frigate Remote ${{ env.VERSION }} (build ${{ github.run_number }})
+          name: FrigateCtrl ${{ env.VERSION }} (build ${{ github.run_number }})
           target_commitish: ${{ github.sha }}
           make_latest: true
           files: ${{ env.APK }}
           body: |
-            **Frigate Remote ${{ env.VERSION }}**, build ${{ github.run_number }}
+            **FrigateCtrl ${{ env.VERSION }}**, build ${{ github.run_number }}
 
             Download **${{ env.APK }}** below and open it on your phone to install or update.
 

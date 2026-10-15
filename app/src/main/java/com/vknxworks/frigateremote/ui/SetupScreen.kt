@@ -128,7 +128,7 @@ fun SetupScreen(editing: Boolean, onDone: () -> Unit, onCancel: (() -> Unit)?) {
             }
             Spacer(Modifier.height(20.dp))
             Text(
-                if (editing) "Server settings" else "Welcome to Frigate Remote",
+                if (editing) "Server settings" else "Welcome to FrigateCtrl",
                 style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
             )
