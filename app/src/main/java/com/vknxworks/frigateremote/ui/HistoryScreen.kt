@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -41,6 +42,7 @@ import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -229,7 +231,7 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit) {
             onZoomOut = { tl.spp = (tl.spp * 2).coerceIn(MIN_SPP, MAX_SPP) },
         )
         Surface(
-            shape = MaterialTheme.shapes.medium,
+            shape = RoundedCornerShape(20.dp),
             color = cs.surfaceContainer,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         ) {
@@ -263,36 +265,45 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit) {
             Column(Modifier.navigationBarsPadding()) { controls() }
         }
     } else {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = {
-                        Column {
-                            Text(info?.displayName ?: camera, fontWeight = FontWeight.SemiBold)
-                            Text("History", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
-                        }
-                    },
-                    navigationIcon = { IconButton(onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back to live") } },
-                    actions = {
-                        IconButton({ showDate = true }) { Icon(Icons.Outlined.CalendarMonth, "Pick date") }
-                        IconButton({ showEvents = true }) {
-                            BadgedBox(badge = { if (reviews.isNotEmpty()) Badge { Text("${reviews.size.coerceAtMost(99)}") } }) {
-                                Icon(Icons.AutoMirrored.Outlined.List, "Events")
-                            }
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = cs.background),
-                )
-            },
-        ) { pad ->
-            Column(Modifier.fillMaxSize().padding(pad)) {
-                video(
-                    Modifier.padding(horizontal = 16.dp).fillMaxWidth().aspectRatio(16f / 9f)
-                        .clip(MaterialTheme.shapes.large)
-                )
-                Spacer(Modifier.height(4.dp))
-                controls()
-                Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState())) { Legend() }
+        Column(Modifier.fillMaxSize().background(cs.background)) {
+            // ---- compact header ----
+            Row(
+                Modifier.fillMaxWidth().statusBarsPadding().padding(start = 4.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back to live") }
+                Column(Modifier.weight(1f)) {
+                    Text(info?.displayName ?: camera, style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold, maxLines = 1)
+                    Text("History", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
+                }
+                FilledTonalIconButton({ showDate = true }) { Icon(Icons.Outlined.CalendarMonth, "Pick date") }
+                Spacer(Modifier.width(6.dp))
+                FilledTonalIconButton({ showEvents = true }) {
+                    BadgedBox(badge = { if (reviews.isNotEmpty()) Badge { Text("${reviews.size.coerceAtMost(99)}") } }) {
+                        Icon(Icons.AutoMirrored.Outlined.List, "Events")
+                    }
+                }
+            }
+            video(
+                Modifier.padding(horizontal = 12.dp).fillMaxWidth().aspectRatio(16f / 9f)
+                    .clip(RoundedCornerShape(28.dp))
+            )
+            Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState())) { Legend() }
+
+            // ---- bottom dock: readout, timeline, transport ----
+            Surface(
+                shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
+                color = cs.surfaceContainerLow,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(Modifier.navigationBarsPadding().padding(top = 10.dp, bottom = 4.dp)) {
+                    Box(
+                        Modifier.align(Alignment.CenterHorizontally).size(width = 36.dp, height = 4.dp)
+                            .clip(RoundedCornerShape(50)).background(cs.outlineVariant)
+                    )
+                    controls()
+                }
             }
         }
     }

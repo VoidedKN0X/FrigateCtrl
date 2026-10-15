@@ -1,6 +1,15 @@
 package com.vknxworks.frigateremote.ui
 
 import android.content.res.Configuration
+import androidx.compose.material3.Surface
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.Badge
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -83,7 +92,6 @@ fun CameraScreen(camera: String, onBack: () -> Unit) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun LiveScreen(
     camera: String,
@@ -110,14 +118,12 @@ private fun LiveScreen(
     val ptzSocket = remember { PtzSocket(api) }
     DisposableEffect(ptzSocket) { onDispose { ptzSocket.close() } }
     LaunchedEffect(ptz) { if (ptz != null) ptzSocket.connect() }
+    val send: (String) -> Unit = { ptzSocket.send(camera, it) }
 
-    // Last 24 h activity for the history card.
-    var counts by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    // Alerts in the last 24 h, shown on the History button.
+    var alerts by remember { mutableStateOf<Int?>(null) }
     LaunchedEffect(camera) {
-        counts = try {
-            val r = api.reviews(camera, nowSec() - 86400, nowSec())
-            r.count { it.isAlert } to r.count { !it.isAlert }
-        } catch (_: Exception) { null }
+        alerts = try { api.reviews(camera, nowSec() - 86400, nowSec()).count { it.isAlert } } catch (_: Exception) { null }
     }
 
     val stream = streams.getOrNull(streamIdx)?.streamName ?: camera
@@ -142,93 +148,108 @@ private fun LiveScreen(
         return
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(info?.displayName ?: camera, fontWeight = FontWeight.SemiBold)
-                        Text("Live", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
-                    }
-                },
-                navigationIcon = { IconButton(onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
-                actions = {
-                    if (streams.size > 1) Box {
-                        IconButton({ streamMenu = true }) { Icon(Icons.Outlined.HighQuality, "Stream") }
-                        DropdownMenu(streamMenu, { streamMenu = false }) {
-                            streams.forEachIndexed { i, s ->
-                                DropdownMenuItem(
-                                    text = { Text(s.label, fontWeight = if (i == streamIdx) FontWeight.Bold else null) },
-                                    onClick = { streamIdx = i; streamMenu = false },
-                                )
-                            }
-                        }
-                    }
-                    IconButton({ muted = !muted }) {
-                        Icon(
-                            if (muted) Icons.AutoMirrored.Outlined.VolumeOff else Icons.AutoMirrored.Outlined.VolumeUp,
-                            if (muted) "Unmute" else "Mute",
+    val p = ptz
+    val hasPtz = p != null && (p.panTilt || p.zoom || p.focus)
+    val hasPresets = p != null && p.presets.isNotEmpty()
+
+    Column(Modifier.fillMaxSize().background(cs.background)) {
+        // ---- compact header ----
+        Row(
+            Modifier.fillMaxWidth().statusBarsPadding().padding(start = 4.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconButton(onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
+            Column(Modifier.weight(1f)) {
+                Text(info?.displayName ?: camera, style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold, maxLines = 1)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(6.dp).clip(CircleShape).background(Status.live))
+                    Text("  Live" + (streams.getOrNull(streamIdx)?.let { if (streams.size > 1) " · ${it.label}" else "" } ?: ""),
+                        style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
+                }
+            }
+            if (streams.size > 1) Box {
+                FilledTonalIconButton({ streamMenu = true }) { Icon(Icons.Outlined.HighQuality, "Stream") }
+                DropdownMenu(streamMenu, { streamMenu = false }) {
+                    streams.forEachIndexed { i, s ->
+                        DropdownMenuItem(
+                            text = { Text(s.label, fontWeight = if (i == streamIdx) FontWeight.Bold else null) },
+                            onClick = { streamIdx = i; streamMenu = false },
                         )
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = cs.background),
-            )
-        },
-    ) { pad ->
-        Column(
-            Modifier.fillMaxSize().padding(pad).verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 4.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+                }
+            }
+        }
+
+        // ---- video ----
+        Box(
+            Modifier.padding(horizontal = 12.dp).fillMaxWidth().aspectRatio(16f / 9f)
+                .clip(RoundedCornerShape(28.dp)).background(Color.Black)
         ) {
-            Box(
-                Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(MaterialTheme.shapes.large).background(Color.Black)
-            ) {
-                LiveView(camera, stream, muted, Modifier.fillMaxSize())
-                OverlayChip("LIVE", Status.live, Modifier.align(Alignment.TopStart).padding(10.dp), pulse = true)
+            LiveView(camera, stream, muted, Modifier.fillMaxSize())
+            OverlayChip("LIVE", Status.live, Modifier.align(Alignment.TopStart).padding(12.dp), pulse = true)
+            Row(Modifier.align(Alignment.BottomEnd).padding(6.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                 VideoIconButton(
-                    Icons.Outlined.Fullscreen, "Fullscreen", Modifier.align(Alignment.BottomEnd).padding(4.dp),
-                ) { fullscreen = true }
+                    if (muted) Icons.AutoMirrored.Outlined.VolumeOff else Icons.AutoMirrored.Outlined.VolumeUp,
+                    if (muted) "Unmute" else "Mute",
+                ) { muted = !muted }
+                VideoIconButton(Icons.Outlined.Fullscreen, "Fullscreen") { fullscreen = true }
             }
+        }
 
-            HistoryCard(counts, onHistory)
+        Spacer(Modifier.weight(1f))
 
-            val p = ptz
-            if (p != null && (p.panTilt || p.zoom || p.focus || p.presets.isNotEmpty())) {
-                PtzPanel(p, send = { ptzSocket.send(camera, it) })
+        // ---- bottom control dock: presets above PTZ, History bottom-left ----
+        Surface(
+            shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
+            color = cs.surfaceContainerLow,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(Modifier.navigationBarsPadding().padding(top = 10.dp, bottom = 12.dp)) {
+                Box(
+                    Modifier.align(Alignment.CenterHorizontally).size(width = 36.dp, height = 4.dp)
+                        .clip(RoundedCornerShape(50)).background(cs.outlineVariant)
+                )
+                if (hasPresets) {
+                    Text("Presets", style = MaterialTheme.typography.labelLarge, color = cs.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 20.dp, top = 10.dp, bottom = 6.dp))
+                    PtzPresets(p!!.presets, send)
+                }
+                if (p != null && hasPtz) {
+                    Box(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(top = 14.dp).height(172.dp)) {
+                        if (p.panTilt) PtzJoystick(send, Modifier.align(Alignment.Center))
+                        if (p.zoom || p.focus)
+                            PtzZoomPill(send, p.zoom, p.focus, Modifier.align(if (p.panTilt) Alignment.CenterEnd else Alignment.Center))
+                    }
+                }
+                Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 12.dp)) {
+                    HistoryButton(alerts, onHistory)
+                }
             }
-            Spacer(Modifier.height(8.dp))
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun HistoryCard(counts: Pair<Int, Int>?, onClick: () -> Unit) {
-    val cs = MaterialTheme.colorScheme
-    Card(
-        onClick = onClick,
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = cs.primaryContainer, contentColor = cs.onPrimaryContainer),
-        modifier = Modifier.fillMaxWidth(),
+private fun HistoryButton(alerts: Int?, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val source = remember { MutableInteractionSource() }
+    BadgedBox(
+        badge = { if ((alerts ?: 0) > 0) Badge(containerColor = Status.alert) { Text("${alerts!!.coerceAtMost(99)}") } },
+        modifier = modifier,
     ) {
-        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier.size(48.dp).clip(CircleShape).background(cs.primary),
-                contentAlignment = Alignment.Center,
-            ) { Icon(Icons.Outlined.History, null, tint = cs.onPrimary) }
-            Spacer(Modifier.width(16.dp))
-            Column(Modifier.weight(1f)) {
-                Text("View history", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                val sub = counts?.let { (a, d) -> "Last 24 h · $a alerts · $d detections" }
-                    ?: "Recordings, events and timeline"
-                Text(sub, style = MaterialTheme.typography.bodyMedium, color = cs.onPrimaryContainer.copy(alpha = 0.8f))
-            }
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null)
+        FilledTonalButton(
+            onClick = onClick,
+            interactionSource = source,
+            contentPadding = PaddingValues(start = 12.dp, end = 16.dp),
+            modifier = Modifier.height(40.dp).pressScale(source),
+        ) {
+            Icon(Icons.Outlined.History, null, Modifier.size(18.dp))
+            Spacer(Modifier.width(6.dp))
+            Text("History", style = MaterialTheme.typography.labelLarge)
         }
     }
 }
 
-/** Round translucent button for use on top of video. */
 @Composable
 fun VideoIconButton(icon: ImageVector, label: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
     FilledTonalIconButton(

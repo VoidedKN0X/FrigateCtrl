@@ -29,6 +29,8 @@ data class CameraInfo(
     val displayName: String get() = name.replace('_', ' ').replaceFirstChar { it.uppercase() }
 }
 
+data class CameraGroup(val name: String, val cameras: List<String>, val order: Int)
+
 data class RecordingSegment(
     val start: Double,
     val end: Double,
@@ -197,8 +199,20 @@ class FrigateApi(private val prefs: Prefs) {
         } catch (_: Exception) { null }
     }
 
+    /** Camera groups from the Frigate config (filled in by [cameras]). */
+    @Volatile var groups: List<CameraGroup> = emptyList()
+        private set
+
     suspend fun cameras(): List<CameraInfo> {
         val root = JSONObject(getString("/api/config"))
+        groups = root.optJSONObject("camera_groups")?.let { g ->
+            g.keys().asSequence().mapNotNull { k ->
+                val o = g.optJSONObject(k) ?: return@mapNotNull null
+                val arr = o.optJSONArray("cameras") ?: return@mapNotNull null
+                val cams = (0 until arr.length()).map { arr.getString(it) }
+                CameraGroup(k, cams, o.optInt("order", 0))
+            }.sortedWith(compareBy({ it.order }, { it.name })).toList()
+        } ?: emptyList()
         val cams = root.optJSONObject("cameras") ?: return emptyList()
         val list = mutableListOf<CameraInfo>()
         for (name in cams.keys()) {
