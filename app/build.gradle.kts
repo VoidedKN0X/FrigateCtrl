@@ -12,8 +12,8 @@ android {
         applicationId = "com.vknxworks.frigateremote"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
-        versionName = "1.2.0"
+        versionCode = 4
+        versionName = "1.3.0"
     }
 
     // Release signing from env (GitHub secrets); falls back to the debug key so the APK is always installable.
