@@ -10,6 +10,9 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -60,7 +63,13 @@ private fun Root() {
 
     AnimatedContent(
         targetState = route,
-        transitionSpec = { fadeIn() togetherWith fadeOut() },
+        transitionSpec = {
+            // Slide deeper screens in from the right, back out to the left — with a soft fade.
+            val forward = depth(targetState) >= depth(initialState)
+            val dir = if (forward) 1 else -1
+            (slideInHorizontally(tween(320)) { it / 5 * dir } + fadeIn(tween(220))) togetherWith
+                (slideOutHorizontally(tween(320)) { -it / 8 * dir } + fadeOut(tween(160)))
+        },
         label = "route",
     ) { r ->
         when {
@@ -90,4 +99,11 @@ private fun Root() {
             }
         }
     }
+}
+
+private fun depth(route: String): Int = when {
+    route == "setup" -> 0
+    route == "cameras" -> 1
+    route == "settings" || route.startsWith("camera:") -> 2
+    else -> 3
 }
