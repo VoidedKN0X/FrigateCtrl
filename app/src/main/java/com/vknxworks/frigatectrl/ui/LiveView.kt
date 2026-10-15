@@ -1,4 +1,4 @@
-package com.vknxworks.frigateremote.ui
+package com.vknxworks.frigatectrl.ui
 
 import android.content.Context
 import androidx.annotation.OptIn
@@ -39,10 +39,10 @@ import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.extractor.Extractor
 import androidx.media3.extractor.ExtractorsFactory
 import androidx.media3.extractor.mp4.FragmentedMp4Extractor
-import com.vknxworks.frigateremote.data.MseWebSocketDataSource
+import com.vknxworks.frigatectrl.data.MseWebSocketDataSource
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
-import com.vknxworks.frigateremote.App
+import com.vknxworks.frigatectrl.App
 import kotlinx.coroutines.delay
 import java.net.URLEncoder
 

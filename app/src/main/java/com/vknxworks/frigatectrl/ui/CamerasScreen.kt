@@ -1,4 +1,4 @@
-package com.vknxworks.frigateremote.ui
+package com.vknxworks.frigatectrl.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -63,9 +63,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vknxworks.frigateremote.App
-import com.vknxworks.frigateremote.data.CameraGroup
-import com.vknxworks.frigateremote.data.CameraInfo
+import com.vknxworks.frigatectrl.App
+import com.vknxworks.frigatectrl.data.CameraGroup
+import com.vknxworks.frigatectrl.data.CameraInfo
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

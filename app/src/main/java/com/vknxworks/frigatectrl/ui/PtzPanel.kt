@@ -1,4 +1,4 @@
-package com.vknxworks.frigateremote.ui
+package com.vknxworks.frigatectrl.ui
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring

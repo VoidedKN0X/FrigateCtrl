@@ -1,4 +1,4 @@
-package com.vknxworks.frigateremote.data
+package com.vknxworks.frigatectrl.data
 
 import android.content.Context
 import androidx.compose.runtime.getValue

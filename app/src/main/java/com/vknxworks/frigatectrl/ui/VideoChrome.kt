@@ -1,4 +1,4 @@
-package com.vknxworks.frigateremote.ui
+package com.vknxworks.frigatectrl.ui
 
 import android.app.Activity
 import android.content.Context

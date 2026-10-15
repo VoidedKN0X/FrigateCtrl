@@ -1,4 +1,4 @@
-package com.vknxworks.frigateremote.ui
+package com.vknxworks.frigatectrl.ui
 
 import android.content.res.Configuration
 import androidx.compose.foundation.Image
@@ -86,10 +86,10 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
-import com.vknxworks.frigateremote.App
-import com.vknxworks.frigateremote.data.CameraInfo
-import com.vknxworks.frigateremote.data.RecordingSegment
-import com.vknxworks.frigateremote.data.ReviewItem
+import com.vknxworks.frigatectrl.App
+import com.vknxworks.frigatectrl.data.CameraInfo
+import com.vknxworks.frigatectrl.data.RecordingSegment
+import com.vknxworks.frigatectrl.data.ReviewItem
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Calendar

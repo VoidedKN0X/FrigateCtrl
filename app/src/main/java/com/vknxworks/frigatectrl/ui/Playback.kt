@@ -1,4 +1,4 @@
-package com.vknxworks.frigateremote.ui
+package com.vknxworks.frigatectrl.ui
 
 import android.content.Context
 import androidx.annotation.OptIn
@@ -14,8 +14,8 @@ import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.SeekParameters
 import androidx.media3.exoplayer.hls.HlsMediaSource
-import com.vknxworks.frigateremote.App
-import com.vknxworks.frigateremote.data.RecordingSegment
+import com.vknxworks.frigatectrl.App
+import com.vknxworks.frigatectrl.data.RecordingSegment
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch

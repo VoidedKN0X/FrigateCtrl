@@ -1,9 +1,9 @@
-package com.vknxworks.frigateremote
+package com.vknxworks.frigatectrl
 
 import android.content.Context
-import com.vknxworks.frigateremote.data.FrigateApi
-import com.vknxworks.frigateremote.data.Prefs
-import com.vknxworks.frigateremote.data.Settings
+import com.vknxworks.frigatectrl.data.FrigateApi
+import com.vknxworks.frigatectrl.data.Prefs
+import com.vknxworks.frigatectrl.data.Settings
 
 /** Tiny service locator. */
 object App {

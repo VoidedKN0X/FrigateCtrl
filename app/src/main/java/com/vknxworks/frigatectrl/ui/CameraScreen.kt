@@ -1,4 +1,4 @@
-package com.vknxworks.frigateremote.ui
+package com.vknxworks.frigatectrl.ui
 
 import android.content.res.Configuration
 import androidx.compose.material3.Surface
@@ -67,10 +67,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.vknxworks.frigateremote.App
-import com.vknxworks.frigateremote.data.CameraInfo
-import com.vknxworks.frigateremote.data.PtzInfo
-import com.vknxworks.frigateremote.data.PtzSocket
+import com.vknxworks.frigatectrl.App
+import com.vknxworks.frigatectrl.data.CameraInfo
+import com.vknxworks.frigatectrl.data.PtzInfo
+import com.vknxworks.frigatectrl.data.PtzSocket
 
 @Composable
 fun CameraScreen(camera: String, onBack: () -> Unit) {

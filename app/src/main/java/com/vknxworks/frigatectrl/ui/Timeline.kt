@@ -1,4 +1,4 @@
-package com.vknxworks.frigateremote.ui
+package com.vknxworks.frigatectrl.ui
 
 import androidx.compose.animation.core.AnimationState
 import androidx.compose.animation.core.animateDecay
@@ -34,8 +34,8 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vknxworks.frigateremote.data.RecordingSegment
-import com.vknxworks.frigateremote.data.ReviewItem
+import com.vknxworks.frigatectrl.data.RecordingSegment
+import com.vknxworks.frigatectrl.data.ReviewItem
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
