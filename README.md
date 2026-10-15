@@ -5,7 +5,7 @@ An unofficial Android app for watching and reviewing your [Frigate NVR](https://
 ## Features
 
 **Cameras**
-- Camera grid with refreshing snapshots, a red badge with each camera's alerts from the last 24 hours, and a PTZ badge on cameras with ONVIF
+- Camera grid with refreshing snapshots, a red badge with each camera's unreviewed alerts from the last 24 hours, and a PTZ badge on cameras with ONVIF
 - Camera-group filter chips, taken from the `camera_groups` in your Frigate config
 - Pull down to refresh; labels switch between light and dark text depending on the picture behind them
 
@@ -14,6 +14,10 @@ An unofficial Android app for watching and reviewing your [Frigate NVR](https://
 - Audio, including cameras that send G.711 (PCMA/PCMU) audio
 - Stream picker for cameras with more than one live stream (e.g. main and sub)
 - Fullscreen, or just turn the phone sideways
+- Pinch to zoom up to 8×, drag to pan, double-tap to zoom in or out
+- Picture-in-picture: keeps the live view floating when you leave the app, or on demand
+- Camera settings: turn the camera, object detection, recording, snapshots, audio detection and notifications on or off
+- Two-way talk for cameras with a speaker (shown only when go2rtc reports a microphone backchannel)
 - Shows a snapshot straight away while the video connects, and falls back to fast snapshots, with the reason shown, if video can't play
 
 **PTZ (ONVIF)**
@@ -27,7 +31,9 @@ An unofficial Android app for watching and reviewing your [Frigate NVR](https://
 - Precision timeline: drag to scrub, pinch to zoom from about 20 seconds to 2 days across the screen, fling for long jumps, tap to jump
 - The timeline shows recording coverage, motion, detections and alerts, with a light vibration as each time mark passes
 - Frame previews while scrubbing, and steps of ±0.1 s, 1 s, 10 s and 30 s
-- Previous/next event, 0.5× to 16× speed, a date picker, and an events list with thumbnails
+- Previous/next event, 0.5× to 16× speed, a date picker, and pinch-zoom on recordings
+- Events list with thumbnails: swipe to mark reviewed, mark all reviewed, filter by unreviewed or alerts
+- Save or share clips: any event, or a range you mark on the timeline, saved to *Movies/FrigateCtrl*
 
 **Security**
 - Optional app lock with a PIN (4–8 digits, stored only as a salted PBKDF2 hash) and fingerprint unlock
@@ -35,9 +41,14 @@ An unofficial Android app for watching and reviewing your [Frigate NVR](https://
 - Hides the app in the recent-apps screen and blocks screenshots and screen recording while the lock is on
 - Video and audio stop as soon as the app leaves the screen
 
+**System health**
+- Frigate version and uptime, update notice, CPU, memory and GPU load
+- Detector inference speed and temperature, per-camera FPS and skipped frames
+- Disk usage for recordings, clips and cache, plus storage used per camera
+
 **App**
 - Material 3 design with Material You colours, light/dark/system theme and an optional pure-black mode
-- Settings for grid columns, thumbnail refresh, preferring the sub stream, starting muted, keeping the screen on, the timeline's starting zoom, how early events start, and timeline vibration
+- Settings for grid columns, thumbnail refresh, preferring the sub stream, starting muted, keeping the screen on, picture-in-picture, the timeline's starting zoom, how early events start, and timeline vibration
 
 ## Requirements
 
@@ -72,6 +83,8 @@ Your password and session token are encrypted with the Android Keystore. The app
   - `stream not found`: the go2rtc stream name doesn't match the camera. Map it with `live: streams:` in your Frigate config.
   - `no frames received`: check the camera works in Frigate's own Live view.
 - **Live view uses the wrong stream:** the app plays the streams listed under `live: streams:` for each camera. Pick one with the stream button, or turn on *Prefer sub stream* in Settings.
+- **Two-way talk:** the Talk button only appears when go2rtc reports that the camera accepts audio. It uses WebRTC, so go2rtc's WebRTC port (8555) must be reachable from your phone — see Frigate's [two-way talk docs](https://docs.frigate.video/configuration/live/#two-way-talk).
+- **Camera settings switches don't stick:** older Frigate versions reset them when Frigate restarts. Change the config to make them permanent.
 - **PTZ controls missing:** they only appear for cameras with an `onvif:` section in the Frigate config, and only show the features the camera reports (pan/tilt, zoom, focus, presets).
 
 ## Building from source
@@ -100,5 +113,10 @@ Signed releases are built automatically by GitHub Actions; see `.github/workflow
 | Event thumbnails | `GET /clips/review/thumb-{camera}-{id}.webp` |
 | PTZ info | `GET /api/{camera}/ptz/info` |
 | PTZ control | websocket `/ws`, topic `{camera}/ptz` (`MOVE_*`, `ZOOM_*`, `FOCUS_*`, `STOP`, `preset_{name}`) |
+| Camera settings | websocket `/ws`: `onConnect` → `camera_activity`; `{camera}/{feature}/set` `ON`/`OFF` |
+| Mark reviewed | `POST /api/reviews/viewed`, `DELETE /api/review/{id}/viewed` |
+| Clips | `GET /api/{camera}/start/{start}/end/{end}/clip.mp4` |
+| System health | `GET /api/stats`, `GET /api/recordings/storage` |
+| Two-way talk | `GET /api/go2rtc/streams/{stream}`; WebRTC via websocket `/live/webrtc/api/ws?src={stream}` |
 
-The app only reads from Frigate and sends PTZ commands; it never changes your Frigate configuration.
+The app never edits your Frigate config file. It only sends PTZ commands, review status and the runtime camera switches above.
