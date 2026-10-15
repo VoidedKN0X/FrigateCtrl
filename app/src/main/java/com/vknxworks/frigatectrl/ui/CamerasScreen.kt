@@ -61,6 +61,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vknxworks.frigatectrl.App
@@ -69,7 +70,7 @@ import com.vknxworks.frigatectrl.data.CameraInfo
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CamerasScreen(onOpen: (String) -> Unit, onSettings: () -> Unit) {
+fun CamerasScreen(onOpen: (String) -> Unit, onSettings: () -> Unit, bottomPadding: Dp = 0.dp) {
     val settings = App.settings
     val cs = MaterialTheme.colorScheme
     var cameras by remember { mutableStateOf<List<CameraInfo>?>(null) }
@@ -100,7 +101,6 @@ fun CamerasScreen(onOpen: (String) -> Unit, onSettings: () -> Unit) {
     val totalAlerts = alerts.values.sum()
 
     val bars = WindowInsets.statusBars.asPaddingValues()
-    val nav = WindowInsets.navigationBars.asPaddingValues()
 
     PullToRefreshBox(
         isRefreshing = refreshing,
@@ -112,7 +112,7 @@ fun CamerasScreen(onOpen: (String) -> Unit, onSettings: () -> Unit) {
             contentPadding = PaddingValues(
                 start = 16.dp, end = 16.dp,
                 top = bars.calculateTopPadding() + 8.dp,
-                bottom = nav.calculateBottomPadding() + 24.dp,
+                bottom = bottomPadding + 24.dp,
             ),
             verticalArrangement = Arrangement.spacedBy(12.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),

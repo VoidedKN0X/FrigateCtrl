@@ -1,6 +1,10 @@
 package com.vknxworks.frigatectrl.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.Dp
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,6 +21,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Memory
+import androidx.compose.material.icons.outlined.MonitorHeart
 import androidx.compose.material.icons.outlined.NewReleases
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.Card
@@ -53,7 +58,7 @@ import java.util.Locale
 /** Frigate's /api/stats, refreshed every 5 seconds. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HealthScreen(onBack: () -> Unit) {
+fun HealthScreen(bottomPadding: Dp = 0.dp) {
     val cs = MaterialTheme.colorScheme
     var stats by remember { mutableStateOf<JSONObject?>(null) }
     var storage by remember { mutableStateOf<JSONObject?>(null) }
@@ -70,25 +75,41 @@ fun HealthScreen(onBack: () -> Unit) {
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("System health", fontWeight = FontWeight.SemiBold) },
-                navigationIcon = { IconButton(onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = cs.background),
-            )
-        },
-    ) { pad ->
+    Column(Modifier.fillMaxSize().background(cs.background)) {
+        // ---- compact header, matching the Cameras tab ----
+        Row(
+            Modifier.fillMaxWidth().statusBarsPadding().padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(cs.primaryContainer),
+                contentAlignment = Alignment.Center,
+            ) { Icon(Icons.Outlined.MonitorHeart, null, tint = cs.onPrimaryContainer, modifier = Modifier.size(22.dp)) }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text("System health", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text(
+                    when {
+                        error != null && stats != null -> "Offline · showing last data"
+                        stats == null -> "Loading…"
+                        else -> "Live · refreshes every 5 s"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (error != null) cs.error else cs.onSurfaceVariant,
+                )
+            }
+        }
+
         val s = stats
         if (s == null) {
-            Box(Modifier.fillMaxSize().padding(pad), Alignment.Center) {
+            Box(Modifier.fillMaxSize().padding(bottom = bottomPadding), Alignment.Center) {
                 if (error != null) Text(error!!, color = cs.error) else CircularProgressIndicator()
             }
-            return@Scaffold
+            return@Column
         }
         Column(
-            Modifier.fillMaxSize().padding(pad).verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp).padding(bottom = 32.dp),
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp).padding(top = 4.dp, bottom = bottomPadding + 24.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             val service = s.optJSONObject("service")
