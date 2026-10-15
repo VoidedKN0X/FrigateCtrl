@@ -5,6 +5,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: write   # needed to create releases
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -25,8 +28,9 @@ jobs:
           if [ -n "$KEYSTORE_BASE64" ]; then
             echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
             echo "SIGNING_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+            echo "RELEASE_SIGNED=1" >> "$GITHUB_ENV"
           else
-            echo "No signing secret set - using debug key"
+            echo "::warning title=Unsigned build::No signing secrets set - APK is signed with the debug key"
           fi
 
       - name: Build release APK
@@ -34,6 +38,7 @@ jobs:
           SIGNING_STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           SIGNING_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          VERSION_CODE: ${{ github.run_number }}
         run: |
           chmod +x gradlew
           set -o pipefail
@@ -44,7 +49,42 @@ jobs:
             exit 1
           fi
 
+      - name: Name APK and check signature
+        run: |
+          VERSION=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
+          TAG="v${VERSION}-build.${{ github.run_number }}"
+          APK="FrigateRemote-${TAG}.apk"
+          cp app/build/outputs/apk/release/app-release.apk "$APK"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+          echo "APK=$APK" >> "$GITHUB_ENV"
+
+          APKSIGNER=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner
+          CERT=$("$APKSIGNER" verify --print-certs "$APK" | grep -m1 "certificate DN" | sed 's/^[^:]*: //')
+          SHA=$("$APKSIGNER" verify --print-certs "$APK" | grep -m1 "SHA-256" | sed 's/^.*: //')
+          echo "Signed by: $CERT"
+          if [ "$RELEASE_SIGNED" = "1" ] && echo "$CERT" | grep -q "Android Debug"; then
+            echo "::error title=Signing failed::Secrets are set but the APK is debug-signed - check the key alias and passwords"
+            exit 1
+          fi
+          echo "::notice title=Signed APK::$APK signed by $CERT (SHA-256 $SHA)"
+
       - uses: actions/upload-artifact@v4
         with:
           name: FrigateRemote-apk
-          path: app/build/outputs/apk/release/*.apk
+          path: ${{ env.APK }}
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TAG }}
+          name: Frigate Remote ${{ env.VERSION }} (build ${{ github.run_number }})
+          target_commitish: ${{ github.sha }}
+          make_latest: true
+          files: ${{ env.APK }}
+          body: |
+            **Frigate Remote ${{ env.VERSION }}**, build ${{ github.run_number }}
+
+            Download **${{ env.APK }}** below and open it on your phone to install or update.
+
+            Changes in this build: ${{ github.event.head_commit.message || 'manual build' }}
