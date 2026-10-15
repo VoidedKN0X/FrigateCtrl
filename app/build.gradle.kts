@@ -12,7 +12,8 @@ android {
         applicationId = "com.vknxworks.frigateremote"
         minSdk = 26
         targetSdk = 35
-        versionCode = 7
+        // CI passes the run number so every build installs over the previous one.
+        versionCode = System.getenv("VERSION_CODE")?.toIntOrNull() ?: 7
         versionName = "2.1.1"
     }
 
