@@ -88,7 +88,7 @@ fun CamerasScreen(onOpen: (String) -> Unit, onSettings: () -> Unit) {
         } catch (e: Exception) { error = e.message ?: "Couldn't load cameras" }
         alerts = try {
             App.api.reviews("all", nowSec() - 86400, nowSec())
-                .filter { it.isAlert }.groupingBy { it.camera }.eachCount()
+                .filter { it.isAlert && !it.reviewed }.groupingBy { it.camera }.eachCount()
         } catch (_: Exception) { alerts }
         refreshing = false
     }
@@ -179,7 +179,7 @@ private fun Header(host: String, cameraCount: Int?, alertCount: Int, onSettings:
             val parts = buildList {
                 add(host)
                 cameraCount?.let { add("$it cams") }
-                if (alertCount > 0) add("$alertCount alerts today")
+                if (alertCount > 0) add("$alertCount new alerts")
             }
             Text(
                 parts.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant,

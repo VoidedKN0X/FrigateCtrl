@@ -1,6 +1,24 @@
 package com.vknxworks.frigatectrl.ui
 
 import android.content.res.Configuration
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.rememberSwipeToDismissBoxState
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.FilterChip
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.MarkEmailUnread
+import androidx.compose.material.icons.outlined.DoneAll
+import androidx.compose.material.icons.outlined.ContentCut
+import kotlinx.coroutines.launch
+import com.vknxworks.frigatectrl.data.Clips
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -199,20 +217,46 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit) {
 
     var showEvents by remember { mutableStateOf(false) }
     var showDate by remember { mutableStateOf(false) }
+    val zoom = remember(camera) { ZoomState() }
+
+    // ---- clip selection: start is marked, end follows the playhead ----
+    var clipStart by remember { mutableStateOf<Double?>(null) }
+    var clipBusy by remember { mutableStateOf(false) }
+    fun runClip(start: Double, end: Double, share: Boolean) {
+        if (clipBusy) return
+        val a = minOf(start, end); val b = maxOf(start, end)
+        if (b - a < 1) { Toast.makeText(ctx, "Move the playhead to choose where the clip ends", Toast.LENGTH_SHORT).show(); return }
+        if (b - a > Clips.MAX_SECONDS) { Toast.makeText(ctx, "Clips can be at most 1 hour", Toast.LENGTH_SHORT).show(); return }
+        clipBusy = true
+        Toast.makeText(ctx, "Preparing clip…", Toast.LENGTH_SHORT).show()
+        scope.launch {
+            try {
+                if (share) Clips.share(ctx, camera, a, b)
+                else {
+                    val name = Clips.save(ctx, camera, a, b)
+                    Toast.makeText(ctx, "Saved $name to Movies/FrigateCtrl", Toast.LENGTH_LONG).show()
+                }
+                clipStart = null
+            } catch (e: Exception) {
+                Toast.makeText(ctx, "Clip failed: ${e.message}", Toast.LENGTH_LONG).show()
+            } finally { clipBusy = false }
+        }
+    }
+
+    // ---- reviewed state ----
+    fun markReviewed(ids: List<String>, reviewed: Boolean) {
+        if (ids.isEmpty()) return
+        val set = ids.toSet()
+        reviews = reviews.map { if (it.id in set) it.copy(reviewed = reviewed) else it }
+        scope.launch {
+            try { api.setReviewed(ids, reviewed) }
+            catch (e: Exception) { Toast.makeText(ctx, "Couldn't update: ${e.message}", Toast.LENGTH_SHORT).show() }
+        }
+    }
 
     val video: @Composable (Modifier) -> Unit = { m ->
-        Box(m.background(Color.Black)) {
-            AndroidView(
-                factory = { c ->
-                    PlayerView(c).apply {
-                        useController = false
-                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                        setShutterBackgroundColor(android.graphics.Color.BLACK)
-                        player = playback.player
-                    }
-                },
-                modifier = Modifier.fillMaxSize(),
-            )
+        Box(m.background(Color.Black).zoomable(zoom)) {
+            PlayerSurface(playback.player, zoom)
             previewTime?.let { ScrubPreview(api.snapshotAt(camera, it, 480), Modifier.fillMaxSize()) }
             if (playback.loading && previewTime == null)
                 CircularProgressIndicator(Modifier.align(Alignment.Center).size(36.dp), strokeWidth = 3.dp, color = Color.White)
@@ -225,10 +269,22 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit) {
                 if (playback.speed == 1f) "PLAYBACK" else "PLAYBACK · ${speedLabel(playback.speed)}",
                 cs.primary, Modifier.align(Alignment.TopStart).padding(10.dp),
             )
+            if (zoom.zoomed) OverlayChip(
+                "${"%.1f".format(zoom.scale)}× · reset", null,
+                Modifier.align(Alignment.TopEnd).padding(10.dp), onClick = { zoom.reset() },
+            )
         }
     }
 
     val controls: @Composable () -> Unit = {
+        clipStart?.let { start ->
+            ClipBar(
+                start = start, end = tl.center, busy = clipBusy,
+                onCancel = { clipStart = null },
+                onSave = { runClip(start, tl.center, share = false) },
+                onShare = { runClip(start, tl.center, share = true) },
+            )
+        }
         TimeReadout(
             t = tl.center, spp = tl.spp, widthPx = widthPx,
             onZoomIn = { tl.spp = (tl.spp / 2).coerceIn(MIN_SPP, MAX_SPP) },
@@ -243,6 +299,7 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit) {
                 state = tl, segments = segments, reviews = reviews, nowProvider = ::nowSec,
                 onScrubStart = onScrubStart, onScrub = onScrub, onScrubEnd = onScrubEnd,
                 hapticTicks = settings.timelineHaptics,
+                selection = clipStart?.let { it to tl.center },
                 modifier = Modifier.fillMaxWidth().height(92.dp),
             )
         }
@@ -261,6 +318,7 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit) {
             Box(Modifier.fillMaxWidth().weight(1f)) {
                 video(Modifier.fillMaxSize())
                 Row(Modifier.align(Alignment.TopEnd).padding(6.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    VideoIconButton(Icons.Outlined.ContentCut, "Make a clip") { clipStart = if (clipStart == null) tl.center else null }
                     VideoIconButton(Icons.Outlined.CalendarMonth, "Pick date") { showDate = true }
                     VideoIconButton(Icons.AutoMirrored.Outlined.List, "Events") { showEvents = true }
                     VideoIconButton(Icons.AutoMirrored.Filled.ArrowBack, "Back to live", onClick = onBack)
@@ -281,10 +339,16 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit) {
                         fontWeight = FontWeight.Bold, maxLines = 1)
                     Text("History", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
                 }
+                IconButton({ clipStart = if (clipStart == null) tl.center else null }) {
+                    Icon(Icons.Outlined.ContentCut, "Make a clip", tint = if (clipStart != null) cs.primary else cs.onSurfaceVariant)
+                }
                 FilledTonalIconButton({ showDate = true }) { Icon(Icons.Outlined.CalendarMonth, "Pick date") }
                 Spacer(Modifier.width(6.dp))
                 FilledTonalIconButton({ showEvents = true }) {
-                    BadgedBox(badge = { if (reviews.isNotEmpty()) Badge { Text("${reviews.size.coerceAtMost(99)}") } }) {
+                    BadgedBox(badge = {
+                        val unseen = reviews.count { !it.reviewed }
+                        if (unseen > 0) Badge { Text("${unseen.coerceAtMost(99)}") }
+                    }) {
                         Icon(Icons.AutoMirrored.Outlined.List, "Events")
                     }
                 }
@@ -314,10 +378,19 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit) {
 
     if (showEvents) {
         ModalBottomSheet(onDismissRequest = { showEvents = false }) {
-            EventsList(reviews.asReversed()) { r ->
-                showEvents = false
-                seekTo(r.start - settings.eventPreroll, play = true)
-            }
+            EventsList(
+                items = reviews.asReversed(),
+                onPick = { r ->
+                    showEvents = false
+                    if (!r.reviewed) markReviewed(listOf(r.id), true)
+                    seekTo(r.start - settings.eventPreroll, play = true)
+                },
+                onReviewed = { r, v -> markReviewed(listOf(r.id), v) },
+                onMarkAll = { markReviewed(reviews.filter { !it.reviewed }.map { it.id }, true) },
+                onClip = { r, share ->
+                    runClip(r.start - settings.eventPreroll, (r.end ?: nowSec()) + 2, share)
+                },
+            )
         }
     }
     if (showDate) {
@@ -472,42 +545,179 @@ private fun LegendDot(c: Color, label: String) {
     }
 }
 
+private enum class EventFilter(val label: String) { All("All"), Unreviewed("Unreviewed"), Alerts("Alerts") }
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun EventsList(items: List<ReviewItem>, onPick: (ReviewItem) -> Unit) {
+private fun EventsList(
+    items: List<ReviewItem>,
+    onPick: (ReviewItem) -> Unit,
+    onReviewed: (ReviewItem, Boolean) -> Unit,
+    onMarkAll: () -> Unit,
+    onClip: (ReviewItem, share: Boolean) -> Unit,
+) {
     val cs = MaterialTheme.colorScheme
     val st = Status
     val fmt = remember { SimpleDateFormat("EEE HH:mm:ss", Locale.getDefault()) }
-    Text("Events", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold,
-        modifier = Modifier.padding(start = 20.dp, bottom = 8.dp))
-    if (items.isEmpty()) {
-        Text("No events in this part of the timeline", color = cs.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp))
+    var filter by rememberSaveable { mutableStateOf(EventFilter.All) }
+    val shown = items.filter {
+        when (filter) {
+            EventFilter.All -> true
+            EventFilter.Unreviewed -> !it.reviewed
+            EventFilter.Alerts -> it.isAlert
+        }
+    }
+    val unseen = items.count { !it.reviewed }
+
+    Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text("Events", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+            Text(
+                if (unseen > 0) "$unseen unreviewed · swipe right to mark reviewed" else "All caught up",
+                style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant,
+            )
+        }
+        if (unseen > 0) TextButton(onMarkAll) {
+            Icon(Icons.Outlined.DoneAll, null, Modifier.size(18.dp))
+            Spacer(Modifier.width(6.dp))
+            Text("Mark all")
+        }
+    }
+    Row(
+        Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        EventFilter.entries.forEach { f ->
+            FilterChip(filter == f, { filter = f }, label = { Text(f.label) })
+        }
+    }
+    if (shown.isEmpty()) {
+        Text(
+            if (filter == EventFilter.Unreviewed) "Nothing left to review here" else "No events in this part of the timeline",
+            color = cs.onSurfaceVariant, modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp),
+        )
         return
     }
     LazyColumn(Modifier.fillMaxWidth().height(540.dp)) {
-        items(items, key = { it.id }) { r ->
-            ListItem(
-                modifier = Modifier.clip(MaterialTheme.shapes.medium).clickable { onPick(r) },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                leadingContent = {
-                    Box(Modifier.width(112.dp).aspectRatio(16f / 9f).clip(MaterialTheme.shapes.small).background(cs.surfaceContainerHighest)) {
-                        r.thumbPath?.let { RemoteImage(App.api.url(it), Modifier.fillMaxSize()) }
-                    }
-                },
-                headlineContent = {
-                    Text(
-                        r.labels.joinToString(", ").ifBlank { r.severity }.replaceFirstChar { it.uppercase() },
-                        fontWeight = FontWeight.Medium,
-                    )
-                },
-                supportingContent = {
-                    val dur = r.end?.let { "${(it - r.start).toInt()} s" } ?: "ongoing"
-                    Text("${fmt.format(Date((r.start * 1000).toLong()))} · $dur")
-                },
-                trailingContent = {
-                    Box(Modifier.size(10.dp).clip(CircleShape).background(if (r.isAlert) st.alert else st.detection))
+        items(shown, key = { it.id }) { r ->
+            val dismiss = rememberSwipeToDismissBoxState(
+                confirmValueChange = { v ->
+                    if (v == SwipeToDismissBoxValue.StartToEnd) onReviewed(r, !r.reviewed)
+                    false // snap back; the row just changes style
                 },
             )
+            SwipeToDismissBox(
+                state = dismiss,
+                enableDismissFromEndToStart = false,
+                backgroundContent = {
+                    Row(
+                        Modifier.fillMaxSize().background(cs.primaryContainer).padding(horizontal = 24.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            if (r.reviewed) Icons.Outlined.MarkEmailUnread else Icons.Outlined.DoneAll, null,
+                            tint = cs.onPrimaryContainer,
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Text(if (r.reviewed) "Mark unreviewed" else "Mark reviewed", color = cs.onPrimaryContainer)
+                    }
+                },
+                modifier = Modifier.animateItem(),
+            ) {
+                var menu by remember { mutableStateOf(false) }
+                ListItem(
+                    modifier = Modifier.clickable { onPick(r) },
+                    colors = ListItemDefaults.colors(containerColor = cs.surfaceContainerLow),
+                    leadingContent = {
+                        Box(
+                            Modifier.width(112.dp).aspectRatio(16f / 9f).clip(MaterialTheme.shapes.small)
+                                .background(cs.surfaceContainerHighest)
+                        ) {
+                            r.thumbPath?.let {
+                                RemoteImage(
+                                    App.api.url(it),
+                                    Modifier.fillMaxSize().graphicsLayer { alpha = if (r.reviewed) 0.6f else 1f },
+                                )
+                            }
+                        }
+                    },
+                    headlineContent = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.size(8.dp).clip(CircleShape).background(if (r.isAlert) st.alert else st.detection))
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                r.labels.joinToString(", ").ifBlank { r.severity }.replaceFirstChar { it.uppercase() },
+                                fontWeight = if (r.reviewed) FontWeight.Normal else FontWeight.Bold,
+                                color = if (r.reviewed) cs.onSurfaceVariant else cs.onSurface,
+                            )
+                        }
+                    },
+                    supportingContent = {
+                        val dur = r.end?.let { "${(it - r.start).toInt()} s" } ?: "ongoing"
+                        Text("${fmt.format(Date((r.start * 1000).toLong()))} · $dur")
+                    },
+                    trailingContent = {
+                        Box {
+                            IconButton({ menu = true }) { Icon(Icons.Outlined.MoreVert, "More") }
+                            DropdownMenu(menu, { menu = false }) {
+                                DropdownMenuItem(
+                                    text = { Text(if (r.reviewed) "Mark unreviewed" else "Mark reviewed") },
+                                    leadingIcon = { Icon(if (r.reviewed) Icons.Outlined.MarkEmailUnread else Icons.Outlined.DoneAll, null) },
+                                    onClick = { menu = false; onReviewed(r, !r.reviewed) },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Save clip") },
+                                    leadingIcon = { Icon(Icons.Outlined.Download, null) },
+                                    onClick = { menu = false; onClip(r, false) },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Share clip") },
+                                    leadingIcon = { Icon(Icons.Outlined.Share, null) },
+                                    onClick = { menu = false; onClip(r, true) },
+                                )
+                            }
+                        }
+                    },
+                )
+            }
+        }
+    }
+}
+
+/** Shown above the timeline while a clip is being selected. */
+@Composable
+private fun ClipBar(
+    start: Double,
+    end: Double,
+    busy: Boolean,
+    onCancel: () -> Unit,
+    onSave: () -> Unit,
+    onShare: () -> Unit,
+) {
+    val cs = MaterialTheme.colorScheme
+    val fmt = remember { SimpleDateFormat("HH:mm:ss", Locale.getDefault()) }
+    val a = minOf(start, end); val b = maxOf(start, end)
+    val len = (b - a).toInt()
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = cs.primaryContainer,
+        contentColor = cs.onPrimaryContainer,
+        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 8.dp),
+    ) {
+        Row(Modifier.padding(start = 16.dp, end = 4.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Clip · %d:%02d".format(len / 60, len % 60), fontWeight = FontWeight.Bold)
+                Text(
+                    if (len < 1) "Scrub to where the clip should end" else "${fmt.format(Date((a * 1000).toLong()))} → ${fmt.format(Date((b * 1000).toLong()))}",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            if (busy) CircularProgressIndicator(Modifier.size(22.dp).padding(end = 8.dp), strokeWidth = 2.dp)
+            else {
+                IconButton(onSave) { Icon(Icons.Outlined.Download, "Save to gallery") }
+                IconButton(onShare) { Icon(Icons.Outlined.Share, "Share") }
+            }
+            IconButton(onCancel) { Icon(Icons.Outlined.Close, "Cancel clip") }
         }
     }
 }
