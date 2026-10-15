@@ -1,4 +1,4 @@
-package com.vknxworks.frigateremote.data
+package com.vknxworks.frigatectrl.data
 
 import android.net.Uri
 import androidx.annotation.OptIn

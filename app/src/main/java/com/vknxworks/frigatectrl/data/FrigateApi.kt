@@ -1,4 +1,4 @@
-package com.vknxworks.frigateremote.data
+package com.vknxworks.frigatectrl.data
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

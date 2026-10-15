@@ -1,4 +1,4 @@
-package com.vknxworks.frigateremote
+package com.vknxworks.frigatectrl
 
 import android.graphics.Color
 import android.os.Bundle
@@ -24,12 +24,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import com.vknxworks.frigateremote.ui.CameraScreen
-import com.vknxworks.frigateremote.ui.CamerasScreen
-import com.vknxworks.frigateremote.ui.FrigateTheme
-import com.vknxworks.frigateremote.ui.SettingsScreen
-import com.vknxworks.frigateremote.ui.SetupScreen
-import com.vknxworks.frigateremote.ui.isAppInDarkTheme
+import com.vknxworks.frigatectrl.ui.CameraScreen
+import com.vknxworks.frigatectrl.ui.CamerasScreen
+import com.vknxworks.frigatectrl.ui.FrigateTheme
+import com.vknxworks.frigatectrl.ui.SettingsScreen
+import com.vknxworks.frigatectrl.ui.SetupScreen
+import com.vknxworks.frigatectrl.ui.isAppInDarkTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

@@ -1,4 +1,4 @@
-package com.vknxworks.frigateremote.ui
+package com.vknxworks.frigatectrl.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -57,8 +57,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.vknxworks.frigateremote.App
-import com.vknxworks.frigateremote.data.AuthException
+import com.vknxworks.frigatectrl.App
+import com.vknxworks.frigatectrl.data.AuthException
 import kotlinx.coroutines.launch
 import javax.net.ssl.SSLException
 

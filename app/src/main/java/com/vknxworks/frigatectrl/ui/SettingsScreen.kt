@@ -1,4 +1,4 @@
-package com.vknxworks.frigateremote.ui
+package com.vknxworks.frigatectrl.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -58,8 +58,8 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.vknxworks.frigateremote.App
-import com.vknxworks.frigateremote.data.ThemeMode
+import com.vknxworks.frigatectrl.App
+import com.vknxworks.frigatectrl.data.ThemeMode
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

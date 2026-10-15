@@ -1,4 +1,4 @@
-package com.vknxworks.frigateremote.ui
+package com.vknxworks.frigatectrl.ui
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,8 +16,8 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.vknxworks.frigateremote.App
-import com.vknxworks.frigateremote.data.ThemeMode
+import com.vknxworks.frigatectrl.App
+import com.vknxworks.frigatectrl.data.ThemeMode
 
 /** Fixed meaning colours (timeline, badges). Tuned per light/dark so they stay legible. */
 @Immutable

@@ -1,4 +1,4 @@
-package com.vknxworks.frigateremote.data
+package com.vknxworks.frigatectrl.data
 
 import okhttp3.Request
 import okhttp3.Response
