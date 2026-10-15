@@ -47,8 +47,11 @@ class MseWebSocketDataSource(private val client: OkHttpClient) : BaseDataSource(
         val req = Request.Builder().url(dataSpec.uri.toString()).build()
         ws = client.newWebSocket(req, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
-                // Offer what Android's hardware decoders handle: H.264, H.265 and AAC.
-                val codecs = "avc1.640029,avc1.64002A,avc1.640033,avc1.4D401F,avc1.42E01E,hvc1.1.6.L153.B0,mp4a.40.2,mp4a.40.5"
+                // Offer what Android can decode: H.264/H.265 video; AAC, FLAC and Opus audio.
+                // FLAC matters: go2rtc only forwards G.711 (PCMA/PCMU) camera audio over MSE by
+                // converting it to FLAC, and only when the player lists "flac".
+                val codecs = "avc1.640029,avc1.64002A,avc1.640033,avc1.4D401F,avc1.42E01E,hvc1.1.6.L153.B0," +
+                        "mp4a.40.2,mp4a.40.5,flac,opus"
                 webSocket.send(JSONObject().put("type", "mse").put("value", codecs).toString())
             }
             override fun onMessage(webSocket: WebSocket, text: String) {
