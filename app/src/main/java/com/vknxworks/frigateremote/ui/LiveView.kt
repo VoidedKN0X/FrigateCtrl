@@ -33,11 +33,13 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.HttpDataSource
-import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
+import androidx.media3.extractor.Extractor
+import androidx.media3.extractor.ExtractorsFactory
+import androidx.media3.extractor.mp4.FragmentedMp4Extractor
+import com.vknxworks.frigateremote.data.MseWebSocketDataSource
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.vknxworks.frigateremote.App
@@ -45,10 +47,8 @@ import kotlinx.coroutines.delay
 import java.net.URLEncoder
 
 /**
- * Native live view. Plays the camera's go2rtc stream through Frigate's /live/mse proxy:
- *  1. progressive fMP4 (api/stream.mp4) — ~1 s latency
- *  2. HLS (api/stream.m3u8) — a few seconds latency, very tolerant
- *  3. snapshots refreshed twice a second
+ * Native live view: go2rtc's fMP4 stream read from Frigate's /live/mse websocket and played by
+ * ExoPlayer (hardware H.264/H.265). Falls back to snapshots refreshed twice a second.
  * A snapshot is shown on top until the first real video frame renders, so it's never black.
  */
 @OptIn(UnstableApi::class)
@@ -56,19 +56,19 @@ import java.net.URLEncoder
 fun LiveView(camera: String, streamName: String, muted: Boolean, modifier: Modifier = Modifier) {
     val ctx = LocalContext.current
     var attempt by remember(camera, streamName) { mutableIntStateOf(0) }
-    var mode by remember(camera, streamName, attempt) { mutableIntStateOf(0) } // 0 mp4, 1 hls, 2 snapshots
+    var mode by remember(camera, streamName, attempt) { mutableIntStateOf(0) } // 0 video, 1 snapshots
     var notes by remember(camera, streamName, attempt) { mutableStateOf(listOf<String>()) }
     var rendered by remember(camera, streamName, attempt, mode) { mutableStateOf(false) }
 
-    val player = remember(camera, streamName, attempt, mode) { if (mode < 2) buildLivePlayer(ctx) else null }
+    val player = remember(camera, streamName, attempt, mode) { if (mode < 1) buildLivePlayer(ctx) else null }
 
     DisposableEffect(player) {
         if (player == null) return@DisposableEffect onDispose {}
-        val label = if (mode == 0) "MP4" else "HLS"
+        val label = "Video"
         val listener = object : Player.Listener {
             override fun onRenderedFirstFrame() { rendered = true }
             override fun onPlayerError(error: PlaybackException) {
-                if (rendered && mode < 2) {
+                if (rendered) {
                     // Was working and dropped — just reconnect the same way.
                     attempt++
                 } else {
@@ -79,14 +79,11 @@ fun LiveView(camera: String, streamName: String, muted: Boolean, modifier: Modif
         }
         player.addListener(listener)
         val src = URLEncoder.encode(streamName, "UTF-8")
-        val ds = OkHttpDataSource.Factory(App.api.http)
-        val source = if (mode == 0) {
-            ProgressiveMediaSource.Factory(ds)
-                .createMediaSource(MediaItem.fromUri(App.api.url("/live/mse/api/stream.mp4?src=$src")))
-        } else {
-            HlsMediaSource.Factory(ds)
-                .createMediaSource(MediaItem.fromUri(App.api.url("/live/mse/api/stream.m3u8?src=$src&mp4")))
-        }
+        // Frigate only exposes go2rtc's live video as the MSE websocket, so read fMP4 straight from it.
+        val source = ProgressiveMediaSource.Factory(
+            MseWebSocketDataSource.Factory(App.api.http),
+            ExtractorsFactory { arrayOf<Extractor>(FragmentedMp4Extractor()) },
+        ).createMediaSource(MediaItem.fromUri(App.api.url("/live/mse/api/ws?src=$src")))
         player.setMediaSource(source)
         player.prepare()
         player.playWhenReady = true
@@ -101,9 +98,9 @@ fun LiveView(camera: String, streamName: String, muted: Boolean, modifier: Modif
     // No picture after a while → try the next method.
     LaunchedEffect(player) {
         if (player == null) return@LaunchedEffect
-        delay(if (mode == 0) 10_000 else 15_000)
+        delay(15_000)
         if (!rendered) {
-            notes = notes + "${if (mode == 0) "MP4" else "HLS"}: no video frames received"
+            notes = notes + "Video: no frames received"
             mode++
         }
     }
@@ -114,7 +111,7 @@ fun LiveView(camera: String, streamName: String, muted: Boolean, modifier: Modif
         while (true) {
             delay(1000)
             val behind = player.bufferedPosition - player.currentPosition
-            player.setPlaybackSpeed(if (mode == 0 && behind > 1500) 1.15f else 1f)
+            player.setPlaybackSpeed(if (behind > 1500) 1.15f else 1f)
         }
     }
 
@@ -138,7 +135,7 @@ fun LiveView(camera: String, streamName: String, muted: Boolean, modifier: Modif
                 contentScale = ContentScale.Fit, refreshMs = 500,
             )
         }
-        if (mode >= 2) {
+        if (mode >= 1) {
             Column(
                 Modifier.align(Alignment.BottomStart).padding(8.dp).widthIn(max = 320.dp)
                     .clip(RoundedCornerShape(10.dp)).background(Color(0xCC000000))
