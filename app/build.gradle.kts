@@ -14,7 +14,7 @@ android {
         targetSdk = 35
         // CI passes the run number so every build installs over the previous one.
         versionCode = System.getenv("VERSION_CODE")?.toIntOrNull() ?: 7
-        versionName = "2.4.0"
+        versionName = "2.5.0"
     }
 
     // Release signing from env (GitHub secrets); falls back to the debug key so the APK is always installable.
@@ -61,6 +61,9 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+
+    implementation("androidx.biometric:biometric:1.1.0")
+    implementation("androidx.fragment:fragment-ktx:1.8.6")
 
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 

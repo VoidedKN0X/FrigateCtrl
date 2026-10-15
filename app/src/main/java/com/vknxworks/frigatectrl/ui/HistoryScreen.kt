@@ -84,6 +84,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.vknxworks.frigatectrl.App
@@ -115,6 +117,8 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit) {
     }
     val playback = remember(camera) { Playback(ctx, camera, scope) }
     DisposableEffect(playback) { onDispose { playback.release() } }
+    // Pause recordings when the app goes to the background.
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { playback.pause() }
 
     // Start a minute back from now (recordings are written in short segments, so "now" isn't on disk yet).
     LaunchedEffect(playback) { playback.seek(nowSec() - 60, play = true) }

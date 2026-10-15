@@ -2,7 +2,7 @@ package com.vknxworks.frigatectrl
 
 import android.graphics.Color
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import android.view.WindowManager
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -23,7 +23,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vknxworks.frigatectrl.ui.lock.AppLockViewModel
+import com.vknxworks.frigatectrl.ui.lock.LockScreen
 import com.vknxworks.frigatectrl.ui.CameraScreen
 import com.vknxworks.frigatectrl.ui.CamerasScreen
 import com.vknxworks.frigatectrl.ui.FrigateTheme
@@ -31,7 +39,8 @@ import com.vknxworks.frigatectrl.ui.SettingsScreen
 import com.vknxworks.frigatectrl.ui.SetupScreen
 import com.vknxworks.frigatectrl.ui.isAppInDarkTheme
 
-class MainActivity : ComponentActivity() {
+// FragmentActivity (a ComponentActivity) is required by the fingerprint prompt.
+class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         App.init(this)
@@ -44,7 +53,13 @@ class MainActivity : ComponentActivity() {
                     else SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
                     enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
                 }
-                Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { Root() }
+                // With the lock on, keep cameras out of the recent-apps preview, screenshots and recordings.
+                val secure = App.lock.pinSet && App.lock.hideContent
+                LaunchedEffect(secure) {
+                    if (secure) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                    else window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                }
+                Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { Root(this) }
             }
         }
     }
@@ -52,13 +67,41 @@ class MainActivity : ComponentActivity() {
 
 /** Routes: "setup", "setup-edit", "cameras", "settings", "camera:<name>" */
 @Composable
-private fun Root() {
+private fun Root(activity: FragmentActivity, lockVm: AppLockViewModel = viewModel()) {
     var route by rememberSaveable { mutableStateOf(if (App.prefs.isConfigured) "cameras" else "setup") }
 
     fun logout() {
         App.prefs.clear()
         App.api.reload()
         route = "setup"
+    }
+
+    // Lock when the app goes to the background (immediately, or after the chosen delay).
+    val owner = LocalLifecycleOwner.current
+    DisposableEffect(owner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_STOP -> if (!activity.isChangingConfigurations) lockVm.onBackground()
+                Lifecycle.Event.ON_START -> lockVm.onForeground()
+                else -> Unit
+            }
+        }
+        owner.lifecycle.addObserver(observer)
+        onDispose { owner.lifecycle.removeObserver(observer) }
+    }
+
+    // While locked nothing else is composed, so live streams and audio stop too.
+    if (lockVm.locked && App.prefs.isConfigured) {
+        LockScreen(
+            vm = lockVm,
+            onForgot = {
+                // Forgetting the PIN wipes the lock and the saved login, so the cameras stay protected.
+                App.lock.clearPin()
+                lockVm.unlock()
+                logout()
+            },
+        )
+        return
     }
 
     AnimatedContent(

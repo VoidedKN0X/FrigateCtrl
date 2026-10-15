@@ -2,6 +2,7 @@ package com.vknxworks.frigatectrl
 
 import android.content.Context
 import com.vknxworks.frigatectrl.data.FrigateApi
+import com.vknxworks.frigatectrl.data.LockSettings
 import com.vknxworks.frigatectrl.data.Prefs
 import com.vknxworks.frigatectrl.data.Settings
 
@@ -13,11 +14,14 @@ object App {
         private set
     lateinit var settings: Settings
         private set
+    lateinit var lock: LockSettings
+        private set
 
     fun init(ctx: Context) {
         if (::prefs.isInitialized) return
         prefs = Prefs(ctx.applicationContext)
         api = FrigateApi(prefs)
         settings = Settings(ctx.applicationContext)
+        lock = LockSettings(ctx.applicationContext)
     }
 }
