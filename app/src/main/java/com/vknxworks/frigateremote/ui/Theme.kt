@@ -1,6 +1,5 @@
 package com.vknxworks.frigateremote.ui
 
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
@@ -140,7 +139,7 @@ fun FrigateTheme(content: @Composable () -> Unit) {
     val dark = isAppInDarkTheme()
     val ctx = LocalContext.current
     var scheme = when {
-        s.dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
+        s.dynamicColor ->
             if (dark) dynamicDarkColorScheme(ctx) else dynamicLightColorScheme(ctx)
         dark -> BrandDark
         else -> BrandLight

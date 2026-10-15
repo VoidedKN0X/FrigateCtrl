@@ -30,14 +30,14 @@ An unofficial Android app for watching and reviewing your [Frigate NVR](https://
 - Previous/next event, 0.5× to 16× speed, a date picker, and an events list with thumbnails
 
 **App**
-- Material 3 design with Material You colours on Android 12+, light/dark/system theme and an optional pure-black mode
+- Material 3 design with Material You colours, light/dark/system theme and an optional pure-black mode
 - Settings for grid columns, thumbnail refresh, preferring the sub stream, starting muted, keeping the screen on, the timeline's starting zoom, how early events start, and timeline vibration
 
 ## Requirements
 
 - Frigate **0.14 or newer**. Tested against the 0.16–0.18 API.
 - **go2rtc** set up in Frigate for live video and audio (it is by default with restreaming). Without it the app shows refreshing snapshots instead.
-- Android **8.0** or newer.
+- Android **13** or newer.
 - Your Frigate address can be:
   - `https://…:8971`, the authenticated port (recommended)
   - `http://…:5000`, the port without authentication

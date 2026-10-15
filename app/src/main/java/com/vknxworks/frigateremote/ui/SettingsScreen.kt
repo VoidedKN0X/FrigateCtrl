@@ -1,6 +1,5 @@
 package com.vknxworks.frigateremote.ui
 
-import android.os.Build
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -103,11 +102,8 @@ fun SettingsScreen(onBack: () -> Unit, onServer: () -> Unit, onLogout: () -> Uni
                     onSelect = { s.theme = ThemeMode.entries[it] },
                 )
                 Divider()
-                val dynAvailable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
                 Toggle(
-                    Icons.Outlined.Palette, "Material You colours",
-                    if (dynAvailable) "Match the app to your wallpaper" else "Needs Android 12 or newer",
-                    s.dynamicColor && dynAvailable, enabled = dynAvailable,
+                    Icons.Outlined.Palette, "Material You colours", "Match the app to your wallpaper", s.dynamicColor,
                 ) { s.dynamicColor = it }
                 Divider()
                 Toggle(Icons.Outlined.DarkMode, "Pure black", "True black backgrounds in dark mode (saves power on OLED)", s.pureBlack) {
