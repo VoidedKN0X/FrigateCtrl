@@ -103,24 +103,31 @@ fun CamerasScreen(onOpen: (String) -> Unit, onSettings: () -> Unit, onLogout: ()
 
 @Composable
 private fun CameraCard(cam: CameraInfo, onClick: () -> Unit) {
+    // Label colour follows the picture: dark text on bright scenes, white text on dark ones.
+    var bright by remember { mutableStateOf(false) }
+    val textColor = if (bright) Color(0xFF0E1116) else Color.White
+    val scrim = if (bright) Color(0x99FFFFFF) else Color(0xB3000000)
     Box(
         Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(14.dp))
             .background(Palette.Surface).clickable(onClick = onClick)
     ) {
         if (cam.enabled) {
-            RemoteImage(App.api.latestJpg(cam.name, 360), Modifier.fillMaxSize(), refreshMs = 4000)
+            RemoteImage(
+                App.api.latestJpg(cam.name, 360), Modifier.fillMaxSize(), refreshMs = 4000,
+                onBitmap = { bright = bottomBrightness(it) > 0.62f },
+            )
         } else {
             Icon(Icons.Default.VideocamOff, null, tint = Palette.Muted, modifier = Modifier.align(Alignment.Center))
         }
         Row(
             Modifier.align(Alignment.BottomStart).fillMaxWidth()
-                .background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xCC000000))))
+                .background(Brush.verticalGradient(listOf(Color.Transparent, scrim)))
                 .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(Modifier.size(8.dp).clip(CircleShape).background(if (cam.enabled) Palette.Accent else Palette.Muted))
-            Text(cam.displayName, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 8.dp).weight(1f))
-            if (cam.hasOnvif) Icon(Icons.Default.ControlCamera, "PTZ", tint = Palette.Muted, modifier = Modifier.size(18.dp))
+            Text(cam.displayName, color = textColor, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 8.dp).weight(1f))
+            if (cam.hasOnvif) Icon(Icons.Default.ControlCamera, "PTZ", tint = textColor.copy(alpha = 0.8f), modifier = Modifier.size(18.dp))
         }
     }
 }

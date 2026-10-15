@@ -1,6 +1,7 @@
 package com.vknxworks.frigateremote.ui
 
 import android.content.res.Configuration
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -29,6 +30,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -38,6 +40,7 @@ import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material.icons.filled.ZoomOut
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -99,31 +102,113 @@ import androidx.compose.foundation.Image
 
 private fun nowSec() = System.currentTimeMillis() / 1000.0
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CameraScreen(camera: String, onBack: () -> Unit) {
-    val ctx = LocalContext.current
-    val scope = rememberCoroutineScope()
     val api = App.api
-    val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
-
     var info by remember { mutableStateOf<CameraInfo?>(null) }
     var ptz by remember { mutableStateOf<PtzInfo?>(null) }
     LaunchedEffect(camera) {
         info = try { api.cameras().firstOrNull { it.name == camera } } catch (_: Exception) { null }
         if (info?.hasOnvif == true) ptz = api.ptzInfo(camera)
     }
+    var showHistory by rememberSaveable { mutableStateOf(false) }
 
+    if (showHistory) {
+        BackHandler { showHistory = false }
+        HistoryScreen(camera, info, onBack = { showHistory = false })
+    } else {
+        LiveScreen(camera, info, ptz, onBack = onBack, onHistory = { showHistory = true })
+    }
+}
+
+// ============================ LIVE ============================
+
+@Composable
+private fun LiveScreen(
+    camera: String,
+    info: CameraInfo?,
+    ptz: PtzInfo?,
+    onBack: () -> Unit,
+    onHistory: () -> Unit,
+) {
+    val api = App.api
+    val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     var streamIdx by rememberSaveable { mutableIntStateOf(0) }
-    var live by rememberSaveable { mutableStateOf(true) }
     var muted by rememberSaveable { mutableStateOf(true) }
+    var streamMenu by remember { mutableStateOf(false) }
 
-    val tl = remember { TimelineState(nowSec(), initialSpp = 1.0) }
-    val playback = remember(camera) { Playback(ctx, camera, scope) }
-    DisposableEffect(playback) { onDispose { playback.release() } }
     val ptzSocket = remember { PtzSocket(api) }
     DisposableEffect(ptzSocket) { onDispose { ptzSocket.close() } }
     LaunchedEffect(ptz) { if (ptz != null) ptzSocket.connect() }
+
+    Column(Modifier.fillMaxSize().background(Palette.Bg).statusBarsPadding().navigationBarsPadding()) {
+        if (!landscape) {
+            Row(Modifier.fillMaxWidth().padding(end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
+                Text(info?.displayName ?: camera, style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                val streams = info?.streams.orEmpty()
+                if (streams.size > 1) Box {
+                    TextButton({ streamMenu = true }) { Text(streams.getOrNull(streamIdx)?.label ?: "Stream") }
+                    DropdownMenu(streamMenu, { streamMenu = false }) {
+                        streams.forEachIndexed { i, s ->
+                            DropdownMenuItem(text = { Text(s.label) }, onClick = { streamIdx = i; streamMenu = false })
+                        }
+                    }
+                }
+                IconButton({ muted = !muted }) {
+                    Icon(if (muted) Icons.Default.VolumeOff else Icons.Default.VolumeUp, "Audio")
+                }
+            }
+        }
+
+        val videoMod = if (landscape) Modifier.fillMaxWidth().weight(1f) else Modifier.fillMaxWidth().aspectRatio(16f / 9f)
+        Box(videoMod.background(Color.Black)) {
+            val stream = info?.streams?.getOrNull(streamIdx)?.streamName ?: camera
+            if (info != null) LiveView(camera, stream, muted, Modifier.fillMaxSize())
+            OverlayChip("LIVE", Palette.Alert, Modifier.align(Alignment.TopStart).padding(8.dp))
+            if (landscape) Row(Modifier.align(Alignment.TopEnd)) {
+                IconButton(onHistory) { Icon(Icons.Default.History, "History", tint = Color.White) }
+                IconButton(onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White) }
+            }
+        }
+
+        if (!landscape) {
+            Column(
+                Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()).padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Button(onHistory, Modifier.fillMaxWidth().height(52.dp)) {
+                    Icon(Icons.Default.History, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("View history")
+                }
+                val p = ptz
+                if (p != null && (p.panTilt || p.zoom || p.presets.isNotEmpty())) {
+                    Spacer(Modifier.height(20.dp))
+                    PtzPanel(p, send = { ptzSocket.send(camera, it) })
+                }
+            }
+        }
+    }
+}
+
+// ============================ HISTORY ============================
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit) {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val api = App.api
+    val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+    val tl = remember { TimelineState(nowSec() - 60, initialSpp = 1.0) }
+    val playback = remember(camera) { Playback(ctx, camera, scope) }
+    DisposableEffect(playback) { onDispose { playback.release() } }
+
+    // Start a minute back from now (recordings are written in short segments, so "now" isn't on disk yet).
+    LaunchedEffect(playback) { playback.seek(nowSec() - 60, play = true) }
 
     // ---- timeline data, loaded in 24 h chunks around the playhead ----
     var segments by remember { mutableStateOf(emptyList<RecordingSegment>()) }
@@ -143,42 +228,30 @@ fun CameraScreen(camera: String, onBack: () -> Unit) {
         }
     }
 
-    // ---- keep the playhead in sync ----
-    LaunchedEffect(live) {
-        if (live) {
-            playback.pause()
-            while (true) {
-                if (!tl.interacting) tl.center = nowSec()
-                delay(250)
-            }
-        } else {
-            while (true) {
-                if (!tl.interacting && !playback.loading && !playback.noRecording)
-                    playback.currentTime()?.let { tl.center = it }
-                delay(80)
-            }
+    // ---- keep the playhead on the player's position ----
+    LaunchedEffect(playback) {
+        while (true) {
+            if (!tl.interacting && !playback.loading && !playback.noRecording)
+                playback.currentTime()?.let { tl.center = it }
+            delay(80)
         }
     }
     playback.onWindowEnded = { end ->
-        if (end < nowSec() - 15) playback.seek(end + 0.05, play = true) else live = true
+        if (end < nowSec() - 30) playback.seek(end + 0.05, play = true) else playback.pause()
     }
 
-    // ---- scrubbing ----
     var wasPlaying by remember { mutableStateOf(false) }
     var previewTime by remember { mutableStateOf<Double?>(null) }
     var lastFastSeek by remember { mutableLongStateOf(0L) }
 
     fun seekTo(t: Double, play: Boolean) {
-        val target = t.coerceAtMost(nowSec())
-        if (target >= nowSec() - 3) { live = true; return }
-        live = false
+        val target = t.coerceAtMost(nowSec() - 15)
         tl.center = target
         playback.seek(target, play)
     }
 
     val onScrubStart: () -> Unit = {
-        wasPlaying = live || playback.player.playWhenReady
-        live = false
+        wasPlaying = playback.player.playWhenReady
         playback.pause()
     }
     val onScrub: (Double) -> Unit = { t ->
@@ -199,8 +272,8 @@ fun CameraScreen(camera: String, onBack: () -> Unit) {
     }
 
     fun step(delta: Double) {
-        val base = if (live) nowSec() else (playback.currentTime() ?: tl.center)
-        seekTo(base + delta, play = if (live) true else playback.isPlaying)
+        val base = playback.currentTime() ?: tl.center
+        seekTo(base + delta, play = playback.isPlaying)
     }
 
     fun jumpEvent(next: Boolean) {
@@ -211,116 +284,76 @@ fun CameraScreen(camera: String, onBack: () -> Unit) {
 
     var showEvents by remember { mutableStateOf(false) }
     var showDate by remember { mutableStateOf(false) }
-    var streamMenu by remember { mutableStateOf(false) }
 
-    // ================= layout =================
-    Column(
-        Modifier.fillMaxSize().background(Palette.Bg).statusBarsPadding().navigationBarsPadding()
-    ) {
+    Column(Modifier.fillMaxSize().background(Palette.Bg).statusBarsPadding().navigationBarsPadding()) {
         if (!landscape) {
             Row(Modifier.fillMaxWidth().padding(end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
-                Text(info?.displayName ?: camera, style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                val streams = info?.streams.orEmpty()
-                if (streams.size > 1) Box {
-                    TextButton({ streamMenu = true }) { Text(streams.getOrNull(streamIdx)?.label ?: "Stream") }
-                    DropdownMenu(streamMenu, { streamMenu = false }) {
-                        streams.forEachIndexed { i, s ->
-                            DropdownMenuItem(text = { Text(s.label) }, onClick = { streamIdx = i; streamMenu = false })
-                        }
-                    }
-                }
-                if (live) IconButton({ muted = !muted }) {
-                    Icon(if (muted) Icons.Default.VolumeOff else Icons.Default.VolumeUp, "Audio")
+                IconButton(onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back to live") }
+                Column(Modifier.weight(1f)) {
+                    Text(info?.displayName ?: camera, style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold)
+                    Text("History", color = Palette.Muted, fontSize = 12.sp)
                 }
                 IconButton({ showDate = true }) { Icon(Icons.Default.CalendarMonth, "Pick date") }
                 IconButton({ showEvents = true }) { Icon(Icons.Default.List, "Events") }
             }
         }
 
-        // ---- video ----
         val videoMod = if (landscape) Modifier.fillMaxWidth().weight(1f) else Modifier.fillMaxWidth().aspectRatio(16f / 9f)
         Box(videoMod.background(Color.Black)) {
-            if (live) {
-                val stream = info?.streams?.getOrNull(streamIdx)?.streamName ?: camera
-                LiveView(camera, stream, muted, Modifier.fillMaxSize())
-            } else {
-                AndroidView(
-                    factory = { c ->
-                        PlayerView(c).apply {
-                            useController = false
-                            resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                            setShutterBackgroundColor(android.graphics.Color.BLACK)
-                            player = playback.player
-                        }
-                    },
-                    modifier = Modifier.fillMaxSize(),
-                )
-                previewTime?.let { ScrubPreview(api.snapshotAt(camera, it, 480), Modifier.fillMaxSize()) }
-                if (playback.loading && previewTime == null)
-                    CircularProgressIndicator(Modifier.align(Alignment.Center).size(36.dp), strokeWidth = 3.dp)
-                if (playback.noRecording && previewTime == null)
-                    Text("No recording at this time", color = Palette.Muted, modifier = Modifier.align(Alignment.Center))
-                playback.error?.let {
-                    Text(it, color = Palette.Alert, style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.align(Alignment.BottomStart).padding(8.dp))
-                }
+            AndroidView(
+                factory = { c ->
+                    PlayerView(c).apply {
+                        useController = false
+                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                        setShutterBackgroundColor(android.graphics.Color.BLACK)
+                        player = playback.player
+                    }
+                },
+                modifier = Modifier.fillMaxSize(),
+            )
+            previewTime?.let { ScrubPreview(api.snapshotAt(camera, it, 480), Modifier.fillMaxSize()) }
+            if (playback.loading && previewTime == null)
+                CircularProgressIndicator(Modifier.align(Alignment.Center).size(36.dp), strokeWidth = 3.dp, color = Color.White)
+            if (playback.noRecording && previewTime == null)
+                OverlayChip("No recording at this time", null, Modifier.align(Alignment.Center))
+            playback.error?.let {
+                Text(it, color = Palette.Alert, style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.align(Alignment.BottomStart).padding(8.dp))
             }
-            // mode chip
-            Row(
-                Modifier.align(Alignment.TopStart).padding(8.dp).clip(RoundedCornerShape(50))
-                    .background(Color(0xAA000000))
-                    .clickable(enabled = !live) { live = true }
-                    .padding(horizontal = 10.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(Modifier.size(8.dp).clip(CircleShape).background(if (live) Palette.Alert else Palette.Muted))
-                Text(if (live) "LIVE" else "Go live", fontSize = 12.sp, fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(start = 6.dp))
-            }
-            if (landscape) IconButton(onBack, Modifier.align(Alignment.TopEnd)) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
-            }
+            OverlayChip(
+                "Live", Palette.Muted,
+                Modifier.align(Alignment.TopStart).padding(8.dp),
+                onClick = onBack,
+            )
         }
 
-        // ---- time readout ----
         TimeReadout(
-            t = tl.center, live = live && !tl.interacting, spp = tl.spp,
+            t = tl.center, live = false, spp = tl.spp,
             onZoomIn = { tl.spp = (tl.spp / 2).coerceIn(MIN_SPP, MAX_SPP) },
             onZoomOut = { tl.spp = (tl.spp * 2).coerceIn(MIN_SPP, MAX_SPP) },
         )
 
-        // ---- timeline ----
         Timeline(
             state = tl, segments = segments, reviews = reviews, nowProvider = ::nowSec,
             onScrubStart = onScrubStart, onScrub = onScrub, onScrubEnd = onScrubEnd,
             modifier = Modifier.fillMaxWidth().height(88.dp),
         )
 
-        // ---- transport ----
         Transport(
-            playing = !live && playback.isPlaying,
+            playing = playback.isPlaying,
             speed = playback.speed,
-            onPlay = { if (live) step(-10.0) else playback.togglePlay() },
+            onPlay = { playback.togglePlay() },
             onStep = ::step,
             onEvent = ::jumpEvent,
             onSpeed = { playback.cycleSpeed() },
         )
 
         if (!landscape) {
-            Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState())) {
-                val p = ptz
-                if (live && p != null && (p.panTilt || p.zoom || p.presets.isNotEmpty())) {
-                    PtzPanel(p, send = { ptzSocket.send(camera, it) }, modifier = Modifier.padding(vertical = 12.dp))
-                } else {
-                    Legend()
-                }
-            }
+            Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState())) { Legend() }
         }
     }
 
-    // ---- sheets & dialogs ----
     if (showEvents) {
         ModalBottomSheet(onDismissRequest = { showEvents = false }, containerColor = Palette.Surface) {
             EventsList(reviews.asReversed()) { r ->
@@ -356,6 +389,23 @@ fun CameraScreen(camera: String, onBack: () -> Unit) {
             },
             dismissButton = { TextButton({ showDate = false }) { Text("Cancel") } },
         ) { DatePicker(dp) }
+    }
+}
+
+/** Small pill drawn over video; always white text on a dark scrim so it reads on any image. */
+@Composable
+private fun OverlayChip(text: String, dot: Color?, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
+    Row(
+        modifier.clip(RoundedCornerShape(50)).background(Color(0xB3000000))
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(horizontal = 10.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (dot != null) {
+            Box(Modifier.size(8.dp).clip(CircleShape).background(dot))
+            Spacer(Modifier.width(6.dp))
+        }
+        Text(text, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
     }
 }
 
