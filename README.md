@@ -76,20 +76,7 @@ Open the project in Android Studio (Ladybug or newer) and run it, or build from 
 ./gradlew assembleDebug
 ```
 
-### Release builds (GitHub Actions)
-
-Every push to `main` builds a signed APK and publishes it as a new release tagged `v<versionName>-build.<run>`. The run number is used as the `versionCode`, so each build updates the previous one. Changes that only touch Markdown files don't trigger a build.
-
-Signing uses these repository secrets (*Settings → Secrets and variables → Actions*):
-
-| Secret | Value |
-| --- | --- |
-| `KEYSTORE_BASE64` | Your `.jks` keystore, base64-encoded |
-| `KEYSTORE_PASSWORD` | Keystore password |
-| `KEY_ALIAS` | Key alias |
-| `KEY_PASSWORD` | Key password |
-
-Without the secrets the APK is signed with the debug key. If the secrets are set but signing fails, the build stops instead of publishing a debug-signed release.
+Signed releases are built automatically by GitHub Actions; see `.github/workflows/build.yml` for the signing secrets it expects.
 
 ## Frigate API endpoints used
 
