@@ -165,7 +165,7 @@ private fun LiveScreen(
         val videoMod = if (landscape) Modifier.fillMaxWidth().weight(1f) else Modifier.fillMaxWidth().aspectRatio(16f / 9f)
         Box(videoMod.background(Color.Black)) {
             val stream = info?.streams?.getOrNull(streamIdx)?.streamName ?: camera
-            if (info != null) LiveView(camera, stream, muted, Modifier.fillMaxSize())
+            LiveView(camera, stream, muted, Modifier.fillMaxSize())
             OverlayChip("LIVE", Palette.Alert, Modifier.align(Alignment.TopStart).padding(8.dp))
             if (landscape) Row(Modifier.align(Alignment.TopEnd)) {
                 IconButton(onHistory) { Icon(Icons.Default.History, "History", tint = Color.White) }
