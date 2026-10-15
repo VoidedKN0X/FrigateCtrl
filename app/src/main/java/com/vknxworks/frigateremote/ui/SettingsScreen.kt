@@ -187,7 +187,7 @@ fun SettingsScreen(onBack: () -> Unit, onServer: () -> Unit, onLogout: () -> Uni
             Section("About") {
                 ListItem(
                     leadingContent = { Icon(Icons.Outlined.Info, null) },
-                    headlineContent = { Text("Frigate Remote $appVersion") },
+                    headlineContent = { Text("FrigateCtrl $appVersion") },
                     supportingContent = { Text("VKNXWorks") },
                     colors = itemColors(),
                 )

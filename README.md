@@ -1,6 +1,6 @@
-# Frigate Remote
+# FrigateCtrl
 
-An Android app for watching and reviewing your [Frigate NVR](https://frigate.video) cameras from your phone, built with Kotlin and Jetpack Compose on Frigate's HTTP API and go2rtc.
+An unofficial Android app for watching and reviewing your [Frigate NVR](https://frigate.video) cameras from your phone, built with Kotlin and Jetpack Compose on Frigate's HTTP API and go2rtc.
 
 ## Features
 
@@ -45,7 +45,7 @@ An Android app for watching and reviewing your [Frigate NVR](https://frigate.vid
 
 ## Install
 
-Download the latest `FrigateRemote-vX.Y.Z-build.N.apk` from the [Releases](../../releases) page and open it on your phone. Android may ask you to allow installing apps from your browser or file manager.
+Download the latest `FrigateCtrl-vX.Y.Z-build.N.apk` from the [Releases](../../releases) page and open it on your phone. Android may ask you to allow installing apps from your browser or file manager.
 
 Updates install over the existing app. Every build is signed with the same release key, so you never need to uninstall or log in again.
 
