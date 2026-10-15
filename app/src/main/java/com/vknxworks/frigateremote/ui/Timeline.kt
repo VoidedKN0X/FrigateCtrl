@@ -28,6 +28,8 @@ import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
@@ -85,8 +87,17 @@ fun Timeline(
     onScrub: (Double) -> Unit,
     onScrubEnd: (Double) -> Unit,
     modifier: Modifier = Modifier,
+    hapticTicks: Boolean = true,
 ) {
     val measurer = rememberTextMeasurer()
+    val cs = MaterialTheme.colorScheme
+    val st = Status
+    val cBg = cs.surfaceContainer
+    val cFuture = cs.surfaceContainerLowest.copy(alpha = 0.85f)
+    val cMuted = cs.onSurfaceVariant
+    val cLine = cs.outlineVariant
+    val cHead = cs.onSurface
+    val hapticsOn by rememberUpdatedState(hapticTicks)
     val haptics = LocalHapticFeedback.current
     val start by rememberUpdatedState(onScrubStart)
     val scrub by rememberUpdatedState(onScrub)
@@ -96,8 +107,8 @@ fun Timeline(
     val fmtSec = remember { SimpleDateFormat("HH:mm:ss", Locale.getDefault()) }
     val fmtMin = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
     val fmtDay = remember { SimpleDateFormat("EEE d", Locale.getDefault()) }
-    val labelStyle = remember { TextStyle(color = Palette.Muted, fontSize = 10.sp) }
-    val dayStyle = remember { TextStyle(color = Palette.Text, fontSize = 10.sp) }
+    val labelStyle = remember(cMuted) { TextStyle(color = cMuted, fontSize = 10.sp) }
+    val dayStyle = remember(cHead) { TextStyle(color = cHead, fontSize = 10.sp, fontWeight = FontWeight.SemiBold) }
 
     val gestures = Modifier.pointerInput(Unit) {
         val decay = splineBasedDecay<Float>(this)
@@ -112,7 +123,7 @@ fun Timeline(
             val step = pickStep(state.spp).major
             val idx = floor(state.center / step).toLong()
             val nowMs = System.currentTimeMillis()
-            if (lastHapticIdx != Long.MIN_VALUE && idx != lastHapticIdx && nowMs - lastHapticAt > 45) {
+            if (hapticsOn && lastHapticIdx != Long.MIN_VALUE && idx != lastHapticIdx && nowMs - lastHapticAt > 45) {
                 haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                 lastHapticAt = nowMs
             }
@@ -190,11 +201,11 @@ fun Timeline(
         val reviewTop = 22.dp.toPx(); val reviewH = 10.dp.toPx()
         val recTop = 36.dp.toPx(); val recH = h - recTop - 8.dp.toPx()
 
-        drawRect(Palette.Surface)
+        drawRect(cBg)
 
         // Future (after now) shaded.
         val nowT = now()
-        if (nowT < t1) drawRect(Color(0xFF0A0D11), topLeft = Offset(x(nowT), 0f), size = Size(w - x(nowT), h))
+        if (nowT < t1) drawRect(cFuture, topLeft = Offset(x(nowT), 0f), size = Size(w - x(nowT), h))
 
         // --- ticks + labels ---
         val step = pickStep(spp)
@@ -206,7 +217,7 @@ fun Timeline(
             if (t > t1 + step.major) break
             val px = x(t)
             if (Math.floorMod(k, majorEvery) == 0L) {
-                drawLine(Palette.Muted.copy(alpha = 0.6f), Offset(px, labelBand), Offset(px, h), 1f)
+                drawLine(cMuted.copy(alpha = 0.5f), Offset(px, labelBand), Offset(px, h), 1f)
                 val localSec = Math.floorMod(Math.round(k * step.minor), 86400L)
                 val midnight = localSec == 0L
                 val d = Date(Math.round(t * 1000))
@@ -218,7 +229,7 @@ fun Timeline(
                 val layout = measurer.measure(text, if (midnight) dayStyle else labelStyle)
                 drawText(layout, topLeft = Offset(px - layout.size.width / 2f, 1f))
             } else {
-                drawLine(Palette.Line, Offset(px, labelBand + 2f), Offset(px, labelBand + 7.dp.toPx()), 1f)
+                drawLine(cLine, Offset(px, labelBand + 2f), Offset(px, labelBand + 7.dp.toPx()), 1f)
             }
             k++
         }
@@ -230,7 +241,7 @@ fun Timeline(
         fun flushCov() {
             if (!covStart.isNaN()) {
                 val a = max(0f, x(covStart)); val b = min(w, x(covEnd))
-                if (b > a) drawRoundRect(Palette.Accent.copy(alpha = 0.28f), Offset(a, recTop), Size(max(1f, b - a), recH), CornerRadius(3f))
+                if (b > a) drawRoundRect(st.recording.copy(alpha = 0.30f), Offset(a, recTop), Size(max(1f, b - a), recH), CornerRadius(3f))
             }
         }
         for (i in firstIdx until segments.size) {
@@ -246,7 +257,7 @@ fun Timeline(
             if (s.motion <= 0) continue
             val a = x(s.start); val b = x(s.end)
             val bh = recH * (0.25f + 0.75f * (s.motion.toFloat() / maxMotion))
-            drawRect(Palette.Motion.copy(alpha = 0.75f), Offset(a, recTop + recH - bh), Size(max(1f, b - a - 0.5f), bh))
+            drawRect(st.motion.copy(alpha = 0.75f), Offset(a, recTop + recH - bh), Size(max(1f, b - a - 0.5f), bh))
         }
 
         // --- review items ---
@@ -255,21 +266,21 @@ fun Timeline(
             if (re < t0 || rs > t1) continue
             val a = x(rs); val b = max(a + 3.dp.toPx(), x(re))
             drawRoundRect(
-                if (r.isAlert) Palette.Alert else Palette.Detection,
+                if (r.isAlert) st.alert else st.detection,
                 Offset(a, reviewTop), Size(b - a, reviewH), CornerRadius(reviewH / 2),
             )
         }
 
         // --- playhead ---
         val cx = w / 2f
-        drawLine(Color.White, Offset(cx, labelBand - 2f), Offset(cx, h), 2.dp.toPx())
+        drawLine(cHead, Offset(cx, labelBand - 2f), Offset(cx, h), 2.dp.toPx())
         val tri = Path().apply {
             moveTo(cx - 6.dp.toPx(), labelBand - 4.dp.toPx())
             lineTo(cx + 6.dp.toPx(), labelBand - 4.dp.toPx())
             lineTo(cx, labelBand + 4.dp.toPx())
             close()
         }
-        drawPath(tri, Color.White)
+        drawPath(tri, cHead)
     }
 }
 

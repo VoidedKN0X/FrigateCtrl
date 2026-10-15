@@ -3,104 +3,65 @@ package com.vknxworks.frigateremote.ui
 import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.FastForward
-import androidx.compose.material.icons.filled.FastRewind
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material.icons.filled.SkipPrevious
-import androidx.compose.material.icons.filled.VolumeOff
-import androidx.compose.material.icons.filled.VolumeUp
-import androidx.compose.material.icons.filled.ZoomIn
-import androidx.compose.material.icons.filled.ZoomOut
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.outlined.VolumeOff
+import androidx.compose.material.icons.automirrored.outlined.VolumeUp
+import androidx.compose.material.icons.outlined.Fullscreen
+import androidx.compose.material.icons.outlined.FullscreenExit
+import androidx.compose.material.icons.outlined.HighQuality
+import androidx.compose.material.icons.outlined.History
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.SelectableDates
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.media3.ui.AspectRatioFrameLayout
-import androidx.media3.ui.PlayerView
 import com.vknxworks.frigateremote.App
 import com.vknxworks.frigateremote.data.CameraInfo
 import com.vknxworks.frigateremote.data.PtzInfo
 import com.vknxworks.frigateremote.data.PtzSocket
-import com.vknxworks.frigateremote.data.RecordingSegment
-import com.vknxworks.frigateremote.data.ReviewItem
-import kotlinx.coroutines.delay
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Date
-import java.util.Locale
-import java.util.TimeZone
-import kotlin.math.floor
-import kotlin.math.min
-import androidx.compose.foundation.Image
-
-private fun nowSec() = System.currentTimeMillis() / 1000.0
 
 @Composable
 fun CameraScreen(camera: String, onBack: () -> Unit) {
@@ -112,6 +73,7 @@ fun CameraScreen(camera: String, onBack: () -> Unit) {
         if (info?.hasOnvif == true) ptz = api.ptzInfo(camera)
     }
     var showHistory by rememberSaveable { mutableStateOf(false) }
+    KeepScreenOn(App.settings.keepScreenOn)
 
     if (showHistory) {
         BackHandler { showHistory = false }
@@ -121,8 +83,7 @@ fun CameraScreen(camera: String, onBack: () -> Unit) {
     }
 }
 
-// ============================ LIVE ============================
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun LiveScreen(
     camera: String,
@@ -132,420 +93,149 @@ private fun LiveScreen(
     onHistory: () -> Unit,
 ) {
     val api = App.api
+    val settings = App.settings
+    val cs = MaterialTheme.colorScheme
     val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
-    var streamIdx by rememberSaveable { mutableIntStateOf(0) }
-    var muted by rememberSaveable { mutableStateOf(true) }
+
+    val streams = info?.streams.orEmpty()
+    var streamIdx by rememberSaveable(camera) { mutableIntStateOf(-1) }
+    LaunchedEffect(streams.size) {
+        if (streamIdx < 0 && streams.isNotEmpty())
+            streamIdx = if (settings.preferSubStream && streams.size > 1) streams.lastIndex else 0
+    }
+    var muted by rememberSaveable { mutableStateOf(settings.startMuted) }
     var streamMenu by remember { mutableStateOf(false) }
+    var fullscreen by rememberSaveable { mutableStateOf(false) }
 
     val ptzSocket = remember { PtzSocket(api) }
     DisposableEffect(ptzSocket) { onDispose { ptzSocket.close() } }
     LaunchedEffect(ptz) { if (ptz != null) ptzSocket.connect() }
 
-    Column(Modifier.fillMaxSize().background(Palette.Bg).statusBarsPadding().navigationBarsPadding()) {
-        if (!landscape) {
-            Row(Modifier.fillMaxWidth().padding(end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
-                Text(info?.displayName ?: camera, style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                val streams = info?.streams.orEmpty()
-                if (streams.size > 1) Box {
-                    TextButton({ streamMenu = true }) { Text(streams.getOrNull(streamIdx)?.label ?: "Stream") }
-                    DropdownMenu(streamMenu, { streamMenu = false }) {
-                        streams.forEachIndexed { i, s ->
-                            DropdownMenuItem(text = { Text(s.label) }, onClick = { streamIdx = i; streamMenu = false })
+    // Last 24 h activity for the history card.
+    var counts by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    LaunchedEffect(camera) {
+        counts = try {
+            val r = api.reviews(camera, nowSec() - 86400, nowSec())
+            r.count { it.isAlert } to r.count { !it.isAlert }
+        } catch (_: Exception) { null }
+    }
+
+    val stream = streams.getOrNull(streamIdx)?.streamName ?: camera
+    val immersive = fullscreen || landscape
+    ImmersiveMode(immersive)
+    if (fullscreen) BackHandler { fullscreen = false }
+
+    if (immersive) {
+        Box(Modifier.fillMaxSize().background(Color.Black)) {
+            LiveView(camera, stream, muted, Modifier.fillMaxSize())
+            OverlayChip("LIVE", Status.live, Modifier.align(Alignment.TopStart).padding(16.dp), pulse = true)
+            Row(Modifier.align(Alignment.TopEnd).padding(8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                VideoIconButton(
+                    if (muted) Icons.AutoMirrored.Outlined.VolumeOff else Icons.AutoMirrored.Outlined.VolumeUp, "Audio",
+                ) { muted = !muted }
+                VideoIconButton(Icons.Outlined.History, "History", onClick = onHistory)
+                VideoIconButton(Icons.Outlined.FullscreenExit, "Exit fullscreen") {
+                    if (fullscreen) fullscreen = false else onBack()
+                }
+            }
+        }
+        return
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Column {
+                        Text(info?.displayName ?: camera, fontWeight = FontWeight.SemiBold)
+                        Text("Live", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                    }
+                },
+                navigationIcon = { IconButton(onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
+                actions = {
+                    if (streams.size > 1) Box {
+                        IconButton({ streamMenu = true }) { Icon(Icons.Outlined.HighQuality, "Stream") }
+                        DropdownMenu(streamMenu, { streamMenu = false }) {
+                            streams.forEachIndexed { i, s ->
+                                DropdownMenuItem(
+                                    text = { Text(s.label, fontWeight = if (i == streamIdx) FontWeight.Bold else null) },
+                                    onClick = { streamIdx = i; streamMenu = false },
+                                )
+                            }
                         }
                     }
-                }
-                IconButton({ muted = !muted }) {
-                    Icon(if (muted) Icons.Default.VolumeOff else Icons.Default.VolumeUp, "Audio")
-                }
-            }
-        }
-
-        val videoMod = if (landscape) Modifier.fillMaxWidth().weight(1f) else Modifier.fillMaxWidth().aspectRatio(16f / 9f)
-        Box(videoMod.background(Color.Black)) {
-            val stream = info?.streams?.getOrNull(streamIdx)?.streamName ?: camera
-            LiveView(camera, stream, muted, Modifier.fillMaxSize())
-            OverlayChip("LIVE", Palette.Alert, Modifier.align(Alignment.TopStart).padding(8.dp))
-            if (landscape) Row(Modifier.align(Alignment.TopEnd)) {
-                IconButton(onHistory) { Icon(Icons.Default.History, "History", tint = Color.White) }
-                IconButton(onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White) }
-            }
-        }
-
-        if (!landscape) {
-            Column(
-                Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()).padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
+                    IconButton({ muted = !muted }) {
+                        Icon(
+                            if (muted) Icons.AutoMirrored.Outlined.VolumeOff else Icons.AutoMirrored.Outlined.VolumeUp,
+                            if (muted) "Unmute" else "Mute",
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = cs.background),
+            )
+        },
+    ) { pad ->
+        Column(
+            Modifier.fillMaxSize().padding(pad).verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Box(
+                Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(MaterialTheme.shapes.large).background(Color.Black)
             ) {
-                Button(onHistory, Modifier.fillMaxWidth().height(52.dp)) {
-                    Icon(Icons.Default.History, null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("View history")
-                }
-                val p = ptz
-                if (p != null && (p.panTilt || p.zoom || p.presets.isNotEmpty())) {
-                    Spacer(Modifier.height(20.dp))
-                    PtzPanel(p, send = { ptzSocket.send(camera, it) })
-                }
+                LiveView(camera, stream, muted, Modifier.fillMaxSize())
+                OverlayChip("LIVE", Status.live, Modifier.align(Alignment.TopStart).padding(10.dp), pulse = true)
+                VideoIconButton(
+                    Icons.Outlined.Fullscreen, "Fullscreen", Modifier.align(Alignment.BottomEnd).padding(4.dp),
+                ) { fullscreen = true }
             }
+
+            HistoryCard(counts, onHistory)
+
+            val p = ptz
+            if (p != null && (p.panTilt || p.zoom || p.focus || p.presets.isNotEmpty())) {
+                PtzPanel(p, send = { ptzSocket.send(camera, it) })
+            }
+            Spacer(Modifier.height(8.dp))
         }
     }
 }
-
-// ============================ HISTORY ============================
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit) {
-    val ctx = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val api = App.api
-    val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
-
-    val tl = remember { TimelineState(nowSec() - 60, initialSpp = 1.0) }
-    val playback = remember(camera) { Playback(ctx, camera, scope) }
-    DisposableEffect(playback) { onDispose { playback.release() } }
-
-    // Start a minute back from now (recordings are written in short segments, so "now" isn't on disk yet).
-    LaunchedEffect(playback) { playback.seek(nowSec() - 60, play = true) }
-
-    // ---- timeline data, loaded in 24 h chunks around the playhead ----
-    var segments by remember { mutableStateOf(emptyList<RecordingSegment>()) }
-    var reviews by remember { mutableStateOf(emptyList<ReviewItem>()) }
-    var refreshTick by remember { mutableIntStateOf(0) }
-    val bucket by remember { derivedStateOf { floor(tl.center / 21600.0).toLong() } }
-    LaunchedEffect(bucket, refreshTick) {
-        val a = bucket * 21600.0 - 43200
-        val b = min(nowSec(), bucket * 21600.0 + 43200)
-        try { segments = api.recordings(camera, a, b) } catch (_: Exception) {}
-        try { reviews = api.reviews(camera, a, b) } catch (_: Exception) {}
-    }
-    LaunchedEffect(Unit) {
-        while (true) {
-            delay(30_000)
-            if (nowSec() - tl.center < 43200) refreshTick++
-        }
-    }
-
-    // ---- keep the playhead on the player's position ----
-    LaunchedEffect(playback) {
-        while (true) {
-            if (!tl.interacting && !playback.loading && !playback.noRecording)
-                playback.currentTime()?.let { tl.center = it }
-            delay(80)
-        }
-    }
-    playback.onWindowEnded = { end ->
-        if (end < nowSec() - 30) playback.seek(end + 0.05, play = true) else playback.pause()
-    }
-
-    var wasPlaying by remember { mutableStateOf(false) }
-    var previewTime by remember { mutableStateOf<Double?>(null) }
-    var lastFastSeek by remember { mutableLongStateOf(0L) }
-
-    fun seekTo(t: Double, play: Boolean) {
-        val target = t.coerceAtMost(nowSec() - 15)
-        tl.center = target
-        playback.seek(target, play)
-    }
-
-    val onScrubStart: () -> Unit = {
-        wasPlaying = playback.player.playWhenReady
-        playback.pause()
-    }
-    val onScrub: (Double) -> Unit = { t ->
-        if (playback.inWindow(t)) {
-            previewTime = null
-            val ms = System.currentTimeMillis()
-            if (ms - lastFastSeek > 90) {
-                lastFastSeek = ms
-                playback.seek(t, play = false, fast = true)
-            }
-        } else {
-            previewTime = t
-        }
-    }
-    val onScrubEnd: (Double) -> Unit = { t ->
-        previewTime = null
-        seekTo(t, wasPlaying)
-    }
-
-    fun step(delta: Double) {
-        val base = playback.currentTime() ?: tl.center
-        seekTo(base + delta, play = playback.isPlaying)
-    }
-
-    fun jumpEvent(next: Boolean) {
-        val c = tl.center
-        val r = if (next) reviews.firstOrNull { it.start > c + 1 } else reviews.lastOrNull { it.start < c - 3 }
-        r?.let { seekTo(it.start - 2, play = true) }
-    }
-
-    var showEvents by remember { mutableStateOf(false) }
-    var showDate by remember { mutableStateOf(false) }
-
-    Column(Modifier.fillMaxSize().background(Palette.Bg).statusBarsPadding().navigationBarsPadding()) {
-        if (!landscape) {
-            Row(Modifier.fillMaxWidth().padding(end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back to live") }
-                Column(Modifier.weight(1f)) {
-                    Text(info?.displayName ?: camera, style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold)
-                    Text("History", color = Palette.Muted, fontSize = 12.sp)
-                }
-                IconButton({ showDate = true }) { Icon(Icons.Default.CalendarMonth, "Pick date") }
-                IconButton({ showEvents = true }) { Icon(Icons.Default.List, "Events") }
-            }
-        }
-
-        val videoMod = if (landscape) Modifier.fillMaxWidth().weight(1f) else Modifier.fillMaxWidth().aspectRatio(16f / 9f)
-        Box(videoMod.background(Color.Black)) {
-            AndroidView(
-                factory = { c ->
-                    PlayerView(c).apply {
-                        useController = false
-                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                        setShutterBackgroundColor(android.graphics.Color.BLACK)
-                        player = playback.player
-                    }
-                },
-                modifier = Modifier.fillMaxSize(),
-            )
-            previewTime?.let { ScrubPreview(api.snapshotAt(camera, it, 480), Modifier.fillMaxSize()) }
-            if (playback.loading && previewTime == null)
-                CircularProgressIndicator(Modifier.align(Alignment.Center).size(36.dp), strokeWidth = 3.dp, color = Color.White)
-            if (playback.noRecording && previewTime == null)
-                OverlayChip("No recording at this time", null, Modifier.align(Alignment.Center))
-            playback.error?.let {
-                Text(it, color = Palette.Alert, style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.align(Alignment.BottomStart).padding(8.dp))
-            }
-            OverlayChip(
-                "Live", Palette.Muted,
-                Modifier.align(Alignment.TopStart).padding(8.dp),
-                onClick = onBack,
-            )
-        }
-
-        TimeReadout(
-            t = tl.center, live = false, spp = tl.spp,
-            onZoomIn = { tl.spp = (tl.spp / 2).coerceIn(MIN_SPP, MAX_SPP) },
-            onZoomOut = { tl.spp = (tl.spp * 2).coerceIn(MIN_SPP, MAX_SPP) },
-        )
-
-        Timeline(
-            state = tl, segments = segments, reviews = reviews, nowProvider = ::nowSec,
-            onScrubStart = onScrubStart, onScrub = onScrub, onScrubEnd = onScrubEnd,
-            modifier = Modifier.fillMaxWidth().height(88.dp),
-        )
-
-        Transport(
-            playing = playback.isPlaying,
-            speed = playback.speed,
-            onPlay = { playback.togglePlay() },
-            onStep = ::step,
-            onEvent = ::jumpEvent,
-            onSpeed = { playback.cycleSpeed() },
-        )
-
-        if (!landscape) {
-            Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState())) { Legend() }
-        }
-    }
-
-    if (showEvents) {
-        ModalBottomSheet(onDismissRequest = { showEvents = false }, containerColor = Palette.Surface) {
-            EventsList(reviews.asReversed()) { r ->
-                showEvents = false
-                seekTo(r.start - 2, play = true)
-            }
-        }
-    }
-    if (showDate) {
-        val todayEnd = System.currentTimeMillis()
-        val dp = rememberDatePickerState(
-            initialSelectedDateMillis = todayEnd,
-            selectableDates = object : SelectableDates {
-                override fun isSelectableDate(utcTimeMillis: Long) = utcTimeMillis <= todayEnd
-            },
-        )
-        DatePickerDialog(
-            onDismissRequest = { showDate = false },
-            confirmButton = {
-                TextButton({
-                    showDate = false
-                    dp.selectedDateMillis?.let { utc ->
-                        val u = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply { timeInMillis = utc }
-                        val local = Calendar.getInstance().apply {
-                            clear()
-                            set(u.get(Calendar.YEAR), u.get(Calendar.MONTH), u.get(Calendar.DAY_OF_MONTH), 12, 0, 0)
-                        }
-                        val target = min(local.timeInMillis / 1000.0, nowSec() - 1800)
-                        tl.spp = 8.0
-                        seekTo(target, play = false)
-                    }
-                }) { Text("Go") }
-            },
-            dismissButton = { TextButton({ showDate = false }) { Text("Cancel") } },
-        ) { DatePicker(dp) }
-    }
-}
-
-/** Small pill drawn over video; always white text on a dark scrim so it reads on any image. */
-@Composable
-private fun OverlayChip(text: String, dot: Color?, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
-    Row(
-        modifier.clip(RoundedCornerShape(50)).background(Color(0xB3000000))
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(horizontal = 10.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
+private fun HistoryCard(counts: Pair<Int, Int>?, onClick: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    Card(
+        onClick = onClick,
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = cs.primaryContainer, contentColor = cs.onPrimaryContainer),
+        modifier = Modifier.fillMaxWidth(),
     ) {
-        if (dot != null) {
-            Box(Modifier.size(8.dp).clip(CircleShape).background(dot))
-            Spacer(Modifier.width(6.dp))
-        }
-        Text(text, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-    }
-}
-
-@Composable
-private fun TimeReadout(t: Double, live: Boolean, spp: Double, onZoomIn: () -> Unit, onZoomOut: () -> Unit) {
-    val fmtDate = remember { SimpleDateFormat("EEE d MMM", Locale.getDefault()) }
-    val fmtTime = remember { SimpleDateFormat("HH:mm:ss", Locale.getDefault()) }
-    val d = Date((t * 1000).toLong())
-    val tenths = ((t * 10).toLong() % 10)
-    Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 6.dp, bottom = 2.dp),
-        verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-            Text(fmtDate.format(d), color = Palette.Muted, fontSize = 12.sp)
-            Text(
-                if (live) fmtTime.format(d) else "${fmtTime.format(d)}.$tenths",
-                fontFamily = FontFamily.Monospace, fontSize = 22.sp, fontWeight = FontWeight.Medium,
-            )
-        }
-        Text(zoomLabel(spp), color = Palette.Muted, fontSize = 12.sp, modifier = Modifier.padding(end = 4.dp))
-        IconButton(onZoomOut) { Icon(Icons.Default.ZoomOut, "Zoom timeline out") }
-        IconButton(onZoomIn) { Icon(Icons.Default.ZoomIn, "Zoom timeline in") }
-    }
-}
-
-/** Approximate span visible on a ~400dp-wide timeline. */
-private fun zoomLabel(spp: Double): String {
-    val span = spp * 1080
-    return when {
-        span < 120 -> "${span.toInt()} s"
-        span < 7200 -> "${(span / 60).toInt()} min"
-        else -> "${"%.1f".format(Locale.US, span / 3600)} h"
-    }
-}
-
-@Composable
-private fun Transport(
-    playing: Boolean,
-    speed: Float,
-    onPlay: () -> Unit,
-    onStep: (Double) -> Unit,
-    onEvent: (Boolean) -> Unit,
-    onSpeed: () -> Unit,
-) {
-    Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp)) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically) {
-            IconButton({ onEvent(false) }) { Icon(Icons.Default.SkipPrevious, "Previous event") }
-            StepButton("−10s") { onStep(-10.0) }
-            StepButton("−1s") { onStep(-1.0) }
-            FilledIconButton(onPlay, Modifier.size(52.dp), colors = IconButtonDefaults.filledIconButtonColors(containerColor = Palette.Accent)) {
-                Icon(if (playing) Icons.Default.Pause else Icons.Default.PlayArrow, "Play/pause", tint = Color(0xFF00331F))
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.size(48.dp).clip(CircleShape).background(cs.primary),
+                contentAlignment = Alignment.Center,
+            ) { Icon(Icons.Outlined.History, null, tint = cs.onPrimary) }
+            Spacer(Modifier.width(16.dp))
+            Column(Modifier.weight(1f)) {
+                Text("View history", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                val sub = counts?.let { (a, d) -> "Last 24 h · $a alerts · $d detections" }
+                    ?: "Recordings, events and timeline"
+                Text(sub, style = MaterialTheme.typography.bodyMedium, color = cs.onPrimaryContainer.copy(alpha = 0.8f))
             }
-            StepButton("+1s") { onStep(1.0) }
-            StepButton("+10s") { onStep(10.0) }
-            IconButton({ onEvent(true) }) { Icon(Icons.Default.SkipNext, "Next event") }
-        }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically) {
-            IconButton({ onStep(-30.0) }) { Icon(Icons.Default.FastRewind, "Back 30 s") }
-            StepButton("−0.1s") { onStep(-0.1) }
-            TextButton(onSpeed) {
-                Text(if (speed == 0.5f) "0.5×" else "${speed.toInt()}×", fontWeight = FontWeight.Bold)
-            }
-            StepButton("+0.1s") { onStep(0.1) }
-            IconButton({ onStep(30.0) }) { Icon(Icons.Default.FastForward, "Forward 30 s") }
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null)
         }
     }
 }
 
+/** Round translucent button for use on top of video. */
 @Composable
-private fun StepButton(label: String, onClick: () -> Unit) {
-    Box(
-        Modifier.clip(RoundedCornerShape(10.dp)).background(Palette.SurfaceHi).clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 8.dp),
-        contentAlignment = Alignment.Center,
-    ) { Text(label, fontSize = 13.sp, fontFamily = FontFamily.Monospace) }
-}
-
-@Composable
-private fun ColumnScope.Legend() {
-    Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-        LegendDot(Palette.Accent, "Recording")
-        LegendDot(Palette.Motion, "Motion")
-        LegendDot(Palette.Detection, "Detection")
-        LegendDot(Palette.Alert, "Alert")
-    }
-    Text(
-        "Drag the timeline to scrub · pinch to zoom down to fractions of a second · tap to jump",
-        color = Palette.Muted, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp),
-    )
-}
-
-@Composable
-private fun LegendDot(c: Color, label: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(10.dp).clip(RoundedCornerShape(3.dp)).background(c))
-        Text(label, color = Palette.Muted, fontSize = 12.sp, modifier = Modifier.padding(start = 5.dp))
-    }
-}
-
-@Composable
-private fun EventsList(items: List<ReviewItem>, onPick: (ReviewItem) -> Unit) {
-    val fmt = remember { SimpleDateFormat("EEE HH:mm:ss", Locale.getDefault()) }
-    if (items.isEmpty()) {
-        Text("No events in this part of the timeline", color = Palette.Muted, modifier = Modifier.padding(24.dp))
-        return
-    }
-    LazyColumn(Modifier.fillMaxWidth().height(520.dp)) {
-        items(items, key = { it.id }) { r ->
-            Row(
-                Modifier.fillMaxWidth().clickable { onPick(r) }.padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(Modifier.width(112.dp).aspectRatio(16f / 9f).clip(RoundedCornerShape(8.dp)).background(Palette.SurfaceHi)) {
-                    r.thumbPath?.let { RemoteImage(App.api.url(it), Modifier.fillMaxSize()) }
-                }
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.size(8.dp).clip(CircleShape).background(if (r.isAlert) Palette.Alert else Palette.Detection))
-                        Text(
-                            r.labels.joinToString(", ").ifBlank { r.severity }.replaceFirstChar { it.uppercase() },
-                            fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 6.dp),
-                        )
-                    }
-                    val dur = r.end?.let { "${(it - r.start).toInt()} s" } ?: "ongoing"
-                    Text("${fmt.format(Date((r.start * 1000).toLong()))} · $dur", color = Palette.Muted, fontSize = 12.sp)
-                }
-            }
-        }
-    }
-}
-
-/** Frame preview from Frigate's recording snapshot API while scrubbing outside the loaded window. */
-@Composable
-private fun ScrubPreview(url: String, modifier: Modifier) {
-    var bmp by remember { mutableStateOf<ImageBitmap?>(null) }
-    LaunchedEffect(url) {
-        delay(120) // debounce while the finger is moving
-        loadBitmap(url)?.let { bmp = it }
-    }
-    bmp?.let { Image(it, null, modifier.background(Color.Black), contentScale = ContentScale.Fit) }
+fun VideoIconButton(icon: ImageVector, label: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    FilledTonalIconButton(
+        onClick = onClick,
+        modifier = modifier,
+        colors = IconButtonDefaults.filledTonalIconButtonColors(
+            containerColor = Color(0x99000000), contentColor = Color.White,
+        ),
+    ) { Icon(icon, label) }
 }

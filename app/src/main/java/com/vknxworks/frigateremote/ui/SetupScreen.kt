@@ -1,6 +1,8 @@
 package com.vknxworks.frigateremote.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,18 +13,29 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Videocam
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.outlined.Dns
+import androidx.compose.material.icons.outlined.ErrorOutline
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Videocam
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
@@ -36,11 +49,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.vknxworks.frigateremote.App
 import com.vknxworks.frigateremote.data.AuthException
@@ -50,6 +65,7 @@ import javax.net.ssl.SSLException
 @Composable
 fun SetupScreen(editing: Boolean, onDone: () -> Unit, onCancel: (() -> Unit)?) {
     val prefs = App.prefs
+    val cs = MaterialTheme.colorScheme
     var url by remember { mutableStateOf(if (editing) prefs.baseUrl else "") }
     var user by remember { mutableStateOf(if (editing) prefs.username else "") }
     var pass by remember { mutableStateOf(if (editing) prefs.password else "") }
@@ -60,6 +76,7 @@ fun SetupScreen(editing: Boolean, onDone: () -> Unit, onCancel: (() -> Unit)?) {
     val scope = rememberCoroutineScope()
 
     fun connect() {
+        if (busy || url.isBlank()) return
         error = null
         busy = true
         scope.launch {
@@ -96,70 +113,96 @@ fun SetupScreen(editing: Boolean, onDone: () -> Unit, onCancel: (() -> Unit)?) {
         }
     }
 
-    Column(
-        Modifier.fillMaxSize().safeDrawingPadding().imePadding().verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Spacer(Modifier.height(32.dp))
-        Icon(Icons.Default.Videocam, null, tint = Palette.Accent, modifier = Modifier.size(56.dp))
-        Spacer(Modifier.height(12.dp))
-        Text(
-            if (editing) "Server settings" else "Connect to Frigate",
-            style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold,
-        )
-        Text(
-            "Use the same address you open Frigate with in a browser — e.g. https://192.168.1.20:8971",
-            color = Palette.Muted, style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(top = 6.dp, bottom = 24.dp),
-        )
-        Column(Modifier.widthIn(max = 480.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedTextField(
-                url, { url = it }, label = { Text("Frigate URL") }, singleLine = true,
-                placeholder = { Text("https://frigate.local:8971") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next),
-                modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
-                user, { user = it }, label = { Text("Username") }, singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
-                pass, { pass = it }, label = { Text("Password") }, singleLine = true,
-                visualTransformation = if (showPass) VisualTransformation.None else PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
-                trailingIcon = {
-                    IconButton({ showPass = !showPass }) {
-                        Icon(if (showPass) Icons.Default.VisibilityOff else Icons.Default.Visibility, null)
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
+    Box(Modifier.fillMaxSize().background(cs.background), contentAlignment = Alignment.TopCenter) {
+        Column(
+            Modifier.widthIn(max = 520.dp).fillMaxSize().safeDrawingPadding().imePadding()
+                .verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Spacer(Modifier.height(24.dp))
+            Box(
+                Modifier.size(84.dp).clip(CircleShape).background(cs.primaryContainer),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Outlined.Videocam, null, tint = cs.onPrimaryContainer, modifier = Modifier.size(42.dp))
+            }
+            Spacer(Modifier.height(20.dp))
+            Text(
+                if (editing) "Server settings" else "Welcome to Frigate Remote",
+                style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
             )
             Text(
-                "Leave username empty if your Frigate has authentication disabled (port 5000).",
-                color = Palette.Muted, style = MaterialTheme.typography.bodySmall,
+                "Enter the address you use to open Frigate in a browser.",
+                color = cs.onSurfaceVariant, style = MaterialTheme.typography.bodyLarge,
+                textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp, bottom = 28.dp),
             )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("Allow self-signed certificate")
-                    Text(
-                        "Only for servers on your own network",
-                        color = Palette.Muted, style = MaterialTheme.typography.bodySmall,
+
+            Card(
+                colors = CardDefaults.cardColors(containerColor = cs.surfaceContainerLow),
+                shape = MaterialTheme.shapes.large,
+            ) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        url, { url = it }, label = { Text("Frigate URL") }, singleLine = true,
+                        placeholder = { Text("https://192.168.1.20:8971") },
+                        leadingIcon = { Icon(Icons.Outlined.Dns, null) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    OutlinedTextField(
+                        user, { user = it }, label = { Text("Username") }, singleLine = true,
+                        leadingIcon = { Icon(Icons.Outlined.Person, null) },
+                        supportingText = { Text("Leave empty if authentication is off (port 5000)") },
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    OutlinedTextField(
+                        pass, { pass = it }, label = { Text("Password") }, singleLine = true,
+                        leadingIcon = { Icon(Icons.Outlined.Lock, null) },
+                        visualTransformation = if (showPass) VisualTransformation.None else PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = { connect() }),
+                        trailingIcon = {
+                            IconButton({ showPass = !showPass }) {
+                                Icon(if (showPass) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                                    if (showPass) "Hide password" else "Show password")
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    ListItem(
+                        headlineContent = { Text("Allow self-signed certificate") },
+                        supportingContent = { Text("Only for servers on your own network") },
+                        trailingContent = { Switch(insecure, { insecure = it }) },
+                        colors = ListItemDefaults.colors(containerColor = cs.surfaceContainerLow),
                     )
                 }
-                Switch(insecure, { insecure = it })
             }
-            error?.let { Text(it, color = Palette.Alert) }
+
+            error?.let {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = cs.errorContainer, contentColor = cs.onErrorContainer),
+                    modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+                ) {
+                    Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Outlined.ErrorOutline, null)
+                        Spacer(Modifier.width(12.dp))
+                        Text(it, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(20.dp))
             Button(
                 onClick = { connect() },
                 enabled = !busy && url.isNotBlank(),
-                modifier = Modifier.fillMaxWidth().height(52.dp),
+                modifier = Modifier.fillMaxWidth().height(56.dp),
             ) {
-                if (busy) CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
-                else Text(if (editing) "Save & reconnect" else "Connect")
+                if (busy) CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp, color = cs.onPrimary)
+                else Text(if (editing) "Save & reconnect" else "Connect", style = MaterialTheme.typography.titleMedium)
             }
-            if (onCancel != null) TextButton(onCancel, Modifier.fillMaxWidth()) { Text("Cancel") }
+            if (onCancel != null) TextButton(onCancel, Modifier.fillMaxWidth().padding(top = 4.dp)) { Text("Cancel") }
         }
     }
 }
