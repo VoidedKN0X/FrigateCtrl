@@ -39,7 +39,7 @@ jobs:
           set -o pipefail
           if ! ./gradlew --no-daemon assembleRelease 2>&1 | tee build.log; then
             # Surface compiler errors as an annotation so they're visible without opening the logs.
-            msg=$(grep -E "^e: |What went wrong|^> |error:" build.log | head -60 | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
+            msg=$(grep -E "^e: |What went wrong|error:|FAILED" build.log | head -60 | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
             echo "::error title=Build failed::$msg"
             exit 1
           fi
