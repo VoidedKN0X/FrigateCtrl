@@ -5,9 +5,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -27,7 +26,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             FrigateTheme {
-                Box(Modifier.fillMaxSize().background(Palette.Bg)) { Root() }
+                // Surface sets the default text/icon color to light; without it Compose falls back to black.
+                Surface(Modifier.fillMaxSize(), color = Palette.Bg, contentColor = Palette.Text) { Root() }
             }
         }
     }
