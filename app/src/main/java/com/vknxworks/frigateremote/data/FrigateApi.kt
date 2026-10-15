@@ -259,6 +259,8 @@ class FrigateApi(private val prefs: Prefs) {
         }.sortedBy { it.start }
     }
 
+    suspend fun version(): String? = try { getString("/api/version").trim().trim('"') } catch (_: Exception) { null }
+
     suspend fun ptzInfo(camera: String): PtzInfo? = try {
         val o = JSONObject(getString("/api/$camera/ptz/info"))
         val f = o.optJSONArray("features")
