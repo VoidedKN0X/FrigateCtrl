@@ -89,9 +89,10 @@ private fun MseWebView(streamName: String, muted: Boolean, onPlaying: () -> Unit
             webChromeClient = WebChromeClient()
 
             val base = api.baseUrl
+            val wv = this
             CookieManager.getInstance().apply {
                 setAcceptCookie(true)
-                setAcceptThirdPartyCookies(this@apply, true)
+                setAcceptThirdPartyCookies(wv, true)
                 if (api.token.isNotEmpty()) setCookie(base, "frigate_token=${api.token}; path=/")
                 flush()
             }
