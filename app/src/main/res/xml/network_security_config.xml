@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <!-- Frigate on a LAN is often plain http (port 5000) or uses a private CA. -->
+    <!--
+        Frigate on a LAN is often plain http (port 5000) or uses a private CA, and the server
+        address is typed in by the user, so it can't be listed here. Cleartext therefore stays
+        allowed at the platform level, but the app enforces it: http is only ever used for the
+        configured server, after the user explicitly confirmed it, and the server is then marked
+        "Not encrypted (HTTP)". Every other connection must be https (FrigateApi blocks the rest).
+        User-installed CAs stay trusted: a private CA is a legitimate setup for self-hosters.
+    -->
     <base-config cleartextTrafficPermitted="true">
         <trust-anchors>
             <certificates src="system" />

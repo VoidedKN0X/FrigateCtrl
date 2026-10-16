@@ -59,8 +59,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.vknxworks.frigatectrl.App
 import com.vknxworks.frigatectrl.data.AuthException
+import com.vknxworks.frigatectrl.data.Tls
 import kotlinx.coroutines.launch
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import java.io.IOException
 import javax.net.ssl.SSLException
+import javax.net.ssl.SSLPeerUnverifiedException
 
 @Composable
 fun SetupScreen(editing: Boolean, onDone: () -> Unit, onCancel: (() -> Unit)?) {
@@ -75,42 +79,117 @@ fun SetupScreen(editing: Boolean, onDone: () -> Unit, onCancel: (() -> Unit)?) {
     var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
-    fun connect() {
-        if (busy || url.isBlank()) return
+    // Security prompts: a self-signed certificate to confirm, or an http address to confirm.
+    var certPrompt by remember { mutableStateOf<Pair<String, CertInfo>?>(null) }
+    var certChanged by remember { mutableStateOf(false) }
+    var httpPrompt by remember { mutableStateOf<String?>(null) }
+
+    fun save(base: String, tok: String, pin: String) {
+        prefs.baseUrl = base
+        prefs.username = user.trim()
+        prefs.password = pass
+        prefs.token = tok
+        prefs.allowInsecureTls = insecure && pin.isNotBlank()
+        prefs.certPin = if (insecure) pin else ""
+        prefs.httpConfirmed = base.startsWith("http://", ignoreCase = true)
+        App.api.reload()
+    }
+
+    /** Asks the user to confirm the certificate [base] presents (nothing is sent to it first). */
+    fun promptCert(base: String, changed: Boolean, httpFallback: String? = null) {
+        busy = true
+        scope.launch {
+            try {
+                certChanged = changed
+                certPrompt = base to fetchCertInfo(base)
+            } catch (e: Exception) {
+                if (httpFallback != null && e is IOException && e !is SSLException) httpPrompt = httpFallback
+                else error = "Couldn't read the server's certificate: " + (e.message ?: e.javaClass.simpleName)
+            }
+            busy = false
+        }
+    }
+
+    /**
+     * Logs in to [base]. [pin] is the confirmed certificate fingerprint ("" = normal checks),
+     * [httpOk] means the user confirmed plain http. When the address had no scheme, [httpFallback]
+     * is offered (after an explicit warning) only if https couldn't connect at all — never after
+     * a certificate error.
+     */
+    fun attempt(base: String, pin: String, httpOk: Boolean, httpFallback: String?) {
         error = null
         busy = true
         scope.launch {
-            val raw = url.trim().trimEnd('/')
-            val candidates = if (raw.startsWith("http://") || raw.startsWith("https://")) listOf(raw)
-            else listOf("https://$raw", "http://$raw")
-            var lastErr: Exception? = null
-            for (base in candidates) {
-                try {
-                    val tok = App.api.login(base, user.trim(), pass, insecure)
-                    prefs.baseUrl = base
-                    prefs.username = user.trim()
-                    prefs.password = pass
-                    prefs.token = tok
-                    prefs.allowInsecureTls = insecure
-                    App.api.reload()
-                    busy = false
-                    onDone()
-                    return@launch
-                } catch (e: AuthException) {
-                    lastErr = e; break
-                } catch (e: Exception) {
-                    lastErr = e
+            try {
+                val tok = App.api.login(base, user.trim(), pass, pin, httpOk)
+                save(base, tok, pin)
+                busy = false
+                onDone()
+                return@launch
+            } catch (e: Exception) {
+                busy = false
+                val certError = Tls.isCertificateError(e)
+                when {
+                    e is AuthException -> error = e.message
+                    // The pinned certificate no longer matches: show the new one and let the user decide.
+                    insecure && pin.isNotBlank() && certError -> promptCert(base, changed = true)
+                    certError || e is SSLPeerUnverifiedException -> error = "Certificate not trusted. If Frigate uses its " +
+                        "default self-signed certificate, turn on \"Allow self-signed certificate\"."
+                    e is SSLException -> error = "Secure connection failed (" + (e.message ?: e.javaClass.simpleName) +
+                        "). If your server only serves plain http (e.g. port 5000), type http:// in front of the address."
+                    httpFallback != null && e is IOException -> httpPrompt = httpFallback
+                    else -> error = e.message ?: e.javaClass.simpleName
                 }
             }
-            busy = false
-            error = when (val e = lastErr) {
-                is AuthException -> e.message
-                is SSLException -> "Certificate not trusted. If Frigate uses its default self-signed " +
-                        "certificate, turn on \"Allow self-signed certificate\"."
-                null -> "Couldn't connect"
-                else -> e.message ?: e.javaClass.simpleName
-            }
         }
+    }
+
+    /** A pin the user already confirmed for this same server (scheme, host and port). */
+    fun savedPinFor(base: String): String {
+        val old = prefs.baseUrl.toHttpUrlOrNull() ?: return ""
+        val new = base.toHttpUrlOrNull() ?: return ""
+        val same = old.scheme == new.scheme && old.host.equals(new.host, true) && old.port == new.port
+        return if (same && prefs.allowInsecureTls) prefs.certPin else ""
+    }
+
+    fun connectHttps(base: String, httpFallback: String?) {
+        if (!insecure) { attempt(base, "", false, httpFallback); return }
+        val pin = savedPinFor(base)
+        if (pin.isNotBlank()) attempt(base, pin, false, httpFallback)
+        else promptCert(base, changed = false, httpFallback = httpFallback)
+    }
+
+    fun connect() {
+        if (busy || url.isBlank()) return
+        error = null
+        val raw = url.trim().trimEnd('/')
+        when {
+            raw.startsWith("http://", ignoreCase = true) -> {
+                // Explicit http: always confirm, unless it's the server the user already confirmed.
+                val sameAsSaved = prefs.httpConfirmed && raw.equals(prefs.baseUrl, ignoreCase = true)
+                if (sameAsSaved) attempt(raw, "", true, null) else httpPrompt = raw
+            }
+            raw.startsWith("https://", ignoreCase = true) -> connectHttps(raw, null)
+            // No scheme: https first; http only behind an explicit confirm if https can't connect.
+            else -> connectHttps("https://$raw", "http://$raw")
+        }
+    }
+
+    certPrompt?.let { (base, cert) ->
+        CertTrustDialog(
+            cert = cert, changed = certChanged,
+            onTrust = { certPrompt = null; attempt(base, cert.fingerprint, false, null) },
+            onCancel = { certPrompt = null },
+        )
+    }
+    httpPrompt?.let { base ->
+        HttpWarningDialog(
+            host = base.toHttpUrlOrNull()?.host ?: base,
+            intro = if (!url.trim().startsWith("http", ignoreCase = true))
+                "Couldn't connect to ${base.removePrefix("http://")} over https." else null,
+            onConfirm = { httpPrompt = null; attempt(base, "", true, null) },
+            onCancel = { httpPrompt = null },
+        )
     }
 
     Box(Modifier.fillMaxSize().background(cs.background), contentAlignment = Alignment.TopCenter) {
@@ -171,9 +250,10 @@ fun SetupScreen(editing: Boolean, onDone: () -> Unit, onCancel: (() -> Unit)?) {
                         },
                         modifier = Modifier.fillMaxWidth(),
                     )
+                    if (url.trim().startsWith("http://", ignoreCase = true)) NotEncryptedBadge()
                     ListItem(
                         headlineContent = { Text("Allow self-signed certificate") },
-                        supportingContent = { Text("Only for servers on your own network") },
+                        supportingContent = { Text("You confirm the certificate's fingerprint once; only that certificate is accepted") },
                         trailingContent = { Switch(insecure, { insecure = it }) },
                         colors = ListItemDefaults.colors(containerColor = cs.surfaceContainerLow),
                     )

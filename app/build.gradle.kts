@@ -13,14 +13,22 @@ android {
         minSdk = 33
         targetSdk = 35
         // CI passes the run number so every build installs over the previous one.
-        versionCode = System.getenv("VERSION_CODE")?.toIntOrNull() ?: 7
-        versionName = "3.2.0"
+        versionCode = System.getenv("VERSION_CODE")?.toIntOrNull() ?: 8
+        versionName = "3.2.1"
     }
 
-    // Release signing from env (GitHub secrets); falls back to the debug key so the APK is always installable.
+    // Release signing from env (GitHub secrets). Local builds fall back to the debug key so the APK
+    // is always installable; on CI a missing key fails the build instead of publishing a debug-signed APK.
     val ksPath = System.getenv("SIGNING_KEYSTORE_PATH")
+    val hasReleaseKey = !ksPath.isNullOrBlank() && file(ksPath).exists() &&
+        listOf("SIGNING_STORE_PASSWORD", "SIGNING_KEY_ALIAS", "SIGNING_KEY_PASSWORD").all { !System.getenv(it).isNullOrBlank() }
+    val onCi = System.getenv("CI") == "true" || System.getenv("GITHUB_ACTIONS") == "true"
+    val buildingRelease = gradle.startParameter.taskNames.any { it.contains("Release", ignoreCase = true) }
+    if (onCi && buildingRelease && !hasReleaseKey) {
+        throw GradleException("Release signing key or passwords are missing on CI - refusing to sign the release with the debug key")
+    }
     signingConfigs {
-        if (!ksPath.isNullOrBlank() && file(ksPath).exists()) {
+        if (hasReleaseKey) {
             create("release") {
                 storeFile = file(ksPath)
                 storePassword = System.getenv("SIGNING_STORE_PASSWORD")
@@ -32,7 +40,9 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
     }
@@ -62,7 +72,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
 
-    implementation("androidx.biometric:biometric:1.1.0")
+    implementation("androidx.biometric:biometric:1.2.0-alpha05")
     implementation("androidx.fragment:fragment-ktx:1.8.6")
 
     // Backdrop blur for the floating glass tab bar.

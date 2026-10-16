@@ -41,7 +41,9 @@ jobs:
             echo "SIGNING_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
             echo "RELEASE_SIGNED=1" >> "$GITHUB_ENV"
           else
-            echo "::warning title=Unsigned build::No signing secrets set - APK is signed with the debug key"
+            # Never publish a debug-signed release: without the key the build (and release) stops here.
+            echo "::error title=Unsigned build::KEYSTORE_BASE64 is not set - refusing to build a debug-signed release"
+            exit 1
           fi
 
       - name: Build release APK
@@ -83,8 +85,8 @@ jobs:
           CERT=$("$APKSIGNER" verify --print-certs "$APK" | grep -m1 "certificate DN" | sed 's/^[^:]*: //')
           SHA=$("$APKSIGNER" verify --print-certs "$APK" | grep -m1 "SHA-256" | sed 's/^.*: //')
           echo "Signed by: $CERT"
-          if [ "$RELEASE_SIGNED" = "1" ] && echo "$CERT" | grep -q "Android Debug"; then
-            echo "::error title=Signing failed::Secrets are set but the APK is debug-signed - check the key alias and passwords"
+          if [ "$RELEASE_SIGNED" != "1" ] || echo "$CERT" | grep -q "Android Debug"; then
+            echo "::error title=Signing failed::The APK is not release-signed - check the key alias and passwords"
             exit 1
           fi
           echo "::notice title=Signed APK::$APK signed by $CERT (SHA-256 $SHA)"

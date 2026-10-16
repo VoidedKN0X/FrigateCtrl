@@ -136,11 +136,6 @@ fun SettingsScreen(onBack: () -> Unit, onServer: () -> Unit, onLogout: () -> Uni
                         afters.indexOf(lock.lockAfterSeconds).coerceAtLeast(0),
                     ) { lock.lockAfterSeconds = afters[it] }
                     Divider()
-                    Toggle(
-                        Icons.Outlined.VisibilityOff, "Hide from recents & screenshots",
-                        "Blank preview in the app switcher; blocks screenshots and screen recording", lock.hideContent,
-                    ) { lock.hideContent = it }
-                    Divider()
                     ListItem(
                         leadingContent = { Icon(Icons.Outlined.Password, null) },
                         headlineContent = { Text("Change PIN") },
@@ -148,6 +143,11 @@ fun SettingsScreen(onBack: () -> Unit, onServer: () -> Unit, onLogout: () -> Uni
                         modifier = Modifier.clickableItem { pinDialog = PinMode.Change },
                     )
                 }
+                Divider()
+                Toggle(
+                    Icons.Outlined.VisibilityOff, "Hide content in screenshots & recents",
+                    "Blank preview in the app switcher; blocks screenshots and screen recording", lock.hideContent,
+                ) { lock.hideContent = it }
             }
 
             Section("Appearance") {
@@ -231,8 +231,15 @@ fun SettingsScreen(onBack: () -> Unit, onServer: () -> Unit, onLogout: () -> Uni
                     leadingContent = { Icon(Icons.Outlined.Dns, null) },
                     headlineContent = { Text("Server & login") },
                     supportingContent = {
-                        Text(App.prefs.baseUrl.ifBlank { "Not set" } +
-                                (frigateVersion?.let { " · Frigate $it" } ?: ""))
+                        Column {
+                            Text(App.prefs.baseUrl.ifBlank { "Not set" } +
+                                    (frigateVersion?.let { " · Frigate $it" } ?: ""))
+                            if (App.prefs.isHttp) NotEncryptedBadge(Modifier.padding(top = 4.dp))
+                            else if (App.prefs.allowInsecureTls && App.prefs.certPin.isNotBlank()) Text(
+                                "Pinned certificate SHA-256 ${App.prefs.certPin.take(23)}…",
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
                     },
                     colors = itemColors(),
                     modifier = Modifier.clickableItem(onServer),

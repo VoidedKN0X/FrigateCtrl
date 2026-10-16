@@ -11,6 +11,7 @@ import android.view.ViewGroup
 import android.webkit.JavascriptInterface
 import android.webkit.PermissionRequest
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.runtime.getValue
@@ -54,6 +55,9 @@ class TalkSession(private val activity: Activity, private val stream: String) {
             alpha = 0f
             settings.javaScriptEnabled = true
             settings.mediaPlaybackRequiresUserGesture = false
+            // The page is inline HTML; it never needs local files or content providers.
+            settings.allowFileAccess = false
+            settings.allowContentAccess = false
             webChromeClient = object : WebChromeClient() {
                 override fun onPermissionRequest(request: PermissionRequest) {
                     // Only ever grant the microphone, and only to our own page.
@@ -65,6 +69,8 @@ class TalkSession(private val activity: Activity, private val stream: String) {
             addJavascriptInterface(Bridge(), "Android")
             webViewClient = object : WebViewClient() {
                 override fun onPageFinished(view: WebView, url: String) { if (ws == null) openSignalling() }
+                // The JS bridge is exposed to this page only: block every navigation away from it.
+                override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean = true
             }
         }
         // Attached (invisibly) so WebRTC and audio capture run normally.

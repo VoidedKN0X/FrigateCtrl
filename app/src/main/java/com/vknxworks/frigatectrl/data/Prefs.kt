@@ -34,6 +34,25 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("insecure_tls", false)
         set(v) = sp.edit().putBoolean("insecure_tls", v).apply()
 
+    /**
+     * SHA-256 fingerprint of the self-signed certificate the user confirmed (trust on first use).
+     * Empty while [allowInsecureTls] is on means an older install that trusted every certificate:
+     * the app asks the user to confirm the fingerprint before connecting again.
+     */
+    var certPin: String
+        get() = sp.getString("cert_pin", "") ?: ""
+        set(v) = sp.edit().putString("cert_pin", v).apply()
+
+    /** The user confirmed that the configured server is plain http (not encrypted). */
+    var httpConfirmed: Boolean
+        get() = sp.getBoolean("http_confirmed", false)
+        set(v) = sp.edit().putBoolean("http_confirmed", v).apply()
+
+    val isHttp: Boolean get() = baseUrl.startsWith("http://", ignoreCase = true)
+
+    /** Self-signed mode from an older version that has no pinned certificate yet. */
+    val needsCertPin: Boolean get() = allowInsecureTls && certPin.isBlank() && baseUrl.startsWith("https://", ignoreCase = true)
+
     var lastCamera: String
         get() = sp.getString("last_camera", "") ?: ""
         set(v) = sp.edit().putString("last_camera", v).apply()

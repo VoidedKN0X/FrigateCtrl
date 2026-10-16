@@ -185,6 +185,7 @@ private fun Header(host: String, cameraCount: Int?, alertCount: Int, onSettings:
                 parts.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant,
                 maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
+            if (App.prefs.isHttp) NotEncryptedBadge(Modifier.padding(top = 2.dp))
         }
         FilledTonalIconButton(onSettings) { Icon(Icons.Outlined.Settings, "Settings") }
     }

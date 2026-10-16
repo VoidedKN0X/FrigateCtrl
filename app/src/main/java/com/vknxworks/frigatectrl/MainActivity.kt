@@ -57,6 +57,8 @@ import com.vknxworks.frigatectrl.ui.FrigateTheme
 import com.vknxworks.frigatectrl.ui.HealthScreen
 import com.vknxworks.frigatectrl.ui.SettingsScreen
 import com.vknxworks.frigatectrl.ui.SetupScreen
+import com.vknxworks.frigatectrl.ui.ConnectionSecurityCheck
+import com.vknxworks.frigatectrl.ui.needsConnectionCheck
 import com.vknxworks.frigatectrl.ui.isAppInDarkTheme
 
 // FragmentActivity (a ComponentActivity) is required by the fingerprint prompt.
@@ -65,6 +67,8 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         App.init(this)
         enableEdgeToEdge()
+        // Never show a snapshot of the cameras in the recent-apps switcher.
+        setRecentsScreenshotEnabled(false)
         setContent {
             FrigateTheme {
                 val dark = isAppInDarkTheme()
@@ -73,8 +77,9 @@ class MainActivity : FragmentActivity() {
                     else SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
                     enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
                 }
-                // With the lock on, keep cameras out of the recent-apps preview, screenshots and recordings.
-                val secure = App.lock.pinSet && App.lock.hideContent
+                // Keep cameras out of the recent-apps preview, screenshots and recordings (on by default,
+                // independent of the app lock).
+                val secure = App.lock.hideContent
                 LaunchedEffect(secure) {
                     if (secure) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
                     else window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
@@ -90,6 +95,7 @@ class MainActivity : FragmentActivity() {
 private fun Root(activity: FragmentActivity, lockVm: AppLockViewModel = viewModel()) {
     var route by rememberSaveable { mutableStateOf(if (App.prefs.isConfigured) "cameras" else "setup") }
     var homeTab by rememberSaveable { mutableStateOf(0) }
+    var securityChecked by rememberSaveable { mutableStateOf(false) }
 
     fun logout() {
         App.prefs.clear()
@@ -121,6 +127,16 @@ private fun Root(activity: FragmentActivity, lockVm: AppLockViewModel = viewMode
                 lockVm.unlock()
                 logout()
             },
+        )
+        return
+    }
+
+    // After updating from a version that trusted any certificate (or used http without asking),
+    // confirm the server's security once before anything is sent to it.
+    if (!securityChecked && route != "setup" && route != "setup-edit" && needsConnectionCheck()) {
+        ConnectionSecurityCheck(
+            onDone = { securityChecked = true },
+            onServerSettings = { securityChecked = true; route = "setup-edit" },
         )
         return
     }
