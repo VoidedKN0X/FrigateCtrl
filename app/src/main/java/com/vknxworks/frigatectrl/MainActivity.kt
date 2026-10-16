@@ -15,17 +15,25 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.dp
+import com.vknxworks.frigatectrl.ui.GlassTab
+import com.vknxworks.frigatectrl.ui.GlassTabBar
+import com.vknxworks.frigatectrl.ui.GlassTabBarHeight
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeSource
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.outlined.MonitorHeart
 import androidx.compose.material.icons.outlined.Videocam
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -171,33 +179,37 @@ private fun depth(route: String): Int = when {
 private fun HomeScreen(tab: Int, onTab: (Int) -> Unit, onOpen: (String) -> Unit, onSettings: () -> Unit) {
     // Back on the Health tab returns to Cameras first.
     if (tab != 0) BackHandler { onTab(0) }
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        bottomBar = {
-            NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
-                NavigationBarItem(
-                    selected = tab == 0, onClick = { onTab(0) },
-                    icon = { Icon(if (tab == 0) Icons.Filled.Videocam else Icons.Outlined.Videocam, null) },
-                    label = { Text("Cameras") },
-                )
-                NavigationBarItem(
-                    selected = tab == 1, onClick = { onTab(1) },
-                    icon = { Icon(if (tab == 1) Icons.Filled.MonitorHeart else Icons.Outlined.MonitorHeart, null) },
-                    label = { Text("Health") },
-                )
-            }
-        },
-    ) { pad ->
-        AnimatedContent(
-            targetState = tab,
-            transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) },
-            label = "tab",
-        ) { t ->
-            when (t) {
-                0 -> CamerasScreen(onOpen = onOpen, onSettings = onSettings, bottomPadding = pad.calculateBottomPadding())
-                else -> HealthScreen(bottomPadding = pad.calculateBottomPadding())
+    val haze = remember { HazeState() }
+    val tabs = remember {
+        listOf(
+            GlassTab("Cameras", Icons.Outlined.Videocam, Icons.Filled.Videocam),
+            GlassTab("Health", Icons.Outlined.MonitorHeart, Icons.Filled.MonitorHeart),
+        )
+    }
+    val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    // Lists scroll underneath the floating bar, so they only need room to clear it at the end.
+    val contentBottom = navBottom + GlassTabBarHeight + 24.dp
+
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        Box(Modifier.fillMaxSize().hazeSource(haze)) {
+            AnimatedContent(
+                targetState = tab,
+                transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) },
+                label = "tab",
+            ) { t ->
+                when (t) {
+                    0 -> CamerasScreen(onOpen = onOpen, onSettings = onSettings, bottomPadding = contentBottom)
+                    else -> HealthScreen(bottomPadding = contentBottom)
+                }
             }
         }
+        GlassTabBar(
+            tabs = tabs,
+            selected = tab,
+            onSelect = onTab,
+            hazeState = haze,
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = navBottom + 12.dp),
+        )
     }
 }
+
