@@ -234,7 +234,7 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit) {
                 if (share) Clips.share(ctx, camera, a, b)
                 else {
                     val name = Clips.save(ctx, camera, a, b)
-                    Toast.makeText(ctx, "Saved $name to Movies/FrigateCtrl", Toast.LENGTH_LONG).show()
+                    Toast.makeText(ctx, "Saved $name to Movies/FrigateCtrl (visible to other apps with media access)", Toast.LENGTH_LONG).show()
                 }
                 clipStart = null
             } catch (e: Exception) {

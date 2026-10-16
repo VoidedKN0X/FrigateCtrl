@@ -32,7 +32,7 @@ class LockSettings(context: Context) {
         get() = _after
         set(v) { _after = v; prefs.edit().putInt(KEY_LOCK_AFTER, v).apply() }
 
-    /** Hide the app in the recent-apps screen and block screenshots/screen recording. */
+    /** Hide the app in the recent-apps screen and block screenshots/screen recording (works with or without a PIN). */
     private var _hide by mutableStateOf(prefs.getBoolean(KEY_HIDE, true))
     var hideContent: Boolean
         get() = _hide

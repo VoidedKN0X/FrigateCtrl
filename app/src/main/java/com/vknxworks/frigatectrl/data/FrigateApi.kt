@@ -2,6 +2,8 @@ package com.vknxworks.frigatectrl.data
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -10,12 +12,10 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import org.json.JSONArray
 import org.json.JSONObject
-import java.security.SecureRandom
-import java.security.cert.X509Certificate
+import java.io.IOException
 import java.util.concurrent.TimeUnit
 import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManager
-import javax.net.ssl.X509TrustManager
 
 data class StreamOption(val label: String, val streamName: String)
 
@@ -70,16 +70,40 @@ class FrigateApi(private val prefs: Prefs) {
         private set
     @Volatile var token: String = prefs.token
         private set
+    @Volatile private var baseHttpUrl: HttpUrl? = baseUrl.toHttpUrlOrNull()
 
-    @Volatile private var clientCache: Pair<Boolean, OkHttpClient>? = null
+    private data class ClientKey(val base: String, val pin: String, val httpOk: Boolean)
+    @Volatile private var clientCache: Pair<ClientKey, OkHttpClient>? = null
 
-    /** Shared client: adds the auth cookie, follows token refreshes and re-logs in on 401. */
+    /** The pinned certificate fingerprint in use ("" = normal certificate validation). */
+    private val activePin: String get() = if (prefs.allowInsecureTls) prefs.certPin else ""
+
+    /**
+     * Shared client for everything that talks to Frigate (API, images, HLS, MSE and talk
+     * websockets, clip downloads): adds the auth cookie for the server only, follows token
+     * refreshes, re-logs in on 401 and applies the pinned certificate.
+     */
     val http: OkHttpClient
         get() {
-            val insecure = prefs.allowInsecureTls
-            clientCache?.let { if (it.first == insecure) return it.second }
-            val c = buildClient(insecure, withAuth = true)
-            clientCache = insecure to c
+            val key = ClientKey(baseUrl, activePin, prefs.httpConfirmed)
+            clientCache?.let { if (it.first == key) return it.second }
+            val base = baseHttpUrl
+            val b = baseClient(base, key.pin)
+            if (base != null) {
+                b.addInterceptor(
+                    serverInterceptor(base, key.httpOk, { token }, { saveToken(it) }) {
+                        if (prefs.username.isBlank()) null
+                        else doLogin(loginClient(base, key.pin, key.httpOk), baseUrl, prefs.username, prefs.password)
+                    }
+                )
+            } else {
+                b.addInterceptor { chain ->
+                    if (!chain.request().url.isHttps) throw IOException("Blocked an unencrypted (http) connection")
+                    chain.proceed(chain.request())
+                }
+            }
+            val c = b.build()
+            clientCache = key to c
             return c
         }
 
@@ -87,25 +111,30 @@ class FrigateApi(private val prefs: Prefs) {
 
     fun reload() {
         baseUrl = prefs.baseUrl.trimEnd('/')
+        baseHttpUrl = baseUrl.toHttpUrlOrNull()
         token = prefs.token
         clientCache = null
     }
 
     // ---------- auth ----------
 
-    /** Logs in against a candidate server. Returns the token ("" when the server has auth disabled). */
-    suspend fun login(base: String, user: String, pass: String, insecure: Boolean): String =
+    /**
+     * Logs in against a candidate server. Returns the token ("" when the server has auth disabled).
+     * [pin] is the confirmed certificate fingerprint for a self-signed server ("" = normal checks);
+     * [httpOk] must be true (user confirmed) for a plain-http server.
+     */
+    suspend fun login(base: String, user: String, pass: String, pin: String, httpOk: Boolean): String =
         withContext(Dispatchers.IO) {
-            val client = buildClient(insecure, withAuth = false)
+            val baseHttp = base.toHttpUrlOrNull() ?: throw Exception("That isn't a valid address")
             var tok = ""
+            val client = baseClient(baseHttp, pin)
+                .addInterceptor(serverInterceptor(baseHttp, httpOk, { tok }, { tok = it }, null))
+                .build()
             if (user.isNotBlank()) {
                 tok = doLogin(client, base, user, pass)
             }
             // Verify we can actually read the config with this token.
-            val req = Request.Builder().url("$base/api/config").apply {
-                if (tok.isNotEmpty()) header("Cookie", "frigate_token=$tok")
-            }.build()
-            client.newCall(req).execute().use { r ->
+            client.newCall(Request.Builder().url("$base/api/config").build()).execute().use { r ->
                 if (r.code == 401 || r.code == 403) throw AuthException("Server requires a login")
                 if (!r.isSuccessful) throw Exception("Server answered HTTP ${r.code}")
                 val body = r.body?.string().orEmpty()
@@ -114,6 +143,10 @@ class FrigateApi(private val prefs: Prefs) {
             }
             tok
         }
+
+    /** A client for (re-)logging in: no cookie, same pinning, redirect and cleartext rules. */
+    private fun loginClient(base: HttpUrl, pin: String, httpOk: Boolean): OkHttpClient =
+        baseClient(base, pin).addInterceptor(serverInterceptor(base, httpOk, { "" }, {}, null)).build()
 
     private fun doLogin(client: OkHttpClient, base: String, user: String, pass: String): String {
         val json = JSONObject().put("user", user).put("password", pass).toString()
@@ -141,57 +174,99 @@ class FrigateApi(private val prefs: Prefs) {
         }
     }
 
-    private val authInterceptor = Interceptor { chain ->
+    /** Exact scheme + host + port match (ws/wss URLs are already normalised to http/https by OkHttp). */
+    private fun sameOrigin(a: HttpUrl, b: HttpUrl) =
+        a.scheme == b.scheme && a.host.equals(b.host, ignoreCase = true) && a.port == b.port
+
+    /**
+     * Application interceptor for every request to the server (an application interceptor, unlike
+     * a network one, also runs for websocket handshakes). Automatic redirects are off, so each hop
+     * comes back through here: only redirects to the configured server itself are followed, and
+     * the token cookie is only ever attached to (and read back from) that server.
+     */
+    private fun serverInterceptor(
+        base: HttpUrl,
+        httpOk: Boolean,
+        token: () -> String,
+        onToken: (String) -> Unit,
+        relogin: (() -> String?)?,
+    ) = Interceptor { chain ->
+        fun send(req: Request): Response {
+            val same = sameOrigin(req.url, base)
+            if (!req.url.isHttps && !(httpOk && same))
+                throw IOException("Blocked an unencrypted (http) connection to ${req.url.host}")
+            val t = token()
+            val resp = chain.proceed(
+                if (same && t.isNotEmpty()) req.newBuilder().header("Cookie", "frigate_token=$t").build()
+                else req.newBuilder().removeHeader("Cookie").build()
+            )
+            if (same) extractToken(resp)?.let(onToken)
+            return resp
+        }
+
+        fun sendFollowing(first: Request): Response {
+            var req = first
+            var resp = send(req)
+            repeat(MAX_REDIRECTS) {
+                if (resp.code !in REDIRECT_CODES) return resp
+                val next = resp.header("Location")?.let { req.url.resolve(it) } ?: return resp
+                if (!sameOrigin(next, base)) return resp
+                val keepBody = resp.code == 307 || resp.code == 308
+                val b = req.newBuilder().url(next)
+                if (!keepBody && req.method != "GET" && req.method != "HEAD") {
+                    b.method("GET", null).removeHeader("Content-Type").removeHeader("Content-Length")
+                }
+                resp.close()
+                req = b.build()
+                resp = send(req)
+            }
+            return resp
+        }
+
         val original = chain.request()
-        val sameHost = baseUrl.isNotEmpty() && original.url.toString().startsWith(baseUrl)
-        fun withCookie(t: String) = if (sameHost && t.isNotEmpty())
-            original.newBuilder().header("Cookie", "frigate_token=$t").build() else original
-
-        var resp = chain.proceed(withCookie(token))
-        extractToken(resp)?.let { saveToken(it) }
-
-        if (sameHost && resp.code == 401 && prefs.username.isNotBlank()) {
-            resp.close()
-            val fresh = try {
-                doLogin(buildClient(prefs.allowInsecureTls, false), baseUrl, prefs.username, prefs.password)
-            } catch (e: Exception) { null }
+        var resp = sendFollowing(original)
+        if (relogin != null && resp.code == 401 && sameOrigin(original.url, base)) {
+            val fresh = try { relogin() } catch (e: Exception) { null }
             if (fresh != null) {
-                saveToken(fresh)
-                resp = chain.proceed(withCookie(fresh))
-            } else {
-                resp = chain.proceed(withCookie(token))
+                resp.close()
+                onToken(fresh)
+                resp = sendFollowing(original)
             }
         }
         resp
     }
 
-    private fun buildClient(insecure: Boolean, withAuth: Boolean): OkHttpClient {
+    /** Timeouts and, when [pin] is set, certificate pinning for [base]. */
+    private fun baseClient(base: HttpUrl?, pin: String): OkHttpClient.Builder {
         val b = OkHttpClient.Builder()
             .connectTimeout(10, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .pingInterval(20, TimeUnit.SECONDS)
-        if (insecure) {
-            val tm = object : X509TrustManager {
-                override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
-                override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
-                override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
-            }
+            // Redirects are followed by [serverInterceptor], only within the server.
+            .followRedirects(false)
+            .followSslRedirects(false)
+        if (base != null && base.isHttps && pin.isNotBlank()) {
+            val tm = Tls.PinnedTrustManager(pin, Tls.systemTrustManager())
             val ctx = SSLContext.getInstance("TLS")
-            ctx.init(null, arrayOf<TrustManager>(tm), SecureRandom())
+            ctx.init(null, arrayOf<TrustManager>(tm), null)
             b.sslSocketFactory(ctx.socketFactory, tm)
-            b.hostnameVerifier { _, _ -> true }
+            b.hostnameVerifier(Tls.pinnedHostnameVerifier(pin, base.host))
         }
-        if (withAuth) b.addInterceptor(authInterceptor)
-        return b.build()
+        return b
     }
 
     // ---------- requests ----------
 
     private suspend fun getString(path: String): String = withContext(Dispatchers.IO) {
-        http.newCall(Request.Builder().url(url(path)).build()).execute().use { r ->
-            if (r.code == 401) throw AuthException("Session expired — log in again")
-            if (!r.isSuccessful) throw Exception("HTTP ${r.code} for $path")
-            r.body?.string().orEmpty()
+        try {
+            http.newCall(Request.Builder().url(url(path)).build()).execute().use { r ->
+                if (r.code == 401) throw AuthException("Session expired — log in again")
+                if (!r.isSuccessful) throw Exception("HTTP ${r.code} for $path")
+                r.body?.string().orEmpty()
+            }
+        } catch (e: IOException) {
+            // A changed pinned certificate gets a clear explanation instead of a TLS error string.
+            throw Tls.pinMismatchMessage(e)?.let { Exception(it, e) } ?: e
         }
     }
 
@@ -353,6 +428,8 @@ class FrigateApi(private val prefs: Prefs) {
         url(path).replaceFirst("https://", "wss://").replaceFirst("http://", "ws://")
 
     private companion object {
+        const val MAX_REDIRECTS = 5
+        val REDIRECT_CODES = setOf(301, 302, 303, 307, 308)
         const val DEFAULT_ICE = "[{\"urls\":\"stun:stun.l.google.com:19302\"}]"
     }
 }
