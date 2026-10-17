@@ -2,6 +2,8 @@
 
 What changed in each FrigateCtrl version. Every release on the [Releases page](https://github.com/VoidedKN0X/FrigateCtrl/releases) also lists the exact changes in that build.
 
+To publish a new version: bump `versionCode` and `versionName` in `app/build.gradle.kts`, add a section here, and push to `main`. Pushes without a version bump only build; they don't make a release.
+
 ## 3.2.1 (2026-10-16)
 
 Security hardening.

@@ -13,7 +13,8 @@ android {
         minSdk = 33
         targetSdk = 35
         // CI passes the run number so every build installs over the previous one.
-        versionCode = System.getenv("VERSION_CODE")?.toIntOrNull() ?: 8
+        // Bump both to publish a new release (see CHANGELOG.md).
+        versionCode = 23
         versionName = "3.2.1"
     }
 
