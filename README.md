@@ -1,122 +1,100 @@
 # FrigateCtrl
 
-An unofficial Android app for watching and reviewing your [Frigate NVR](https://frigate.video) cameras from your phone, built with Kotlin and Jetpack Compose on Frigate's HTTP API and go2rtc.
+**Watch and review your Frigate cameras from your phone.**
+
+[![Latest release](https://img.shields.io/github/v/release/VoidedKN0X/FrigateCtrl?label=download)](https://github.com/VoidedKN0X/FrigateCtrl/releases/latest) ![Android 13+](https://img.shields.io/badge/Android-13%2B-3DDC84?logo=android&logoColor=white) [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE) [![Sponsor](https://img.shields.io/badge/sponsor-GitHub-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/VoidedKN0X)
+
+FrigateCtrl is an Android app for [Frigate NVR](https://frigate.video). Watch your cameras live, scrub through recordings on a precise timeline, and control PTZ cameras.
+
+Part of the [Ctrl series](#the-ctrl-series) by VKNXWorks.
+
+<a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/VoidedKN0X/FrigateCtrl"><img src=".github/assets/badge_obtainium.png" alt="Get it on Obtainium" height="48"></a>
 
 ## Features
 
-**Cameras**
-- Camera grid with refreshing snapshots, a red badge with each camera's unreviewed alerts from the last 24 hours, and a PTZ badge on cameras with ONVIF
-- Camera-group filter chips, taken from the `camera_groups` in your Frigate config
-- Pull down to refresh; labels switch between light and dark text depending on the picture behind them
-
-**Live view**
-- Low-latency video (about a second behind) from go2rtc, played natively, with H.264 and H.265 support
-- Audio, including cameras that send G.711 (PCMA/PCMU) audio
-- Stream picker for cameras with more than one live stream (e.g. main and sub)
-- Fullscreen, or just turn the phone sideways
-- Pinch to zoom up to 8×, drag to pan, double-tap to zoom in or out
-- Picture-in-picture: keeps the live view floating when you leave the app, or on demand
-- Camera settings: turn the camera, object detection, recording, snapshots, audio detection and notifications on or off
-- Two-way talk for cameras with a speaker (shown only when go2rtc reports a microphone backchannel)
-- Shows a snapshot straight away while the video connects, and falls back to fast snapshots, with the reason shown, if video can't play
-
-**PTZ (ONVIF)**
-- Pan/tilt joystick: drag or press toward a direction to move, let go to stop
-- Hold-to-zoom and hold-to-focus buttons
-- One-tap presets
-- Uses the same commands as the Frigate web UI, sent through Frigate, so the app never talks to the camera directly
-
-**History**
-- Plays recordings for any time, with gaps between recordings handled correctly
-- Precision timeline: drag to scrub, pinch to zoom from about 20 seconds to 2 days across the screen, fling for long jumps, tap to jump
-- The timeline shows recording coverage, motion, detections and alerts, with a light vibration as each time mark passes
-- Frame previews while scrubbing, and steps of ±0.1 s, 1 s, 10 s and 30 s
-- Previous/next event, 0.5× to 16× speed, a date picker, and pinch-zoom on recordings
-- Events list with thumbnails: swipe to mark reviewed, mark all reviewed, filter by unreviewed or alerts
-- Save or share clips: any event, or a range you mark on the timeline, saved to *Movies/FrigateCtrl*
-
-**Security**
-- Optional app lock with a PIN (4–8 digits, stored only as a salted PBKDF2 hash) and fingerprint unlock
-- Locks instantly or after 30 s, 1 min or 5 min in the background; repeated wrong PINs trigger a growing lockout
-- Hides the app in the recent-apps screen and blocks screenshots and screen recording while the lock is on
-- Video and audio stop as soon as the app leaves the screen
-
-**System health** (the Health tab on the dashboard)
-- Frigate version and uptime, update notice, CPU, memory and GPU load
-- Detector inference speed and temperature, per-camera FPS and skipped frames
-- Disk usage for recordings, clips and cache, plus storage used per camera
-
-**App**
-- Material 3 design with Material You colours, light/dark/system theme and an optional pure-black mode
-- Settings for grid columns, thumbnail refresh, preferring the sub stream, starting muted, keeping the screen on, picture-in-picture, the timeline's starting zoom, how early events start, and timeline vibration
+- **Camera grid** with live snapshots and a badge for new alerts
+- **Live view** about one second behind, with sound, zoom and picture-in-picture
+- **Two-way talk** on cameras with a speaker
+- **PTZ controls**: joystick, zoom, focus and presets
+- **History** with a precise timeline you can pinch to zoom, showing recordings, motion and alerts
+- **Events list**: swipe to mark reviewed, filter by alerts
+- **Save or share clips** of any event or time range
+- **Camera switches**: detection, recording, snapshots and notifications
+- **System health**: CPU, GPU, detector speed and disk usage
+- **App lock** with PIN and fingerprint, blocks screenshots while locked
 
 ## Requirements
 
-- Frigate **0.14 or newer**. Tested against the 0.16–0.18 API.
-- **go2rtc** set up in Frigate for live video and audio (it is by default with restreaming). Without it the app shows refreshing snapshots instead.
-- Android **13** or newer.
-- Your Frigate address can be:
-  - `https://…:8971`, the authenticated port (recommended)
-  - `http://…:5000`, the port without authentication
-  - a reverse-proxy URL
+- Android 13 or newer
+- Frigate 0.14 or newer
+- go2rtc set up in Frigate for live video (it is by default). Without it, you get refreshing snapshots instead.
 
 ## Install
 
-Download the latest `FrigateCtrl-vX.Y.Z-build.N.apk` from the [Releases](../../releases) page and open it on your phone. Android may ask you to allow installing apps from your browser or file manager.
+1. Download the latest `.apk` file from the [Releases page](https://github.com/VoidedKN0X/FrigateCtrl/releases/latest).
+2. Open it on your phone. Android may ask you to allow installing apps from your browser or file manager.
+3. Updates install over the old version. Your settings and login are kept.
 
-Updates install over the existing app. Every build is signed with the same release key, so you never need to uninstall or log in again.
+**Automatic updates with Obtainium:** install [Obtainium](https://github.com/ImranR98/Obtainium), then tap the button below on your phone. Obtainium adds FrigateCtrl and installs every new release for you.
 
-## First run
+<a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/VoidedKN0X/FrigateCtrl"><img src=".github/assets/badge_obtainium.png" alt="Get it on Obtainium" height="48"></a>
 
-1. Enter your Frigate address, e.g. `https://192.168.1.20:8971` or `https://frigate.example.com`. If you leave out `https://` or `http://`, the app tries HTTPS first, then HTTP.
-2. Enter your Frigate **username and password**. Leave the username empty if your Frigate runs without authentication (port 5000).
-3. If Frigate uses its default self-signed certificate, turn on **Allow self-signed certificate**. Only do this for a server on your own network.
-4. Tap **Connect**. The app logs in and checks it can read your Frigate config before saving anything.
+If the button doesn't open Obtainium, add `https://github.com/VoidedKN0X/FrigateCtrl` in Obtainium by hand.
 
-Your password and session token are encrypted with the Android Keystore. The app renews the session automatically when it expires.
+## Getting started
 
-## Tips & troubleshooting
+1. Enter your Frigate address, e.g. `https://192.168.1.20:8971` or `https://frigate.example.com`.
+2. Enter your Frigate username and password. Leave the username empty if your Frigate has no login (port 5000).
+3. If Frigate uses its built-in self-signed certificate, turn on **Allow self-signed certificate** (only on your own network).
+4. Tap **Connect**.
 
-- **No sound in live view:** go2rtc can only send AAC, or G.711 converted to FLAC, over MSE. If your camera uses another audio codec, transcode it in your go2rtc config, for example `- "ffmpeg:your_cam#video=copy#audio=aac"`. History always has sound if your recordings do.
-- **"Snapshot mode" on live view:** the note on the video says why the video failed:
-  - `login rejected`: log in again.
-  - `stream not found`: the go2rtc stream name doesn't match the camera. Map it with `live: streams:` in your Frigate config.
-  - `no frames received`: check the camera works in Frigate's own Live view.
-- **Live view uses the wrong stream:** the app plays the streams listed under `live: streams:` for each camera. Pick one with the stream button, or turn on *Prefer sub stream* in Settings.
-- **Two-way talk:** the Talk button only appears when go2rtc reports that the camera accepts audio. It uses WebRTC, so go2rtc's WebRTC port (8555) must be reachable from your phone — see Frigate's [two-way talk docs](https://docs.frigate.video/configuration/live/#two-way-talk).
-- **Camera settings switches don't stick:** older Frigate versions reset them when Frigate restarts. Change the config to make them permanent.
-- **PTZ controls missing:** they only appear for cameras with an `onvif:` section in the Frigate config, and only show the features the camera reports (pan/tilt, zoom, focus, presets).
+## Tips and troubleshooting
 
-## Building from source
+- **No sound in live view:** the camera's audio needs to be AAC. Convert it in your go2rtc config, e.g. `- "ffmpeg:your_cam#video=copy#audio=aac"`.
+- **Live view shows snapshots instead of video:** the note on the screen says why. `stream not found` usually means the go2rtc stream name doesn't match; map it with `live: streams:` in your Frigate config.
+- **No PTZ buttons:** they only show for cameras with an `onvif:` section in your Frigate config.
+- **Talk button missing:** it only shows when the camera has a speaker, and go2rtc's WebRTC port (8555) must be reachable from your phone.
 
-Open the project in Android Studio (Ladybug or newer) and run it, or build from a terminal:
+## Build from source
 
-```bash
-./gradlew assembleDebug
-```
+You need [Android Studio](https://developer.android.com/studio), or JDK 17 and the Android SDK.
 
-Signed releases are built automatically by GitHub Actions; see `.github/workflows/build.yml` for the signing secrets it expects.
+1. Clone the repo:
+   ```bash
+   git clone https://github.com/VoidedKN0X/FrigateCtrl.git
+   cd FrigateCtrl
+   ```
+2. Build the app:
+   ```bash
+   ./gradlew assembleDebug
+   ```
+   On Windows, use `gradlew.bat assembleDebug`.
+3. The APK is in `app/build/outputs/apk/debug/`. Copy it to your phone and install it.
 
-## Frigate API endpoints used
+Or open the folder in Android Studio and press **Run** with your phone connected.
 
-| Feature | Endpoint |
+## Support the project
+
+FrigateCtrl is free and open source. If it's useful to you, you can support development on [GitHub Sponsors](https://github.com/sponsors/VoidedKN0X). Starring the repo and [reporting bugs](https://github.com/VoidedKN0X/FrigateCtrl/issues) helps too.
+
+## The Ctrl series
+
+Native Android apps for self-hosted services and everyday tools, all with the same Material You design.
+
+| App | What it's for |
 | --- | --- |
-| Login | `POST /api/login` (JWT in the `frigate_token` cookie) |
-| Config, cameras, groups, streams | `GET /api/config` |
-| Version | `GET /api/version` |
-| Snapshots | `GET /api/{camera}/latest.jpg` |
-| Live video and audio | go2rtc MSE websocket at `/live/mse/api/ws?src={stream}` |
-| Recordings and timeline | `GET /api/{camera}/recordings?after=&before=` |
-| Playback | `GET /vod/{camera}/start/{start}/end/{end}/index.m3u8` (HLS) |
-| Scrub previews | `GET /api/{camera}/recordings/{time}/snapshot.jpg` |
-| Alerts and detections | `GET /api/review?cameras=&after=&before=` |
-| Event thumbnails | `GET /clips/review/thumb-{camera}-{id}.webp` |
-| PTZ info | `GET /api/{camera}/ptz/info` |
-| PTZ control | websocket `/ws`, topic `{camera}/ptz` (`MOVE_*`, `ZOOM_*`, `FOCUS_*`, `STOP`, `preset_{name}`) |
-| Camera settings | websocket `/ws`: `onConnect` → `camera_activity`; `{camera}/{feature}/set` `ON`/`OFF` |
-| Mark reviewed | `POST /api/reviews/viewed`, `DELETE /api/review/{id}/viewed` |
-| Clips | `GET /api/{camera}/start/{start}/end/{end}/clip.mp4` |
-| System health | `GET /api/stats`, `GET /api/recordings/storage` |
-| Two-way talk | `GET /api/go2rtc/streams/{stream}`; WebRTC via websocket `/live/webrtc/api/ws?src={stream}` |
+| [BeamCtrl](https://github.com/VoidedKN0X/BeamCtrl) | TV remote for phones with an IR blaster |
+| [CraftyCtrl](https://github.com/VoidedKN0X/CraftyCtrl) | Manage Minecraft servers on Crafty Controller |
+| [ElementCtrl](https://github.com/VoidedKN0X/ElementCtrl) | Matrix chat client for matrix.org and self-hosted Synapse |
+| [FilesCtrl](https://github.com/VoidedKN0X/FilesCtrl) | File manager with NFS, SMB, SFTP, FTP and WebDAV |
+| **FrigateCtrl** (this app) | Watch and review your Frigate NVR cameras |
+| [ImmichCtrl](https://github.com/VoidedKN0X/ImmichCtrl) | Photos and backup for your Immich server |
+| [JellyCtrl](https://github.com/VoidedKN0X/JellyCtrl) | Movies, shows, music and Live TV from Jellyfin |
+| [NaviCtrl](https://github.com/VoidedKN0X/NaviCtrl) | Music player for Navidrome servers |
+| [SeerrCtrl](https://github.com/VoidedKN0X/SeerrCtrl) | Request movies and shows on Seerr / Jellyseerr |
 
-The app never edits your Frigate config file. It only sends PTZ commands, review status and the runtime camera switches above.
+## License
+
+FrigateCtrl is licensed under the [GNU General Public License v3.0](LICENSE). © VKNXWorks
+
+FrigateCtrl is an unofficial app and is not affiliated with the Frigate project.
