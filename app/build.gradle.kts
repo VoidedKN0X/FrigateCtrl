@@ -14,8 +14,8 @@ android {
         targetSdk = 35
         // CI passes the run number so every build installs over the previous one.
         // Bump both to publish a new release (see CHANGELOG.md).
-        versionCode = 24
-        versionName = "3.2.2"
+        versionCode = 25
+        versionName = "3.2.3"
     }
 
     // Release signing from env (GitHub secrets). Local builds fall back to the debug key so the APK

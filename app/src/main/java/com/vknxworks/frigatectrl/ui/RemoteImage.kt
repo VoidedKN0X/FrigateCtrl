@@ -20,7 +20,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
+// Thumbnails and snapshots are only ever kept in memory, never written to disk.
 private val imageCache = object : LruCache<String, ImageBitmap>(48) {}
+
+/** Drops every cached camera image (on logout). */
+fun clearImageCache() = imageCache.evictAll()
 
 suspend fun loadBitmap(url: String, useCache: Boolean = true): ImageBitmap? {
     if (useCache) imageCache.get(url)?.let { return it }

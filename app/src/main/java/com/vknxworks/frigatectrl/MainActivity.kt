@@ -51,6 +51,9 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vknxworks.frigatectrl.ui.lock.AppLockViewModel
 import com.vknxworks.frigatectrl.ui.lock.LockScreen
+import com.vknxworks.frigatectrl.ui.lock.resetBiometricKey
+import com.vknxworks.frigatectrl.ui.clearImageCache
+import com.vknxworks.frigatectrl.data.Clips
 import com.vknxworks.frigatectrl.ui.CameraScreen
 import com.vknxworks.frigatectrl.ui.CamerasScreen
 import com.vknxworks.frigatectrl.ui.FrigateTheme
@@ -69,6 +72,11 @@ class MainActivity : FragmentActivity() {
         enableEdgeToEdge()
         // Never show a snapshot of the cameras in the recent-apps switcher.
         setRecentsScreenshotEnabled(false)
+        // Applied before the first frame is drawn, not only once Compose has started.
+        if (App.lock.hideContent) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        // Remove temporary shared clips left over from an earlier session.
+        val appCtx = applicationContext
+        Thread { Clips.cleanup(appCtx) }.start()
         setContent {
             FrigateTheme {
                 val dark = isAppInDarkTheme()
@@ -100,6 +108,10 @@ private fun Root(activity: FragmentActivity, lockVm: AppLockViewModel = viewMode
     fun logout() {
         App.prefs.clear()
         App.api.reload()
+        // Nothing from the old server stays behind: cached thumbnails and temporary clips.
+        clearImageCache()
+        val appCtx = activity.applicationContext
+        Thread { Clips.cleanup(appCtx, all = true) }.start()
         route = "setup"
     }
 
@@ -124,6 +136,7 @@ private fun Root(activity: FragmentActivity, lockVm: AppLockViewModel = viewMode
             onForgot = {
                 // Forgetting the PIN wipes the lock and the saved login, so the cameras stay protected.
                 App.lock.clearPin()
+                resetBiometricKey()
                 lockVm.unlock()
                 logout()
             },

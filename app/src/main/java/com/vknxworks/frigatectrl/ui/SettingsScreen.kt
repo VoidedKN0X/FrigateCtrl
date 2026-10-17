@@ -75,6 +75,7 @@ import androidx.fragment.app.FragmentActivity
 import com.vknxworks.frigatectrl.ui.lock.PIN_MAX
 import com.vknxworks.frigatectrl.ui.lock.PIN_MIN
 import com.vknxworks.frigatectrl.ui.lock.biometricAvailable
+import com.vknxworks.frigatectrl.ui.lock.resetBiometricKey
 import com.vknxworks.frigatectrl.ui.lock.showBiometricPrompt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -125,8 +126,14 @@ fun SettingsScreen(onBack: () -> Unit, onServer: () -> Unit, onLogout: () -> Uni
                         lock.biometricEnabled, enabled = bioAvailable,
                     ) { on ->
                         val act = ctx as? FragmentActivity
-                        if (on && act != null) showBiometricPrompt(act, "Confirm to turn on") { lock.biometricEnabled = true }
-                        else lock.biometricEnabled = false
+                        if (on && act != null) {
+                            // A fresh key each time, bound to the fingerprints enrolled now.
+                            resetBiometricKey()
+                            showBiometricPrompt(act, "Confirm to turn on") { lock.biometricEnabled = true }
+                        } else {
+                            lock.biometricEnabled = false
+                            resetBiometricKey()
+                        }
                     }
                     Divider()
                     val afters = listOf(0, 30, 60, 300)
@@ -383,9 +390,16 @@ private fun PinSetupDialog(mode: PinMode, onDismiss: () -> Unit) {
             TextButton(enabled = !working, onClick = {
                 scope.launch {
                     working = true
+                    // The current PIN shares the lock screen's wrong-PIN counter and lockout, so it
+                    // can't be guessed here without limit while the app is unlocked.
+                    val wait = if (needsCurrent) lock.lockoutRemainingMs() else 0L
                     // PBKDF2 is deliberately slow; keep it off the main thread.
-                    val currentOk = !needsCurrent || withContext(Dispatchers.Default) { lock.checkPin(current) }
+                    val currentOk = wait <= 0 && (!needsCurrent || withContext(Dispatchers.Default) { lock.checkPin(current) })
+                    if (needsCurrent && wait <= 0) {
+                        if (currentOk) lock.failedAttempts = 0 else lock.recordWrongPin()
+                    }
                     error = when {
+                        wait > 0 -> "Too many tries. Try again in ${(wait + 999) / 1000} s"
                         !currentOk -> "Current PIN is wrong"
                         needsNew && first.length < PIN_MIN -> "Use at least $PIN_MIN digits"
                         needsNew && first != second -> "The PINs don't match"
@@ -393,7 +407,7 @@ private fun PinSetupDialog(mode: PinMode, onDismiss: () -> Unit) {
                         else -> null
                     }
                     if (error == null) {
-                        withContext(Dispatchers.Default) { if (needsNew) lock.setPin(first) else lock.clearPin() }
+                        withContext(Dispatchers.Default) { if (needsNew) lock.setPin(first) else { lock.clearPin(); resetBiometricKey() } }
                         onDismiss()
                     }
                     working = false

@@ -20,26 +20,51 @@ import java.util.concurrent.TimeUnit
 object Clips {
     const val MAX_SECONDS = 3600.0
 
+    private const val MAX_AGE_MS = 3_600_000L
+
+    /** Camera names come from the server, so only safe characters make it into a file name. */
     private fun fileName(camera: String, start: Double): String {
         val stamp = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.US).format(Date((start * 1000).toLong()))
-        return "${camera}_$stamp.mp4"
+        val cam = camera.replace(Regex("[^A-Za-z0-9_-]"), "_").take(64).ifBlank { "camera" }
+        return "${cam}_$stamp.mp4"
+    }
+
+    private fun clipDir(context: Context) = File(context.cacheDir, "clips")
+
+    /**
+     * Deletes temporary clips: those older than an hour (a share target has long since read them),
+     * or all of them with [all] (on logout). Called on start-up too, so footage never lingers.
+     */
+    fun cleanup(context: Context, all: Boolean = false) {
+        runCatching {
+            clipDir(context).listFiles()
+                ?.filter { all || System.currentTimeMillis() - it.lastModified() > MAX_AGE_MS }
+                ?.forEach { it.delete() }
+        }
     }
 
     /** Download [start]..[end] of [camera] into the app's private cache. */
     private suspend fun download(context: Context, camera: String, start: Double, end: Double): File =
         withContext(Dispatchers.IO) {
-            val dir = File(context.cacheDir, "clips").apply { mkdirs() }
+            val dir = clipDir(context).apply { mkdirs() }
             // Old shared clips are only needed until the receiving app has read them.
-            dir.listFiles()?.filter { System.currentTimeMillis() - it.lastModified() > 3_600_000 }?.forEach { it.delete() }
+            cleanup(context)
             val out = File(dir, fileName(camera, start))
-            // Frigate stitches the clip together on request, which can take a while for long ranges.
-            val client = App.api.http.newBuilder().readTimeout(5, TimeUnit.MINUTES).build()
-            client.newCall(Request.Builder().url(App.api.clipUrl(camera, start, end)).build()).execute().use { r ->
-                if (!r.isSuccessful) throw Exception(if (r.code == 404) "No recordings in that range" else "HTTP ${r.code}")
-                val body = r.body ?: throw Exception("Empty response")
-                out.outputStream().use { body.byteStream().copyTo(it) }
+            if (out.canonicalFile.parentFile != dir.canonicalFile) throw Exception("Invalid clip name")
+            try {
+                // Frigate stitches the clip together on request, which can take a while for long ranges.
+                val client = App.api.http.newBuilder().readTimeout(5, TimeUnit.MINUTES).build()
+                client.newCall(Request.Builder().url(App.api.clipUrl(camera, start, end)).build()).execute().use { r ->
+                    if (!r.isSuccessful) throw Exception(if (r.code == 404) "No recordings in that range" else "HTTP ${r.code}")
+                    val body = r.body ?: throw Exception("Empty response")
+                    out.outputStream().use { body.byteStream().copyTo(it) }
+                }
+                if (out.length() < 1024) throw Exception("No recordings in that range")
+            } catch (e: Throwable) {
+                // Never leave a partial recording behind (also when the download is cancelled).
+                out.delete()
+                throw e
             }
-            if (out.length() < 1024) { out.delete(); throw Exception("No recordings in that range") }
             out
         }
 
@@ -47,21 +72,31 @@ object Clips {
     suspend fun save(context: Context, camera: String, start: Double, end: Double): String {
         val file = download(context, camera, start, end)
         return withContext(Dispatchers.IO) {
-            val values = ContentValues().apply {
-                put(MediaStore.Video.Media.DISPLAY_NAME, file.name)
-                put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
-                put(MediaStore.Video.Media.RELATIVE_PATH, Environment.DIRECTORY_MOVIES + "/FrigateCtrl")
-                put(MediaStore.Video.Media.IS_PENDING, 1)
-            }
             val resolver = context.contentResolver
-            val uri = resolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, values)
-                ?: throw Exception("Couldn't create the file")
-            resolver.openOutputStream(uri)?.use { o -> file.inputStream().use { it.copyTo(o) } }
-            values.clear()
-            values.put(MediaStore.Video.Media.IS_PENDING, 0)
-            resolver.update(uri, values, null, null)
-            file.delete()
-            file.name
+            var uri: android.net.Uri? = null
+            try {
+                val values = ContentValues().apply {
+                    put(MediaStore.Video.Media.DISPLAY_NAME, file.name)
+                    put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
+                    put(MediaStore.Video.Media.RELATIVE_PATH, Environment.DIRECTORY_MOVIES + "/FrigateCtrl")
+                    put(MediaStore.Video.Media.IS_PENDING, 1)
+                }
+                val created = resolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, values)
+                    ?: throw Exception("Couldn't create the file")
+                uri = created
+                val o = resolver.openOutputStream(created) ?: throw Exception("Couldn't write the file")
+                o.use { file.inputStream().use { i -> i.copyTo(it) } }
+                values.clear()
+                values.put(MediaStore.Video.Media.IS_PENDING, 0)
+                resolver.update(created, values, null, null)
+                uri = null
+                file.name
+            } finally {
+                // A failed save leaves neither a half-written gallery entry nor the cached copy.
+                val leftover = uri
+                if (leftover != null) runCatching { resolver.delete(leftover, null, null) }
+                file.delete()
+            }
         }
     }
 

@@ -1,6 +1,7 @@
 package com.vknxworks.frigatectrl.data
 
 import android.content.Context
+import android.os.SystemClock
 import android.util.Base64
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -16,7 +17,8 @@ import javax.crypto.spec.PBEKeySpec
  * Same design as CraftyCtrl's lock.
  */
 class LockSettings(context: Context) {
-    private val prefs = context.applicationContext.getSharedPreferences("app_lock", Context.MODE_PRIVATE)
+    private val appContext = context.applicationContext
+    private val prefs = appContext.getSharedPreferences("app_lock", Context.MODE_PRIVATE)
 
     private var _pinSet by mutableStateOf(prefs.contains(KEY_PIN_HASH))
     val pinSet: Boolean get() = _pinSet
@@ -56,6 +58,7 @@ class LockSettings(context: Context) {
         prefs.edit()
             .remove(KEY_PIN_LENGTH).remove(KEY_PIN_HASH).remove(KEY_PIN_SALT)
             .remove(KEY_BIOMETRIC).remove(KEY_FAILED).remove(KEY_LOCKOUT_UNTIL)
+            .remove(KEY_LOCKOUT_LEN).remove(KEY_LOCKOUT_ELAPSED).remove(KEY_LOCKOUT_BOOT)
             .apply()
         _pinSet = false
         _bio = false
@@ -72,9 +75,47 @@ class LockSettings(context: Context) {
         get() = prefs.getInt(KEY_FAILED, 0)
         set(v) = prefs.edit().putInt(KEY_FAILED, v).apply()
 
-    var lockoutUntil: Long
-        get() = prefs.getLong(KEY_LOCKOUT_UNTIL, 0)
-        set(v) = prefs.edit().putLong(KEY_LOCKOUT_UNTIL, v).apply()
+    /**
+     * Counts a wrong PIN (on the lock screen or when changing/turning off the PIN) and starts a
+     * lockout after [MAX_TRIES]: 30 s, doubling for every further batch of wrong PINs, capped at 15 minutes.
+     */
+    fun recordWrongPin() {
+        val fails = failedAttempts + 1
+        failedAttempts = fails
+        if (fails >= MAX_TRIES) {
+            val wait = (30_000L shl ((fails - MAX_TRIES) / MAX_TRIES).coerceAtMost(5)).coerceAtMost(900_000L)
+            prefs.edit()
+                .putLong(KEY_LOCKOUT_LEN, wait)
+                .putLong(KEY_LOCKOUT_UNTIL, System.currentTimeMillis() + wait)
+                .putLong(KEY_LOCKOUT_ELAPSED, SystemClock.elapsedRealtime() + wait)
+                .putInt(KEY_LOCKOUT_BOOT, bootCount())
+                .apply()
+        }
+    }
+
+    /**
+     * Milliseconds left of the wrong-PIN lockout. Measured on the monotonic clock, so changing the
+     * phone's date or time neither ends it early nor stretches it; after a reboot (when that clock
+     * restarts) the wall clock is used, never for longer than the lockout itself.
+     */
+    fun lockoutRemainingMs(): Long {
+        val len = prefs.getLong(KEY_LOCKOUT_LEN, 0)
+        if (len <= 0) {
+            // Lockout saved by an older version (wall clock only).
+            return (prefs.getLong(KEY_LOCKOUT_UNTIL, 0) - System.currentTimeMillis()).coerceIn(0, 900_000L)
+        }
+        val boot = bootCount()
+        val left = if (boot >= 0 && boot == prefs.getInt(KEY_LOCKOUT_BOOT, -2)) {
+            prefs.getLong(KEY_LOCKOUT_ELAPSED, 0) - SystemClock.elapsedRealtime()
+        } else {
+            prefs.getLong(KEY_LOCKOUT_UNTIL, 0) - System.currentTimeMillis()
+        }
+        return left.coerceIn(0, len)
+    }
+
+    private fun bootCount(): Int = try {
+        android.provider.Settings.Global.getInt(appContext.contentResolver, android.provider.Settings.Global.BOOT_COUNT, -1)
+    } catch (_: Exception) { -1 }
 
     private fun hash(pin: String, salt: ByteArray): ByteArray {
         val spec = PBEKeySpec(pin.toCharArray(), salt, 120_000, 256)
@@ -85,6 +126,7 @@ class LockSettings(context: Context) {
     private fun unb64(s: String): ByteArray = Base64.decode(s, Base64.NO_WRAP)
 
     private companion object {
+        const val MAX_TRIES = 5
         const val KEY_PIN_HASH = "pin_hash"
         const val KEY_PIN_SALT = "pin_salt"
         const val KEY_PIN_LENGTH = "pin_length"
@@ -93,5 +135,8 @@ class LockSettings(context: Context) {
         const val KEY_HIDE = "hide_content"
         const val KEY_FAILED = "pin_failed"
         const val KEY_LOCKOUT_UNTIL = "pin_lockout_until"
+        const val KEY_LOCKOUT_LEN = "pin_lockout_len"
+        const val KEY_LOCKOUT_ELAPSED = "pin_lockout_elapsed"
+        const val KEY_LOCKOUT_BOOT = "pin_lockout_boot"
     }
 }

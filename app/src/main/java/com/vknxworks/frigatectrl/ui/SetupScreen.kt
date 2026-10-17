@@ -72,7 +72,10 @@ fun SetupScreen(editing: Boolean, onDone: () -> Unit, onCancel: (() -> Unit)?) {
     val cs = MaterialTheme.colorScheme
     var url by remember { mutableStateOf(if (editing) prefs.baseUrl else "") }
     var user by remember { mutableStateOf(if (editing) prefs.username else "") }
-    var pass by remember { mutableStateOf(if (editing) prefs.password else "") }
+    // The saved password is never put back into the field (where it could be revealed); leaving
+    // it empty keeps it, but only for the same server and username.
+    var pass by remember { mutableStateOf("") }
+    val hasSavedPass = editing && prefs.password.isNotEmpty()
     var insecure by remember { mutableStateOf(prefs.allowInsecureTls) }
     var showPass by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
@@ -84,10 +87,19 @@ fun SetupScreen(editing: Boolean, onDone: () -> Unit, onCancel: (() -> Unit)?) {
     var certChanged by remember { mutableStateOf(false) }
     var httpPrompt by remember { mutableStateOf<String?>(null) }
 
-    fun save(base: String, tok: String, pin: String) {
+    /** The password to use for [base]: what was typed, or the saved one for the same host and user. */
+    fun passwordFor(base: String): String {
+        if (pass.isNotEmpty() || !hasSavedPass) return pass
+        val old = prefs.baseUrl.toHttpUrlOrNull() ?: return ""
+        val new = base.toHttpUrlOrNull() ?: return ""
+        val same = old.host.equals(new.host, ignoreCase = true) && user.trim() == prefs.username
+        return if (same) prefs.password else ""
+    }
+
+    fun save(base: String, tok: String, pin: String, password: String) {
         prefs.baseUrl = base
         prefs.username = user.trim()
-        prefs.password = pass
+        prefs.password = password
         prefs.token = tok
         prefs.allowInsecureTls = insecure && pin.isNotBlank()
         prefs.certPin = if (insecure) pin else ""
@@ -121,8 +133,9 @@ fun SetupScreen(editing: Boolean, onDone: () -> Unit, onCancel: (() -> Unit)?) {
         busy = true
         scope.launch {
             try {
-                val tok = App.api.login(base, user.trim(), pass, pin, httpOk)
-                save(base, tok, pin)
+                val password = passwordFor(base)
+                val tok = App.api.login(base, user.trim(), password, pin, httpOk)
+                save(base, tok, pin, password)
                 busy = false
                 onDone()
                 return@launch
@@ -239,6 +252,7 @@ fun SetupScreen(editing: Boolean, onDone: () -> Unit, onCancel: (() -> Unit)?) {
                     OutlinedTextField(
                         pass, { pass = it }, label = { Text("Password") }, singleLine = true,
                         leadingIcon = { Icon(Icons.Outlined.Lock, null) },
+                        supportingText = if (hasSavedPass) ({ Text("Leave empty to keep the saved password") }) else null,
                         visualTransformation = if (showPass) VisualTransformation.None else PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
                         keyboardActions = KeyboardActions(onDone = { connect() }),

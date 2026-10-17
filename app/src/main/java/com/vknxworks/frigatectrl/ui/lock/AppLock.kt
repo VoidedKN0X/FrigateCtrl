@@ -2,6 +2,9 @@ package com.vknxworks.frigatectrl.ui.lock
 
 import android.content.Context
 import android.os.SystemClock
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyPermanentlyInvalidatedException
+import android.security.keystore.KeyProperties
 import androidx.activity.compose.BackHandler
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
@@ -60,6 +63,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.security.KeyStore
+import java.security.SecureRandom
+import javax.crypto.Cipher
+import javax.crypto.KeyGenerator
+import javax.crypto.SecretKey
 import kotlin.math.roundToInt
 
 const val PIN_MIN = 4
@@ -69,12 +77,83 @@ const val PIN_MAX = 8
 fun biometricAvailable(context: Context): Boolean =
     BiometricManager.from(context).canAuthenticate(BIOMETRIC_STRONG) == BiometricManager.BIOMETRIC_SUCCESS
 
-fun showBiometricPrompt(activity: FragmentActivity, title: String, onSuccess: () -> Unit) {
+/**
+ * A Keystore key that can only be used right after a strong (class 3) biometric match. Unlocking
+ * goes through it, so a hooked or faked "success" callback without a real match can't open the app.
+ * It is separate from the key that encrypts the password and token.
+ */
+private object UnlockKey {
+    private const val ANDROID_KEYSTORE = "AndroidKeyStore"
+    private const val ALIAS = "frigatectrl_biometric_unlock_key"
+    private const val TRANSFORMATION = "AES/GCM/NoPadding"
+
+    private fun keyStore() = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
+
+    fun delete() {
+        runCatching { keyStore().deleteEntry(ALIAS) }
+    }
+
+    private fun key(): SecretKey {
+        (keyStore().getEntry(ALIAS, null) as? KeyStore.SecretKeyEntry)?.let { return it.secretKey }
+        val generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEYSTORE)
+        generator.init(
+            KeyGenParameterSpec.Builder(ALIAS, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
+                .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                .setKeySize(256)
+                .setUserAuthenticationRequired(true)
+                // 0 = every use needs its own biometric match; only class 3 biometrics count.
+                .setUserAuthenticationParameters(0, KeyProperties.AUTH_BIOMETRIC_STRONG)
+                .setInvalidatedByBiometricEnrollment(true)
+                .build(),
+        )
+        return generator.generateKey()
+    }
+
+    /** A cipher ready to be unlocked by the prompt, or null if the key was invalidated (new fingerprint added). */
+    fun cipher(): Cipher? = try {
+        Cipher.getInstance(TRANSFORMATION).apply { init(Cipher.ENCRYPT_MODE, key()) }
+    } catch (e: KeyPermanentlyInvalidatedException) {
+        delete()
+        null
+    } catch (e: Exception) {
+        // E.g. no strong biometric enrolled any more, so the key can't be made.
+        delete()
+        null
+    }
+}
+
+/** Forgets the biometric unlock key, so turning fingerprint unlock on again makes a fresh one. */
+fun resetBiometricKey() = UnlockKey.delete()
+
+/**
+ * Shows a strong-biometric prompt bound to [UnlockKey]. [onSuccess] runs only if the key could
+ * actually be used afterwards. [onInvalidated] runs when fingerprints changed since fingerprint
+ * unlock was turned on, so the PIN is needed again.
+ */
+fun showBiometricPrompt(
+    activity: FragmentActivity,
+    title: String,
+    onInvalidated: () -> Unit = {},
+    onSuccess: () -> Unit,
+) {
+    val cipher = UnlockKey.cipher()
+    if (cipher == null) {
+        onInvalidated()
+        return
+    }
     val prompt = BiometricPrompt(
         activity,
         ContextCompat.getMainExecutor(activity),
         object : BiometricPrompt.AuthenticationCallback() {
-            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) = onSuccess()
+            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                val unlocked = result.cryptoObject?.cipher ?: return
+                // Fails unless the Keystore saw a real strong-biometric match for this cipher.
+                val ok = runCatching {
+                    unlocked.doFinal(ByteArray(16).also { SecureRandom().nextBytes(it) })
+                }.isSuccess
+                if (ok) onSuccess()
+            }
         },
     )
     prompt.authenticate(
@@ -83,6 +162,7 @@ fun showBiometricPrompt(activity: FragmentActivity, title: String, onSuccess: ()
             .setNegativeButtonText("Use PIN")
             .setAllowedAuthenticators(BIOMETRIC_STRONG)
             .build(),
+        BiometricPrompt.CryptoObject(cipher),
     )
 }
 
@@ -101,6 +181,9 @@ class AppLockViewModel : ViewModel() {
 
     /** Set once the lock screen has shown the biometric prompt, so rotation doesn't show it twice. */
     var biometricShown = false
+
+    /** Set when the biometric key was invalidated by a newly added fingerprint; the PIN is needed. */
+    var biometricInvalidated by mutableStateOf(false)
 
     private var backgroundedAt = 0L
 
@@ -129,6 +212,7 @@ class AppLockViewModel : ViewModel() {
     fun unlock() {
         settings.failedAttempts = 0
         pinError = null
+        biometricInvalidated = false
         locked = false
     }
 
@@ -140,32 +224,25 @@ class AppLockViewModel : ViewModel() {
             val ok = withContext(Dispatchers.Default) { settings.checkPin(pin) }
             checking = false
             if (ok) { unlock(); return@launch }
-            val fails = settings.failedAttempts + 1
-            settings.failedAttempts = fails
-            if (fails >= MAX_TRIES) {
-                // 30 s, doubling for every further batch of wrong PINs, capped at 15 minutes.
-                val wait = (30_000L shl ((fails - MAX_TRIES) / MAX_TRIES).coerceAtMost(5)).coerceAtMost(900_000L)
-                settings.lockoutUntil = System.currentTimeMillis() + wait
-                refreshLockout()
-            }
+            settings.recordWrongPin()
+            refreshLockout()
             pinError = "Wrong PIN"
             onWrong()
         }
     }
 
     private fun refreshLockout() {
-        if (settings.lockoutUntil - System.currentTimeMillis() <= 0) { lockoutRemaining = 0; return }
+        lockoutRemaining = settings.lockoutRemainingMs()
+        if (lockoutRemaining <= 0) return
         viewModelScope.launch {
             while (true) {
-                val left = settings.lockoutUntil - System.currentTimeMillis()
-                lockoutRemaining = left.coerceAtLeast(0)
+                val left = settings.lockoutRemainingMs()
+                lockoutRemaining = left
                 if (left <= 0) break
                 delay(500)
             }
         }
     }
-
-    private companion object { const val MAX_TRIES = 5 }
 }
 
 @Composable
@@ -177,10 +254,20 @@ fun LockScreen(vm: AppLockViewModel, onForgot: () -> Unit) {
     val scope = rememberCoroutineScope()
     val shake = remember { Animatable(0f) }
     var pin by remember { mutableStateOf("") }
-    val canBio = vm.settings.biometricEnabled && activity != null && biometricAvailable(context)
+    val canBio = !vm.biometricInvalidated && vm.settings.biometricEnabled && activity != null && biometricAvailable(context)
 
     val askBiometric: () -> Unit = {
-        if (canBio && activity != null) runCatching { showBiometricPrompt(activity, "Unlock FrigateCtrl") { vm.unlock() } }
+        if (canBio && activity != null) runCatching {
+            showBiometricPrompt(
+                activity,
+                "Unlock FrigateCtrl",
+                onInvalidated = {
+                    // Fingerprints changed: ask for the PIN and turn fingerprint unlock off.
+                    vm.settings.biometricEnabled = false
+                    vm.biometricInvalidated = true
+                },
+            ) { vm.unlock() }
+        }
     }
     LaunchedEffect(Unit) {
         if (!vm.biometricShown) { vm.biometricShown = true; askBiometric() }
@@ -216,10 +303,11 @@ fun LockScreen(vm: AppLockViewModel, onForgot: () -> Unit) {
             Spacer(Modifier.height(18.dp))
             Text("FrigateCtrl is locked", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(6.dp))
-            val err = vm.pinError != null || vm.lockoutRemaining > 0
+            val err = vm.pinError != null || vm.lockoutRemaining > 0 || vm.biometricInvalidated
             Text(
                 when {
                     vm.lockoutRemaining > 0 -> "Too many tries. Try again in ${(vm.lockoutRemaining + 999) / 1000} s"
+                    vm.biometricInvalidated -> "Fingerprints changed. Enter your PIN, then turn fingerprint unlock on again in Settings."
                     vm.pinError != null -> vm.pinError!!
                     else -> "Enter your PIN"
                 },
