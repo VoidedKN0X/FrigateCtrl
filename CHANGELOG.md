@@ -4,6 +4,21 @@ What changed in each FrigateCtrl version. Every release on the [Releases page](h
 
 To publish a new version: bump `versionCode` and `versionName` in `app/build.gradle.kts`, add a section here, and push to `main`. Pushes without a version bump only build; they don't make a release.
 
+## 3.2.3 (2026-10-18)
+
+Second security review.
+
+### Security
+
+- **Fingerprint unlock is tied to a real fingerprint match**: unlocking now uses a key in the phone's secure hardware that only works right after a strong fingerprint match, so a faked "success" can't open the app. If you add a new fingerprint to the phone, FrigateCtrl asks for your PIN once and you turn fingerprint unlock on again in Settings
+- **Changing the phone's clock no longer skips the wrong-PIN wait**: the lockout after too many wrong PINs is timed with a clock that can't be changed, and setting the date back can't stretch it either
+- **Guessing the PIN in Settings counts too**: a wrong current PIN under **Change PIN** or **Turn off app lock** counts toward the same lockout as the lock screen
+- **Nothing is copied to a new phone**: the server address, encrypted login, trusted certificate, PIN and settings are excluded from cloud backups and from phone-to-phone transfers
+- **Saved password stays hidden**: **Server settings** no longer fills in your saved password (where the eye button could show it). Leave the field empty to keep it; it's only reused for the same server and username
+- **Recorded clips don't linger**: temporary clips for sharing are deleted after an hour (also on the next start), straight away if saving or downloading fails, and all of them on logout. A failed save no longer leaves a broken video in your gallery, and camera names can't steer a clip's file name outside its folder
+- Logging out also clears camera thumbnails kept in memory
+- Screenshots and recents are blocked from the very first frame when **Hide content in screenshots & recents** is on
+
 ## 3.2.2 (2026-10-18)
 
 - Version numbers are now plain, with no build number on the end, and a new version only comes out when something in the app actually changes. Nothing else in the app has changed.
