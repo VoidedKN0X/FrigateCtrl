@@ -81,36 +81,44 @@ class LockSettings(context: Context) {
      */
     fun recordWrongPin() {
         val fails = failedAttempts + 1
-        failedAttempts = fails
+        val edit = prefs.edit().putInt(KEY_FAILED, fails)
         if (fails >= MAX_TRIES) {
             val wait = (30_000L shl ((fails - MAX_TRIES) / MAX_TRIES).coerceAtMost(5)).coerceAtMost(900_000L)
-            prefs.edit()
-                .putLong(KEY_LOCKOUT_LEN, wait)
+            edit.putLong(KEY_LOCKOUT_LEN, wait)
                 .putLong(KEY_LOCKOUT_UNTIL, System.currentTimeMillis() + wait)
                 .putLong(KEY_LOCKOUT_ELAPSED, SystemClock.elapsedRealtime() + wait)
                 .putInt(KEY_LOCKOUT_BOOT, bootCount())
-                .apply()
         }
+        // Written to disk before returning, so killing the app right after a wrong PIN can't lose it.
+        edit.commit()
     }
 
     /**
-     * Milliseconds left of the wrong-PIN lockout. Measured on the monotonic clock, so changing the
-     * phone's date or time neither ends it early nor stretches it; after a reboot (when that clock
-     * restarts) the wall clock is used, never for longer than the lockout itself.
+     * Milliseconds left of the wrong-PIN lockout, measured only on the monotonic clock, so changing
+     * the phone's date or time neither ends it early nor stretches it. After a reboot (when that clock
+     * restarts) the full lockout counts again from boot: the time since boot is the only part of the
+     * wait that is known for sure to have passed, so rebooting can't be used to skip it.
      */
     fun lockoutRemainingMs(): Long {
         val len = prefs.getLong(KEY_LOCKOUT_LEN, 0)
         if (len <= 0) {
             // Lockout saved by an older version (wall clock only).
-            return (prefs.getLong(KEY_LOCKOUT_UNTIL, 0) - System.currentTimeMillis()).coerceIn(0, 900_000L)
+            val legacy = (prefs.getLong(KEY_LOCKOUT_UNTIL, 0) - System.currentTimeMillis()).coerceIn(0, 900_000L)
+            if (legacy <= 0 && prefs.contains(KEY_LOCKOUT_UNTIL)) prefs.edit().remove(KEY_LOCKOUT_UNTIL).apply()
+            return legacy
         }
+        val now = SystemClock.elapsedRealtime()
+        val end = prefs.getLong(KEY_LOCKOUT_ELAPSED, 0)
+        val savedBoot = prefs.getInt(KEY_LOCKOUT_BOOT, -1)
         val boot = bootCount()
-        val left = if (boot >= 0 && boot == prefs.getInt(KEY_LOCKOUT_BOOT, -2)) {
-            prefs.getLong(KEY_LOCKOUT_ELAPSED, 0) - SystemClock.elapsedRealtime()
-        } else {
-            prefs.getLong(KEY_LOCKOUT_UNTIL, 0) - System.currentTimeMillis()
+        val sameBoot = if (boot >= 0 && savedBoot >= 0) boot == savedBoot else now >= end - len
+        val left = (if (sameBoot) end - now else len - now).coerceIn(0, len)
+        if (left <= 0) {
+            // Over: forget it, so a later reboot doesn't start it again.
+            prefs.edit().remove(KEY_LOCKOUT_LEN).remove(KEY_LOCKOUT_ELAPSED)
+                .remove(KEY_LOCKOUT_BOOT).remove(KEY_LOCKOUT_UNTIL).apply()
         }
-        return left.coerceIn(0, len)
+        return left
     }
 
     private fun bootCount(): Int = try {
