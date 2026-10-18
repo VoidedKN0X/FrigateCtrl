@@ -129,7 +129,7 @@ fun SettingsScreen(onBack: () -> Unit, onServer: () -> Unit, onLogout: () -> Uni
                         if (on && act != null) {
                             // A fresh key each time, bound to the fingerprints enrolled now.
                             resetBiometricKey()
-                            showBiometricPrompt(act, "Confirm to turn on") { lock.biometricEnabled = true }
+                            showBiometricPrompt(act, "Confirm to turn on", createKey = true) { lock.biometricEnabled = true }
                         } else {
                             lock.biometricEnabled = false
                             resetBiometricKey()

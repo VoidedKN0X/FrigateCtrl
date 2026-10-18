@@ -87,12 +87,15 @@ fun SetupScreen(editing: Boolean, onDone: () -> Unit, onCancel: (() -> Unit)?) {
     var certChanged by remember { mutableStateOf(false) }
     var httpPrompt by remember { mutableStateOf<String?>(null) }
 
-    /** The password to use for [base]: what was typed, or the saved one for the same host and user. */
+    /** The password to use for [base]: what was typed, or the saved one for the same server (scheme, host, port) and user. */
     fun passwordFor(base: String): String {
         if (pass.isNotEmpty() || !hasSavedPass) return pass
         val old = prefs.baseUrl.toHttpUrlOrNull() ?: return ""
         val new = base.toHttpUrlOrNull() ?: return ""
-        val same = old.host.equals(new.host, ignoreCase = true) && user.trim() == prefs.username
+        // Same scheme, host and port: switching to http or to another port on the same machine
+        // needs the password typed again.
+        val same = old.scheme == new.scheme && old.host.equals(new.host, ignoreCase = true) &&
+            old.port == new.port && user.trim() == prefs.username
         return if (same) prefs.password else ""
     }
 

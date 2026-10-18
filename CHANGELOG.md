@@ -4,6 +4,18 @@ What changed in each FrigateCtrl version. Every release on the [Releases page](h
 
 To publish a new version: bump `versionCode` and `versionName` in `app/build.gradle.kts`, add a section here, and push to `main`. Pushes without a version bump only build; they don't make a release.
 
+## 3.2.4 (2026-10-18)
+
+Third security review: checks that the previous version's protections can't be worked around.
+
+### Security
+
+- **Restarting the phone no longer shortens the wrong-PIN wait**: after a restart the full wait now counts again from when the phone started, instead of trusting the phone's date and time (which could be set forward to end the wait early). A wait that had already run out is forgotten, so a later restart doesn't bring it back
+- **Fingerprint unlock can't be set up behind your back**: unlocking with a fingerprint only works with the key made when you turned fingerprint unlock on in Settings. If that key is missing (for example after updating from 3.2.2 or older) or fingerprints were added since, FrigateCtrl asks for your PIN and you turn fingerprint unlock on again; it never quietly makes a new key that would accept a newly added fingerprint
+- **Wrong PINs are saved instantly**: each wrong PIN is written to storage before the app reacts, so closing the app straight after a wrong guess can't make it forget the attempt
+- **The lockout applies everywhere at once**: a wait started under **Change PIN** or **Turn off app lock** now also blocks the lock screen straight away
+- **Saved password only reused for the exact same server**: leaving the password empty in **Server settings** keeps the saved one only if the address uses the same http/https and port as before, so switching to plain http or to another port on the same machine needs the password typed again
+
 ## 3.2.3 (2026-10-18)
 
 Second security review.
