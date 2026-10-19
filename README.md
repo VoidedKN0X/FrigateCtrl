@@ -57,6 +57,7 @@ If the Obtainium button doesn't open the app, add `https://github.com/VoidedKN0X
 - **Live view shows snapshots instead of video:** the note on the screen says why. `stream not found` usually means the go2rtc stream name doesn't match; map it with `live: streams:` in your Frigate config.
 - **No PTZ buttons:** they only show for cameras with an `onvif:` section in your Frigate config.
 - **Talk button missing:** it only shows when the camera has a speaker, and go2rtc's WebRTC port (8555) must be reachable from your phone.
+- **Talk connects at home but not away from it:** talk only uses the STUN/TURN servers listed under `go2rtc: webrtc: ice_servers:` in your Frigate config; the app never contacts a public STUN server on its own. Add one there (your own, or a public one if you're happy for it to see your IP address).
 
 ## Usage stats
 
@@ -67,6 +68,8 @@ FrigateCtrl can share anonymous usage stats, **only if you say yes**. It asks on
 - **Where:** VKNXWorks' own self-hosted [Aptabase](https://aptabase.com) server. Nothing goes to Google or analytics companies. Like any website, the server sees your IP address; Aptabase uses it only to work out the country and doesn't store it.
 
 Builds from source don't include the stats key, so they can't send anything and the setting is hidden. The code is in [`Telemetry.kt`](app/src/main/java/com/vknxworks/frigatectrl/data/Telemetry.kt).
+
+Apart from these opt-in stats, FrigateCtrl only talks to your own Frigate server (and, for two-way talk, the STUN/TURN servers from your go2rtc config).
 
 ## Build from source
 

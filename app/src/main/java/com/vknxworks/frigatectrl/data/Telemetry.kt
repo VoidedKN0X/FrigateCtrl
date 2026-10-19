@@ -10,6 +10,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
+import okhttp3.Call
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -66,6 +67,8 @@ class Telemetry(private val context: Context, private val settings: Settings) {
     private val queue = Channel<JSONObject>(capacity = 64, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     @Volatile private var sessionId = newSessionId()
     @Volatile private var lastEventAt = 0L
+    /** The request being sent right now, so switching stats off can stop it. */
+    @Volatile private var inFlight: Call? = null
 
     init {
         // One event at a time, in order. Failures are dropped: stats are never stored or retried.
@@ -89,10 +92,18 @@ class Telemetry(private val context: Context, private val settings: Settings) {
         val was = settings.usageStats
         settings.usageStats = on
         settings.usageStatsAsked = true
+        if (!on) dropPending()
         if (on && !was && available) {
             resetSession()
             trackOpened()
         }
+    }
+
+    /** Switched off: nothing queued goes out, and a request being sent is stopped. */
+    private fun dropPending() {
+        while (queue.tryReceive().isSuccess) Unit
+        inFlight?.cancel()
+        resetSession()
     }
 
     /** Records an event if the user opted in. [props] values must be fixed strings or numbers from code. */
@@ -124,7 +135,12 @@ class Telemetry(private val context: Context, private val settings: Settings) {
             .header("User-Agent", "FrigateCtrl/${BuildConfig.VERSION_NAME} (Android)")
             .post(event.toString().toRequestBody(JSON))
             .build()
-        runCatching { http.newCall(request).execute().close() }
+        val call = http.newCall(request)
+        inFlight = call
+        // Re-checked here too: switching off between the check above and this point still stops it.
+        if (!enabled) call.cancel()
+        runCatching { call.execute().close() }
+        inFlight = null
     }
 
     /** "phone" or "tablet", from the screen's smallest width. */
