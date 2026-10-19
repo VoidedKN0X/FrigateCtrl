@@ -12,22 +12,25 @@ Part of the [Ctrl series](#the-ctrl-series) by VKNXWorks.
 
 ## Features
 
-- **Camera grid** with live snapshots and a badge for new alerts
+- **Camera grid** with live snapshots, camera-group filters and a badge for new alerts
 - **Live view** about one second behind, with sound, zoom and picture-in-picture
 - **Two-way talk** on cameras with a speaker
 - **PTZ controls**: joystick, zoom, focus and presets
 - **History** with a precise timeline you can pinch to zoom, showing recordings, motion and alerts
-- **Events list**: swipe to mark reviewed, filter by alerts
+- **Events list**: swipe to mark reviewed, mark all, filter by unreviewed or alerts
 - **Save or share clips** of any event or time range
-- **Camera switches**: detection, recording, snapshots and notifications
-- **System health**: CPU, GPU, detector speed and disk usage
-- **App lock** with PIN and fingerprint, blocks screenshots while locked
+- **Camera switches**: camera on/off, detection, recording, snapshots, audio detection and notifications
+- **System health**: CPU, GPU, memory, detector speed, camera FPS and disk usage
+- **App lock** with PIN and fingerprint
+- **Private by default**: cameras are hidden from screenshots, screen recordings and the recent-apps preview (**Hide content in screenshots & recents**, on by default)
+- **Self-signed certificates** are pinned: you confirm the fingerprint once, and only that certificate is accepted after that
 
 ## Requirements
 
 - Android 13 or newer
 - Frigate 0.14 or newer
 - go2rtc set up in Frigate for live video (it is by default). Without it, you get refreshing snapshots instead.
+- Microphone permission, only if you use two-way talk
 
 ## Install
 
@@ -48,8 +51,8 @@ If the Obtainium button doesn't open the app, add `https://github.com/VoidedKN0X
 
 1. Enter your Frigate address, e.g. `https://192.168.1.20:8971` or `https://frigate.example.com`.
 2. Enter your Frigate username and password. Leave the username empty if your Frigate has no login (port 5000).
-3. If Frigate uses its built-in self-signed certificate, turn on **Allow self-signed certificate** (only on your own network).
-4. Tap **Connect**.
+3. If Frigate uses its built-in self-signed certificate, turn on **Allow self-signed certificate**.
+4. Tap **Connect**. With a self-signed certificate, check that the SHA-256 fingerprint shown matches your server's and tap **Trust**. With a plain `http://` address, the app warns you first; tap **Connect anyway** only on your own network.
 
 ## Tips and troubleshooting
 
