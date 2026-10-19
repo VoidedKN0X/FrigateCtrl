@@ -4,6 +4,17 @@ What changed in each FrigateCtrl version. Every release on the [Releases page](h
 
 To publish a new version: bump `versionCode` and `versionName` in `app/build.gradle.kts`, add a section here, and push to `main`. Pushes without a version bump only build; they don't make a release.
 
+## 3.2.10 (2026-10-19)
+
+### Changed
+
+- **One About section in every Ctrl app**: Support, Report a bug, Source code and Licence (GPL-3.0), with the version underneath, at the bottom of Settings (the gear button at the top of the Cameras screen). Every Ctrl app now has the same four rows, in the same order, with the same wording and icons.
+  - **Support FrigateCtrl** opens VKNXWorks' GitHub Sponsors page in your browser.
+  - **Report a bug** (new) opens FrigateCtrl's GitHub issues page, where you can report a problem or suggest an idea.
+  - **Source code** (new) opens FrigateCtrl's GitHub repository.
+  - **Licence** (new) opens the GNU General Public License v3.0, the licence FrigateCtrl is released under.
+- The version is no longer a row of its own under About: it now sits in a small line below the section, reading "FrigateCtrl 3.2.10 · VKNXWorks".
+
 ## 3.2.9 (2026-10-19)
 
 ### New
