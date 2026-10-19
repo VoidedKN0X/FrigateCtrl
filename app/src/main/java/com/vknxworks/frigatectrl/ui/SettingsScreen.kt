@@ -1,6 +1,7 @@
 package com.vknxworks.frigatectrl.ui
 
 import android.content.ActivityNotFoundException
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.clickable
@@ -14,15 +15,18 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Gavel
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.automirrored.outlined.VolumeOff
 import androidx.compose.material.icons.outlined.Contrast
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Dns
-import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.HighQuality
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Insights
 import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.Palette
@@ -63,6 +67,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.text.KeyboardOptions
@@ -87,6 +92,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.vknxworks.frigatectrl.App
+import com.vknxworks.frigatectrl.BuildConfig
 import com.vknxworks.frigatectrl.R
 import com.vknxworks.frigatectrl.data.ThemeMode
 
@@ -103,9 +109,6 @@ fun SettingsScreen(onBack: () -> Unit, onServer: () -> Unit, onLogout: () -> Uni
     val bioAvailable = remember { biometricAvailable(ctx) }
     var frigateVersion by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) { frigateVersion = App.api.version() }
-    val appVersion = remember {
-        try { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName } catch (_: Exception) { null } ?: "?"
-    }
 
     Scaffold(
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
@@ -276,27 +279,22 @@ fun SettingsScreen(onBack: () -> Unit, onServer: () -> Unit, onLogout: () -> Uni
                 )
             }
 
-            Section("About") {
-                ListItem(
-                    leadingContent = { Icon(Icons.Outlined.Favorite, null) },
-                    headlineContent = { Text(stringResource(R.string.support_title)) },
-                    supportingContent = { Text(stringResource(R.string.support_subtitle)) },
-                    colors = itemColors(),
-                    modifier = Modifier.clickableItem {
-                        try {
-                            ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(SPONSOR_URL)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                        } catch (_: ActivityNotFoundException) {
-                        }
-                    },
-                )
+            Section(stringResource(R.string.group_about)) {
+                AboutRow(Icons.Filled.Favorite, R.string.support_title, R.string.support_subtitle) { openLink(ctx, SPONSOR_URL) }
                 Divider()
-                ListItem(
-                    leadingContent = { Icon(Icons.Outlined.Info, null) },
-                    headlineContent = { Text("FrigateCtrl $appVersion") },
-                    supportingContent = { Text("VKNXWorks") },
-                    colors = itemColors(),
-                )
+                AboutRow(Icons.Filled.BugReport, R.string.bugs_title, R.string.bugs_subtitle) { openLink(ctx, ISSUES_URL) }
+                Divider()
+                AboutRow(Icons.Filled.Code, R.string.source_title, R.string.source_subtitle) { openLink(ctx, REPO_URL) }
+                Divider()
+                AboutRow(Icons.Filled.Gavel, R.string.licence_title, R.string.licence_subtitle) { openLink(ctx, LICENCE_URL) }
             }
+            Text(
+                stringResource(R.string.about_footer, BuildConfig.VERSION_NAME),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+            )
         }
     }
 
@@ -315,6 +313,26 @@ fun SettingsScreen(onBack: () -> Unit, onServer: () -> Unit, onLogout: () -> Uni
 }
 
 private const val SPONSOR_URL = "https://github.com/sponsors/VoidedKN0X"
+private const val REPO_URL = "https://github.com/VoidedKN0X/FrigateCtrl"
+private const val ISSUES_URL = "$REPO_URL/issues"
+private const val LICENCE_URL = "https://www.gnu.org/licenses/gpl-3.0.html"
+
+private fun openLink(ctx: Context, url: String) {
+    try {
+        ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    } catch (_: ActivityNotFoundException) {
+    }
+}
+
+@Composable
+private fun AboutRow(icon: ImageVector, title: Int, subtitle: Int, onClick: () -> Unit) = ListItem(
+    leadingContent = { Icon(icon, null) },
+    headlineContent = { Text(stringResource(title)) },
+    supportingContent = { Text(stringResource(subtitle)) },
+    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) },
+    colors = itemColors(),
+    modifier = Modifier.clickableItem(onClick),
+)
 
 @Composable
 private fun Section(title: String, footer: String? = null, content: @Composable () -> Unit) {

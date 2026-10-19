@@ -95,7 +95,7 @@ Or open the folder in Android Studio and press **Run** with your phone connected
 
 ## Support the project
 
-FrigateCtrl is free and open source. If it's useful to you, you can support development on [GitHub Sponsors](https://github.com/sponsors/VoidedKN0X), or tap **Support FrigateCtrl** under **Settings → About** in the app (the gear button on the Cameras screen). Starring the repo and [reporting bugs](https://github.com/VoidedKN0X/FrigateCtrl/issues) helps too.
+FrigateCtrl is free and open source. If it's useful to you, tap **Support FrigateCtrl** under **Settings → About** in the app (the gear button on the Cameras screen) to sponsor development on [GitHub Sponsors](https://github.com/sponsors/VoidedKN0X). Found a problem or have an idea? Tap **Report a bug** in the same section, or [open an issue](https://github.com/VoidedKN0X/FrigateCtrl/issues). Starring the repo helps too.
 
 ## The Ctrl series
 
