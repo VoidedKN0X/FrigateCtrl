@@ -4,10 +4,19 @@ What changed in each FrigateCtrl version. Every release on the [Releases page](h
 
 To publish a new version: bump `versionCode` and `versionName` in `app/build.gradle.kts`, add a section here, and push to `main`. Pushes without a version bump only build; they don't make a release.
 
-## Unreleased
+## 3.2.8 (2026-10-19)
+
+FrigateCtrl is now completely Google-free. Nothing changes in how you use it.
+
+### Privacy
+
+- **Emoji no longer make FrigateCtrl ask Google for a font.** A standard Android library inside the app asked Google Play services for a downloadable emoji font every time FrigateCtrl started, which could make Google Play services fetch that font from Google. This lookup is now switched off: emoji are drawn with your phone's own emoji font. On phones without Google Play services nothing changes; on other phones, emoji can look slightly different if the phone's built-in emoji font is older.
+- **The built-in web view no longer reports to Google.** Two-way talk runs in Android's built-in web view, which by default checks pages with Google Safe Browsing and may send usage reports to Google. Both are now turned off for FrigateCtrl. It works exactly as before.
+- **Checked: FrigateCtrl is Google-free.** It contains no Google Play services, Firebase, ML Kit, Google Cast or Play Core, and it doesn't load fonts or anything else from Google's servers. It also never switches server addresses by itself: it always uses the address you set up, and only you can change it.
 
 ### Changed
 
+- **README: new Google-free line** under Requirements: works without Google Play services, contains no Google libraries that contact Google, and draws emoji with your phone's own emoji font, and the web view used for two-way talk has Google Safe Browsing and usage reports turned off.
 - **README brought up to date with 3.2.7.** The feature list now also mentions camera-group filters, **mark all** and the **Unreviewed** filter in the events list, the camera on/off and audio detection switches, memory and camera FPS on the Health tab, hiding cameras from screenshots and the recent-apps preview (on by default, separate from the app lock), and certificate pinning for self-signed certificates. It no longer says screenshots are only blocked while the app is locked. **Getting started** now explains the **Trust** step for a self-signed certificate and the warning for plain `http://` addresses, and **Requirements** notes the microphone permission is only needed for two-way talk. Nothing in the app has changed.
 
 ## 3.2.7 (2026-10-19)

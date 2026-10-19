@@ -31,6 +31,7 @@ Part of the [Ctrl series](#the-ctrl-series) by VKNXWorks.
 - Frigate 0.14 or newer
 - go2rtc set up in Frigate for live video (it is by default). Without it, you get refreshing snapshots instead.
 - Microphone permission, only if you use two-way talk
+- **Google-free:** works without Google Play services, contains no Google libraries that contact Google, and draws emoji with your phone's own emoji font. The built-in web view used for two-way talk has Google Safe Browsing and WebView usage reports turned off
 
 ## Install
 
