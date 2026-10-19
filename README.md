@@ -25,6 +25,10 @@ Part of the [Ctrl series](#the-ctrl-series) by VKNXWorks.
 - **Private by default**: cameras are hidden from screenshots, screen recordings and the recent-apps preview (**Hide content in screenshots & recents**, on by default)
 - **Self-signed certificates** are pinned: you confirm the fingerprint once, and only that certificate is accepted after that
 
+## Screenshots
+
+Coming soon.
+
 ## Requirements
 
 - Android 13 or newer
