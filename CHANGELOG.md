@@ -4,6 +4,13 @@ What changed in each FrigateCtrl version. Every release on the [Releases page](h
 
 To publish a new version: bump `versionCode` and `versionName` in `app/build.gradle.kts`, add a section here, and push to `main`. Pushes without a version bump only build; they don't make a release.
 
+## 3.2.9 (2026-10-19)
+
+### New
+
+- **Support FrigateCtrl** under Settings → About opens VKNXWorks' GitHub Sponsors page in your browser. FrigateCtrl is free and open source, and this is the place to sponsor its development if you'd like to. Settings opens from the gear button at the top of the Cameras screen; the new row is the first one under About, above the version.
+- The README's **Support the project** section now also points to the **Support FrigateCtrl** button.
+
 ## 3.2.8 (2026-10-19)
 
 FrigateCtrl is now completely Google-free. Nothing changes in how you use it.
