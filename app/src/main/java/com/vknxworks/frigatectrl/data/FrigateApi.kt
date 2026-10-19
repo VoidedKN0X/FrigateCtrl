@@ -283,7 +283,10 @@ class FrigateApi(private val prefs: Prefs) {
     @Volatile var groups: List<CameraGroup> = emptyList()
         private set
 
-    /** WebRTC ICE servers from go2rtc's config (used for two-way talk); public STUN if none set. */
+    /**
+     * WebRTC ICE servers from go2rtc's config (used for two-way talk). None if go2rtc doesn't list any:
+     * the phone then never contacts a third-party STUN server (it used to fall back to Google's).
+     */
     @Volatile var iceServersJson: String = DEFAULT_ICE
         private set
 
@@ -430,6 +433,6 @@ class FrigateApi(private val prefs: Prefs) {
     private companion object {
         const val MAX_REDIRECTS = 5
         val REDIRECT_CODES = setOf(301, 302, 303, 307, 308)
-        const val DEFAULT_ICE = "[{\"urls\":\"stun:stun.l.google.com:19302\"}]"
+        const val DEFAULT_ICE = "[]"
     }
 }

@@ -4,6 +4,19 @@ What changed in each FrigateCtrl version. Every release on the [Releases page](h
 
 To publish a new version: bump `versionCode` and `versionName` in `app/build.gradle.kts`, add a section here, and push to `main`. Pushes without a version bump only build; they don't make a release.
 
+## 3.2.7 (2026-10-19)
+
+Fourth security and privacy review, focused on what the app sends and to whom.
+
+### Security
+
+- **Two-way talk no longer contacts Google.** When your go2rtc config doesn't list any STUN/TURN servers, talk used to fall back to Google's public STUN server (`stun.l.google.com`), which let Google see your phone's IP address every time you used talk. Now talk only uses the servers in your own go2rtc config (`go2rtc: webrtc: ice_servers:`), and none otherwise. At home, and with go2rtc's WebRTC port (8555) reachable, talk works as before. If talk stops connecting away from home, add a STUN server to that list; the README explains how
+- **Switching usage stats off takes effect straight away.** Turning off **Settings > Usage stats** now also throws away any stats still waiting to be sent and stops one that's being sent at that moment, and the next time you switch them on starts a new random session. Before, a stat that was already on its way could still go out
+
+### Changed
+
+- The README's **Usage stats** section now says that, apart from those opt-in stats, FrigateCtrl only talks to your own Frigate server (and, for talk, the STUN/TURN servers from your go2rtc config)
+
 ## 3.2.6 (2026-10-19)
 
 ### Changed
