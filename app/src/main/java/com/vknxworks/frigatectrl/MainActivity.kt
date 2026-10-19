@@ -60,6 +60,7 @@ import com.vknxworks.frigatectrl.ui.FrigateTheme
 import com.vknxworks.frigatectrl.ui.HealthScreen
 import com.vknxworks.frigatectrl.ui.SettingsScreen
 import com.vknxworks.frigatectrl.ui.SetupScreen
+import com.vknxworks.frigatectrl.ui.UsageStatsPrompt
 import com.vknxworks.frigatectrl.ui.ConnectionSecurityCheck
 import com.vknxworks.frigatectrl.ui.needsConnectionCheck
 import com.vknxworks.frigatectrl.ui.isAppInDarkTheme
@@ -69,6 +70,8 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         App.init(this)
+        // Usage stats (only if the user opted in); not again on rotation or other configuration changes.
+        if (savedInstanceState == null) App.telemetry.appOpened()
         enableEdgeToEdge()
         // Never show a snapshot of the cameras in the recent-apps switcher.
         setRecentsScreenshotEnabled(false)
@@ -154,6 +157,13 @@ private fun Root(activity: FragmentActivity, lockVm: AppLockViewModel = viewMode
         return
     }
 
+    // Usage stats (only if the user opted in): the kind of screen, never which camera it shows.
+    // The camera screen reports its own Live / History views.
+    val screen = screenName(route, homeTab)
+    LaunchedEffect(screen) { if (screen != null) App.telemetry.track("screen_viewed", mapOf("screen" to screen)) }
+    // Asked once, only after a server is set up.
+    if (route != "setup" && route != "setup-edit" && App.prefs.isConfigured) UsageStatsPrompt()
+
     AnimatedContent(
         targetState = route,
         transitionSpec = {
@@ -194,6 +204,16 @@ private fun Root(activity: FragmentActivity, lockVm: AppLockViewModel = viewMode
             }
         }
     }
+}
+
+/** A fixed screen name for usage stats; null for "camera:<name>", which CameraScreen reports without the name. */
+private fun screenName(route: String, homeTab: Int): String? = when {
+    route == "setup" -> "Setup"
+    route == "setup-edit" -> "ServerSettings"
+    route == "cameras" -> if (homeTab == 0) "Cameras" else "Health"
+    route == "settings" -> "Settings"
+    route.startsWith("camera:") -> null
+    else -> "Other"
 }
 
 private fun depth(route: String): Int = when {

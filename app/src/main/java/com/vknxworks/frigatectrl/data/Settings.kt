@@ -87,4 +87,17 @@ class Settings(context: Context) {
     var eventPreroll: Int
         get() = _preroll.intValue
         set(v) { _preroll.intValue = v; sp.edit().putInt("event_preroll", v).apply() }
+
+    // Usage stats
+    /** Opt-in anonymous usage stats (off until the user says yes). */
+    private val _usageStats = bool("usage_stats", false)
+    var usageStats: Boolean
+        get() = _usageStats.value
+        set(v) { _usageStats.value = v; sp.edit().putBoolean("usage_stats", v).apply() }
+
+    /** Whether the one-time usage stats question has been answered. */
+    private val _usageStatsAsked = bool("usage_stats_asked", false)
+    var usageStatsAsked: Boolean
+        get() = _usageStatsAsked.value
+        set(v) { _usageStatsAsked.value = v; sp.edit().putBoolean("usage_stats_asked", v).apply() }
 }

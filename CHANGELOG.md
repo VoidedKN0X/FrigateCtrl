@@ -4,13 +4,19 @@ What changed in each FrigateCtrl version. Every release on the [Releases page](h
 
 To publish a new version: bump `versionCode` and `versionName` in `app/build.gradle.kts`, add a section here, and push to `main`. Pushes without a version bump only build; they don't make a release.
 
-## Unreleased
+## 3.2.5 (2026-10-19)
 
-README only; the app itself hasn't changed, so this doesn't make a new release.
+### New
+
+- **Optional anonymous usage stats.** After you connect to your Frigate server, FrigateCtrl asks once whether you'd like to share anonymous usage stats. Nothing is sent unless you tap **Share stats**, and you can switch it on or off any time in **Settings > Usage stats**
+- **What's shared:** which screens you open (for example "Cameras", "Live", "History" or "Settings", never which camera), that you opened live view, scrubbed the history timeline, used PTZ controls or played an event (and whether from the events list or the skip buttons), the app version, Android version, phone model, language, phone or tablet, and whether you prefer the sub stream
+- **What's never shared:** your server address, username, passwords, camera names, zones, what was detected (people, cars and so on), event IDs, recording times or footage, PTZ commands or presets, or any ID that follows you between sessions. Each session gets a new random ID, and stats from before and after you switch them off and on again aren't linked
+- **Where it goes:** to VKNXWorks' own self-hosted server (Aptabase), not to Google or any analytics company. Builds you make from source can't send stats at all, and the setting doesn't appear in them
 
 ### Changed
 
 - **PrintCtrl in the Ctrl series list.** The README's table of Ctrl apps now includes [PrintCtrl](https://github.com/VoidedKN0X/PrintCtrl), the app for Bambu Lab printers through a self-hosted Bambuddy server, and Spoolman spools.
+- The README has a new **Usage stats** section listing exactly what's collected
 
 ## 3.2.4 (2026-10-18)
 

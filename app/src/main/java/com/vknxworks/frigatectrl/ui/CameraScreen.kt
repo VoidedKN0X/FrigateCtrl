@@ -113,6 +113,12 @@ fun CameraScreen(camera: String, onBack: () -> Unit) {
     var showHistory by rememberSaveable { mutableStateOf(false) }
     KeepScreenOn(App.settings.keepScreenOn)
 
+    // Usage stats: History is a screen inside the camera screen. Never the camera's name.
+    LaunchedEffect(showHistory) {
+        App.telemetry.track("screen_viewed", mapOf("screen" to if (showHistory) "History" else "Live"))
+        if (!showHistory) App.telemetry.track("live_view_opened")
+    }
+
     if (showHistory) {
         BackHandler { showHistory = false }
         HistoryScreen(camera, info, onBack = { showHistory = false })
@@ -170,7 +176,15 @@ private fun LiveScreen(
         socket.requestState()
         onDispose { socket.onMessage = null; socket.close() }
     }
-    val send: (String) -> Unit = { socket.send(camera, it) }
+    // Usage stats: only that PTZ was used (once per visit), never the camera, command or preset.
+    var ptzTracked by remember(camera) { mutableStateOf(false) }
+    val send: (String) -> Unit = { cmd ->
+        if (!ptzTracked) {
+            ptzTracked = true
+            App.telemetry.track("ptz_used", mapOf("used" to "true"))
+        }
+        socket.send(camera, cmd)
+    }
 
     // Unreviewed alerts in the last 24 h, shown on the History button.
     var alerts by remember { mutableStateOf<Int?>(null) }
