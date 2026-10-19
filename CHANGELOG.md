@@ -4,6 +4,12 @@ What changed in each FrigateCtrl version. Every release on the [Releases page](h
 
 To publish a new version: bump `versionCode` and `versionName` in `app/build.gradle.kts`, add a section here, and push to `main`. Pushes without a version bump only build; they don't make a release.
 
+## Unreleased
+
+### Changed
+
+- **README brought up to date with 3.2.7.** The feature list now also mentions camera-group filters, **mark all** and the **Unreviewed** filter in the events list, the camera on/off and audio detection switches, memory and camera FPS on the Health tab, hiding cameras from screenshots and the recent-apps preview (on by default, separate from the app lock), and certificate pinning for self-signed certificates. It no longer says screenshots are only blocked while the app is locked. **Getting started** now explains the **Trust** step for a self-signed certificate and the warning for plain `http://` addresses, and **Requirements** notes the microphone permission is only needed for two-way talk. Nothing in the app has changed.
+
 ## 3.2.7 (2026-10-19)
 
 Fourth security and privacy review, focused on what the app sends and to whom.
