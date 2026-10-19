@@ -1,5 +1,8 @@
 package com.vknxworks.frigatectrl.ui
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -16,6 +19,7 @@ import androidx.compose.material.icons.automirrored.outlined.VolumeOff
 import androidx.compose.material.icons.outlined.Contrast
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Dns
+import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.HighQuality
 import androidx.compose.material.icons.outlined.Info
@@ -57,6 +61,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Arrangement
@@ -82,6 +87,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.vknxworks.frigatectrl.App
+import com.vknxworks.frigatectrl.R
 import com.vknxworks.frigatectrl.data.ThemeMode
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -272,6 +278,19 @@ fun SettingsScreen(onBack: () -> Unit, onServer: () -> Unit, onLogout: () -> Uni
 
             Section("About") {
                 ListItem(
+                    leadingContent = { Icon(Icons.Outlined.Favorite, null) },
+                    headlineContent = { Text(stringResource(R.string.support_title)) },
+                    supportingContent = { Text(stringResource(R.string.support_subtitle)) },
+                    colors = itemColors(),
+                    modifier = Modifier.clickableItem {
+                        try {
+                            ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(SPONSOR_URL)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                        } catch (_: ActivityNotFoundException) {
+                        }
+                    },
+                )
+                Divider()
+                ListItem(
                     leadingContent = { Icon(Icons.Outlined.Info, null) },
                     headlineContent = { Text("FrigateCtrl $appVersion") },
                     supportingContent = { Text("VKNXWorks") },
@@ -294,6 +313,8 @@ fun SettingsScreen(onBack: () -> Unit, onServer: () -> Unit, onLogout: () -> Uni
         )
     }
 }
+
+private const val SPONSOR_URL = "https://github.com/sponsors/VoidedKN0X"
 
 @Composable
 private fun Section(title: String, footer: String? = null, content: @Composable () -> Unit) {
