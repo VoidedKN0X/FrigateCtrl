@@ -58,6 +58,16 @@ If the Obtainium button doesn't open the app, add `https://github.com/VoidedKN0X
 - **No PTZ buttons:** they only show for cameras with an `onvif:` section in your Frigate config.
 - **Talk button missing:** it only shows when the camera has a speaker, and go2rtc's WebRTC port (8555) must be reachable from your phone.
 
+## Usage stats
+
+FrigateCtrl can share anonymous usage stats, **only if you say yes**. It asks once after you connect to your server, and you can change it any time in **Settings > Usage stats**.
+
+- **Shared:** which screens you open (the kind of screen, such as Cameras, Live or History, never which camera), whether you use live view, the history timeline, PTZ controls and event playback, the app version, Android version, phone model, language, phone or tablet, and whether you prefer the sub stream.
+- **Never shared:** your server address, username or passwords, camera names, zones, what was detected, event IDs, recording times or footage, or any ID that stays the same between sessions.
+- **Where:** VKNXWorks' own self-hosted [Aptabase](https://aptabase.com) server. Nothing goes to Google or analytics companies. Like any website, the server sees your IP address; Aptabase uses it only to work out the country and doesn't store it.
+
+Builds from source don't include the stats key, so they can't send anything and the setting is hidden. The code is in [`Telemetry.kt`](app/src/main/java/com/vknxworks/frigatectrl/data/Telemetry.kt).
+
 ## Build from source
 
 You need [Android Studio](https://developer.android.com/studio), or JDK 17 and the Android SDK.

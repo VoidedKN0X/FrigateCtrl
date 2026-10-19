@@ -1,8 +1,20 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
 }
+
+// Opt-in usage stats go to VKNXWorks' self-hosted Aptabase server. The app key comes from the APTABASE_KEY
+// environment variable (a GitHub Actions secret) or `aptabase.key` in local.properties. Without one, the
+// build can't send stats at all and the setting is hidden, so builds from source never send anything.
+val aptabaseKey: String = System.getenv("APTABASE_KEY")?.trim()?.takeIf { it.isNotEmpty() }
+    ?: rootProject.file("local.properties").takeIf { it.exists() }?.let { f ->
+        Properties().apply { f.inputStream().use { stream -> load(stream) } }.getProperty("aptabase.key")?.trim()
+    }
+    ?: ""
+val aptabaseHost = "https://telemetry.vkhub.org"
 
 android {
     namespace = "com.vknxworks.frigatectrl"
@@ -14,8 +26,11 @@ android {
         targetSdk = 35
         // CI passes the run number so every build installs over the previous one.
         // Bump both to publish a new release (see CHANGELOG.md).
-        versionCode = 26
-        versionName = "3.2.4"
+        versionCode = 27
+        versionName = "3.2.5"
+
+        buildConfigField("String", "APTABASE_KEY", "\"${aptabaseKey.replace("\"", "")}\"")
+        buildConfigField("String", "APTABASE_HOST", "\"$aptabaseHost\"")
     }
 
     // Release signing from env (GitHub secrets). Local builds fall back to the debug key so the APK
@@ -53,7 +68,10 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
     lint {
         checkReleaseBuilds = false
         abortOnError = false

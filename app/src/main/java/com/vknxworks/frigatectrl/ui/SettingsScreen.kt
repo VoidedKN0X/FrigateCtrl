@@ -19,6 +19,7 @@ import androidx.compose.material.icons.outlined.Dns
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.HighQuality
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Insights
 import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Refresh
@@ -233,6 +234,15 @@ fun SettingsScreen(onBack: () -> Unit, onServer: () -> Unit, onLogout: () -> Uni
                 }
             }
 
+            if (App.telemetry.available) {
+                Section("Usage stats", footer = USAGE_STATS_DESCRIPTION) {
+                    Toggle(
+                        Icons.Outlined.Insights, "Share anonymous usage stats",
+                        "Helps decide what to improve next", s.usageStats,
+                    ) { App.telemetry.setOptIn(it) }
+                }
+            }
+
             Section("Server") {
                 ListItem(
                     leadingContent = { Icon(Icons.Outlined.Dns, null) },
@@ -286,7 +296,7 @@ fun SettingsScreen(onBack: () -> Unit, onServer: () -> Unit, onLogout: () -> Uni
 }
 
 @Composable
-private fun Section(title: String, content: @Composable () -> Unit) {
+private fun Section(title: String, footer: String? = null, content: @Composable () -> Unit) {
     Spacer(Modifier.height(20.dp))
     Text(
         title, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary,
@@ -297,6 +307,10 @@ private fun Section(title: String, content: @Composable () -> Unit) {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
         modifier = Modifier.fillMaxWidth(),
     ) { Column { content() } }
+    if (footer != null) Text(
+        footer, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
+    )
 }
 
 @Composable

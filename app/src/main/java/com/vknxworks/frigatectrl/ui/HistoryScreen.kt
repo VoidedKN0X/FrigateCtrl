@@ -182,7 +182,13 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit) {
         playback.seek(target, play)
     }
 
+    // Usage stats: only that the timeline was scrubbed (once per visit), never where or which camera.
+    var scrubTracked by remember(camera) { mutableStateOf(false) }
     val onScrubStart: () -> Unit = {
+        if (!scrubTracked) {
+            scrubTracked = true
+            App.telemetry.track("timeline_used", mapOf("action" to "scrub"))
+        }
         wasPlaying = playback.player.playWhenReady
         playback.pause()
     }
@@ -212,7 +218,10 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit) {
         val c = tl.center
         val pre = settings.eventPreroll
         val r = if (next) reviews.firstOrNull { it.start - pre > c + 1 } else reviews.lastOrNull { it.start - pre < c - 2 }
-        r?.let { seekTo(it.start - pre, play = true) }
+        r?.let {
+            App.telemetry.track("event_played", mapOf("from" to "skip_button"))
+            seekTo(it.start - pre, play = true)
+        }
     }
 
     var showEvents by remember { mutableStateOf(false) }
@@ -383,6 +392,8 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit) {
                 onPick = { r ->
                     showEvents = false
                     if (!r.reviewed) markReviewed(listOf(r.id), true)
+                    // Usage stats: only where it was started from, never the event, its label or time.
+                    App.telemetry.track("event_played", mapOf("from" to "events_list"))
                     seekTo(r.start - settings.eventPreroll, play = true)
                 },
                 onReviewed = { r, v -> markReviewed(listOf(r.id), v) },
