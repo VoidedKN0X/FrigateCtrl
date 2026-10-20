@@ -85,7 +85,10 @@ import androidx.fragment.app.FragmentActivity
 import com.vknxworks.frigatectrl.ui.lock.PIN_MAX
 import com.vknxworks.frigatectrl.ui.lock.PIN_MIN
 import com.vknxworks.frigatectrl.ui.lock.biometricAvailable
-import com.vknxworks.frigatectrl.ui.lock.resetBiometricKey
+import com.vknxworks.frigatectrl.ui.lock.disableAppLock
+import com.vknxworks.frigatectrl.ui.lock.enableAppLock
+import com.vknxworks.frigatectrl.ui.lock.isObviousPin
+import com.vknxworks.frigatectrl.data.lock.LockVault
 import com.vknxworks.frigatectrl.ui.lock.showBiometricPrompt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -124,31 +127,37 @@ fun SettingsScreen(onBack: () -> Unit, onServer: () -> Unit, onLogout: () -> Uni
                 .padding(horizontal = 16.dp).padding(bottom = 32.dp),
         ) {
             Section("Security") {
-                Toggle(Icons.Outlined.Lock, "App lock", "Ask for a PIN when opening the app", lock.pinSet) { on ->
+                val vault = App.vault
+                Toggle(
+                    Icons.Outlined.Lock, "App lock",
+                    "Ask for a PIN when opening the app. While it's locked, your login stays encrypted with the PIN",
+                    vault.enabled,
+                ) { on ->
                     pinDialog = if (on) PinMode.New else PinMode.Disable
                 }
-                if (lock.pinSet) {
+                if (vault.enabled) {
                     Divider()
                     Toggle(
                         Icons.Outlined.Fingerprint, "Unlock with fingerprint",
-                        if (bioAvailable) "Your PIN still works as a backup" else "No secure fingerprint unlock is set up on this phone",
-                        lock.biometricEnabled, enabled = bioAvailable,
+                        if (bioAvailable) "Strong biometrics only. Your PIN is still needed after a restart and every 72 hours"
+                        else "No secure fingerprint unlock is set up on this phone",
+                        vault.biometricEnabled, enabled = bioAvailable || vault.biometricEnabled,
                     ) { on ->
                         val act = ctx as? FragmentActivity
                         if (on && act != null) {
                             // A fresh key each time, bound to the fingerprints enrolled now.
-                            resetBiometricKey()
-                            showBiometricPrompt(act, "Confirm to turn on", createKey = true) { lock.biometricEnabled = true }
+                            val cipher = vault.biometricEnrolCipher()
+                            if (cipher != null) showBiometricPrompt(act, "Confirm to turn on", cipher) { vault.finishBiometricEnrol(it) }
                         } else {
-                            lock.biometricEnabled = false
-                            resetBiometricKey()
+                            vault.disableBiometric()
                         }
                     }
                     Divider()
-                    val afters = listOf(0, 30, 60, 300)
+                    // Seconds; -1 = only when the app restarts.
+                    val afters = listOf(0, 60, 300, 900, 3600, -1)
                     Choice(
                         Icons.Outlined.Timer, "Lock again after leaving the app",
-                        listOf("Instantly", "30 s", "1 min", "5 min"),
+                        listOf("Instantly", "1 min", "5 min", "15 min", "1 hour", "On restart"),
                         afters.indexOf(lock.lockAfterSeconds).coerceAtLeast(0),
                     ) { lock.lockAfterSeconds = afters[it] }
                     Divider()
@@ -295,7 +304,7 @@ fun SettingsScreen(onBack: () -> Unit, onServer: () -> Unit, onLogout: () -> Uni
             onDismissRequest = { confirmLogout = false },
             icon = { Icon(Icons.AutoMirrored.Outlined.Logout, null) },
             title = { Text("Log out?") },
-            text = { Text("The server address and saved login will be removed from this phone.") },
+            text = { Text("The server address and saved login will be removed from this phone, and the app lock is turned off.") },
             confirmButton = { TextButton({ confirmLogout = false; onLogout() }) { Text("Log out") } },
             dismissButton = { TextButton({ confirmLogout = false }) { Text("Cancel") } },
         )
@@ -309,6 +318,7 @@ private const val LICENCE_URL = "https://www.gnu.org/licenses/gpl-3.0.html"
 
 private fun openLink(ctx: Context, url: String) {
     try {
+        com.vknxworks.frigatectrl.ui.lock.LockTrips.expectReturn()
         ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     } catch (_: ActivityNotFoundException) {
     }
@@ -433,24 +443,28 @@ private fun PinSetupDialog(mode: PinMode, onDismiss: () -> Unit) {
             TextButton(enabled = !working, onClick = {
                 scope.launch {
                     working = true
+                    val vault = App.vault
                     // The current PIN shares the lock screen's wrong-PIN counter and lockout, so it
                     // can't be guessed here without limit while the app is unlocked.
-                    val wait = if (needsCurrent) lock.lockoutRemainingMs() else 0L
-                    // PBKDF2 is deliberately slow; keep it off the main thread.
-                    val currentOk = wait <= 0 && (!needsCurrent || withContext(Dispatchers.Default) { lock.checkPin(current) })
-                    if (needsCurrent && wait <= 0) {
-                        if (currentOk) lock.failedAttempts = 0 else lock.recordWrongPin()
-                    }
+                    val wait = if (needsCurrent) vault.lockoutRemaining() else 0L
+                    // Slow on purpose; keep it off the main thread.
+                    val currentOk = wait <= 0 && (!needsCurrent ||
+                        withContext(Dispatchers.Default) { vault.unlockWithPin(current) == LockVault.PinResult.Ok })
+                    val left = if (needsCurrent) vault.lockoutRemaining() else 0L
                     error = when {
-                        wait > 0 -> "Too many tries. Try again in ${(wait + 999) / 1000} s"
+                        wait > 0 || left > 0 && !currentOk -> "Too many tries. Try again in ${(maxOf(wait, left) + 999) / 1000} s"
                         !currentOk -> "Current PIN is wrong"
                         needsNew && first.length < PIN_MIN -> "Use at least $PIN_MIN digits"
                         needsNew && first != second -> "The PINs don't match"
-                        needsNew && first.toSet().size == 1 -> "Pick a PIN that isn't one repeated digit"
+                        needsNew && isObviousPin(first) -> "Too easy to guess. Pick a less obvious PIN"
                         else -> null
                     }
                     if (error == null) {
-                        withContext(Dispatchers.Default) { if (needsNew) lock.setPin(first) else { lock.clearPin(); resetBiometricKey() } }
+                        when (mode) {
+                            PinMode.New -> enableAppLock(first)
+                            PinMode.Change -> withContext(Dispatchers.Default) { vault.changePin(first) }
+                            PinMode.Disable -> withContext(Dispatchers.Default) { disableAppLock() }
+                        }
                         onDismiss()
                     }
                     working = false

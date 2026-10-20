@@ -4,6 +4,7 @@ import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
+import com.vknxworks.frigatectrl.data.lock.LockVault
 import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
@@ -11,7 +12,7 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
 /** Saved server settings. Password and token are encrypted with an Android Keystore key. */
-class Prefs(context: Context) {
+class Prefs(context: Context, private val vault: LockVault) {
     private val sp = context.getSharedPreferences("frigate_remote", Context.MODE_PRIVATE)
 
     var baseUrl: String
@@ -22,13 +23,41 @@ class Prefs(context: Context) {
         get() = sp.getString("username", "") ?: ""
         set(v) = sp.edit().putString("username", v).apply()
 
+    // With the app lock on, the password and token are also encrypted with the lock's key, so they
+    // can't be read while the app is locked.
     var password: String
-        get() = decrypt(sp.getString("password", null))
-        set(v) = sp.edit().putString("password", encrypt(v)).apply()
+        get() = open(decrypt(sp.getString("password", null)))
+        set(v) { seal(v)?.let { sp.edit().putString("password", encrypt(it)).apply() } }
 
     var token: String
-        get() = decrypt(sp.getString("token", null))
-        set(v) = sp.edit().putString("token", encrypt(v)).apply()
+        get() = open(decrypt(sp.getString("token", null)))
+        set(v) { seal(v)?.let { sp.edit().putString("token", encrypt(it)).apply() } }
+
+    private fun open(stored: String): String =
+        if (LockVault.isSealed(stored)) vault.open(stored).orEmpty() else stored
+
+    /** Null while locked: nothing is saved then (the old value stays). */
+    private fun seal(v: String): String? = when {
+        v.isEmpty() || !vault.enabled -> v
+        else -> vault.seal(v)
+    }
+
+    /** The app lock was just turned on (unlocked): encrypt the saved login with its key too. */
+    fun sealCredentials() {
+        val p = password
+        val t = token
+        password = p
+        token = t
+    }
+
+    /** Turning the app lock off (unlocked): [disable] forgets the lock's key, then the login is saved without it. */
+    fun unsealCredentials(disable: () -> Unit) {
+        val p = password
+        val t = token
+        disable()
+        password = p
+        token = t
+    }
 
     var allowInsecureTls: Boolean
         get() = sp.getBoolean("insecure_tls", false)

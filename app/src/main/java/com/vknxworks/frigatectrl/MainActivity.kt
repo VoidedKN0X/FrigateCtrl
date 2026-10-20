@@ -50,6 +50,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vknxworks.frigatectrl.ui.lock.AppLockViewModel
+import com.vknxworks.frigatectrl.ui.lock.ChooseNewPinScreen
 import com.vknxworks.frigatectrl.ui.lock.LockScreen
 import com.vknxworks.frigatectrl.ui.lock.resetBiometricKey
 import com.vknxworks.frigatectrl.ui.clearImageCache
@@ -106,6 +107,11 @@ private fun Root(activity: FragmentActivity, lockVm: AppLockViewModel = viewMode
     var securityChecked by rememberSaveable { mutableStateOf(false) }
 
     fun logout() {
+        // The app lock protects the saved login; with no login left it's turned off too (it would
+        // otherwise have no key to encrypt the next login with while locked).
+        App.vault.disable()
+        App.lock.clearPin()
+        resetBiometricKey()
         App.prefs.clear()
         App.api.reload()
         // Nothing from the old server stays behind: cached thumbnails and temporary clips.
@@ -134,13 +140,16 @@ private fun Root(activity: FragmentActivity, lockVm: AppLockViewModel = viewMode
         LockScreen(
             vm = lockVm,
             onForgot = {
-                // Forgetting the PIN wipes the lock and the saved login, so the cameras stay protected.
-                App.lock.clearPin()
-                resetBiometricKey()
-                lockVm.unlock()
+                // The PIN encrypts the saved login, so forgetting it means logging out: the lock,
+                // the login and everything kept from the server are wiped.
                 logout()
+                lockVm.unlock()
             },
         )
+        return
+    }
+    if (lockVm.mustChoosePin) {
+        ChooseNewPinScreen(lockVm)
         return
     }
 

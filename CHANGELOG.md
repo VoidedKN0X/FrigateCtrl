@@ -4,6 +4,27 @@ What changed in each FrigateCtrl version. Every release on the [Releases page](h
 
 To publish a new version: bump `versionCode` and `versionName` in `app/build.gradle.kts`, add a section here, and push to `main`. Pushes without a version bump only build; they don't make a release.
 
+## 3.3.0 (2026-10-21)
+
+The app lock now works the same way in every Ctrl app, with the strongest protection of the options we compared.
+
+### Changed
+
+- **Your PIN is upgraded the first time you unlock.** Nothing to do if your PIN already has 6 or more digits. If it's shorter (or as easy to guess as 1111 or 1234), FrigateCtrl asks you to choose a new PIN of 6 to 12 digits right after unlocking, before the app opens.
+- **Fingerprint unlock has to be turned on again** after the upgrade (**Settings > Security > Unlock with fingerprint**), because it now unlocks the key that encrypts your login. It still only accepts strong biometrics such as the fingerprint sensor. Your PIN is now also needed after the phone restarts and at least every 72 hours, the same as Android does for your screen lock.
+- **More "Lock again" choices**: instantly (still the default), after 1, 5 or 15 minutes, after 1 hour, or only when the app restarts. "30 s" is gone; if you had it, the lock now locks instantly.
+- **Sharing a clip and opening links no longer count as leaving the app.** Coming back from the share sheet or the browser doesn't ask for your PIN again, even with "Instantly". Going to the home screen or another app yourself still does. Picture-in-picture also still counts as being in the app.
+- **New PINs need 6 to 12 digits**, and very obvious ones (one repeated digit, or a run like 123456) are refused.
+- **"Forgot PIN? Log out" now asks first**, and explains what's removed.
+- **Logging out turns the app lock off**, together with removing the server and login.
+
+### Security
+
+- **Your login is encrypted with your PIN while FrigateCtrl is locked.** The saved password and session token are encrypted with a key that only exists in memory while the app is unlocked. It's wiped the moment the app locks, and live streams, talk and open connections to your server are closed. A locked app, or a copy of its files, can't use your login.
+- **The PIN can't be guessed off the phone.** It's never stored. It's stretched with 600,000 rounds of PBKDF2 (5 times more than before) and mixed with a secret held in the phone's secure hardware (StrongBox where available), so copying FrigateCtrl's files to a computer isn't enough to try PINs there.
+- **Wrong PINs still lock the screen**: after 5 tries you wait 30 seconds, doubling with every further 5 wrong tries up to 15 minutes. Restarting the app or the phone, or changing the clock, doesn't reset the wait. A wait that was running when you updated still counts.
+- **Fingerprint unlock can't be faked**: the fingerprint has to unlock a key in the phone's secure hardware, so a tampered "success" on a rooted phone doesn't open the app. Adding a new fingerprint turns fingerprint unlock off until you turn it on again.
+
 ## 3.2.13 (2026-10-20)
 
 ### Changed

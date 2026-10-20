@@ -13,23 +13,23 @@ import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.PBEKeySpec
 
 /**
- * App lock preferences. Only a salted PBKDF2 hash of the PIN is stored, never the PIN itself.
- * Same design as CraftyCtrl's lock.
+ * App lock preferences: when to lock again and hiding the app's content. The PIN itself lives in
+ * [com.vknxworks.frigatectrl.data.lock.LockVault]. The PIN hash here is only the old (3.2.x) lock,
+ * kept until it's upgraded on the first unlock.
  */
 class LockSettings(context: Context) {
     private val appContext = context.applicationContext
     private val prefs = appContext.getSharedPreferences("app_lock", Context.MODE_PRIVATE)
 
     private var _pinSet by mutableStateOf(prefs.contains(KEY_PIN_HASH))
-    val pinSet: Boolean get() = _pinSet
+    /** An old-style PIN from FrigateCtrl 3.2.x that hasn't been upgraded yet. */
+    val legacyPinSet: Boolean get() = _pinSet
 
-    private var _bio by mutableStateOf(prefs.getBoolean(KEY_BIOMETRIC, false))
-    var biometricEnabled: Boolean
-        get() = _pinSet && _bio
-        set(v) { _bio = v; prefs.edit().putBoolean(KEY_BIOMETRIC, v).apply() }
-
-    /** How long the app may sit in the background before it locks again. 0 = immediately. */
-    private var _after by mutableIntStateOf(prefs.getInt(KEY_LOCK_AFTER, 0))
+    /**
+     * How long the app may sit in the background before it locks again. 0 = immediately,
+     * -1 = only when the app restarts. 30 s (no longer offered) becomes immediately.
+     */
+    private var _after by mutableIntStateOf(prefs.getInt(KEY_LOCK_AFTER, 0).let { if (it in 1..59) 0 else it })
     var lockAfterSeconds: Int
         get() = _after
         set(v) { _after = v; prefs.edit().putInt(KEY_LOCK_AFTER, v).apply() }
@@ -43,17 +43,6 @@ class LockSettings(context: Context) {
     /** Lets the lock screen submit as soon as enough digits are entered. */
     val pinLength: Int get() = prefs.getInt(KEY_PIN_LENGTH, 0)
 
-    fun setPin(pin: String) {
-        val salt = ByteArray(16).also { SecureRandom().nextBytes(it) }
-        prefs.edit()
-            .putString(KEY_PIN_SALT, b64(salt))
-            .putString(KEY_PIN_HASH, b64(hash(pin, salt)))
-            .putInt(KEY_PIN_LENGTH, pin.length)
-            .putInt(KEY_FAILED, 0)
-            .apply()
-        _pinSet = true
-    }
-
     fun clearPin() {
         prefs.edit()
             .remove(KEY_PIN_LENGTH).remove(KEY_PIN_HASH).remove(KEY_PIN_SALT)
@@ -61,7 +50,6 @@ class LockSettings(context: Context) {
             .remove(KEY_LOCKOUT_LEN).remove(KEY_LOCKOUT_ELAPSED).remove(KEY_LOCKOUT_BOOT)
             .apply()
         _pinSet = false
-        _bio = false
     }
 
     fun checkPin(pin: String): Boolean {

@@ -109,6 +109,19 @@ class FrigateApi(private val prefs: Prefs) {
 
     fun url(path: String): String = baseUrl + (if (path.startsWith("/")) path else "/$path")
 
+    /**
+     * The app locked: forget the token held in memory, cancel requests and drop open connections
+     * (live streams, talk). [reload] after unlocking reads the login again.
+     */
+    fun forgetSession() {
+        token = ""
+        clientCache?.second?.let { c ->
+            c.dispatcher.cancelAll()
+            c.connectionPool.evictAll()
+        }
+        clientCache = null
+    }
+
     fun reload() {
         baseUrl = prefs.baseUrl.trimEnd('/')
         baseHttpUrl = baseUrl.toHttpUrlOrNull()

@@ -109,6 +109,7 @@ object Clips {
             putExtra(Intent.EXTRA_STREAM, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
+        com.vknxworks.frigatectrl.ui.lock.LockTrips.expectReturn()
         context.startActivity(Intent.createChooser(send, "Share clip").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 }
