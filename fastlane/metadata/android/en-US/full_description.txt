@@ -1,0 +1,17 @@
+<p>Watch and review your self-hosted Frigate NVR cameras.</p>
+<ul>
+<li>Camera grid with live snapshots, camera groups and new-alert badges</li>
+<li>Live view about one second behind, with sound, zoom and picture-in-picture</li>
+<li>Two-way talk on cameras with a speaker</li>
+<li>PTZ controls: joystick, zoom, focus and presets</li>
+<li>History with a precise pinch-to-zoom timeline of recordings, motion and alerts</li>
+<li>Events list: swipe to mark reviewed, filter by unreviewed or alerts</li>
+<li>Save or share clips of any event or time range</li>
+<li>Camera switches: on/off, detection, recording, snapshots, audio detection, notifications</li>
+<li>System health: CPU, GPU, memory, detectors, camera FPS and storage</li>
+<li>App lock with PIN and fingerprint; cameras hidden from screenshots and recents</li>
+<li>Self-signed certificates pinned by fingerprint</li>
+</ul>
+<p>Needs Frigate 0.14 or newer. Unofficial app, not affiliated with the Frigate project.</p>
+<p>Google-free and de-Googled: no Google Play services, Firebase or other Google services, and the app never contacts Google. It works the same on de-Googled phones (GrapheneOS, CalyxOS, /e/OS, LineageOS without Google apps).</p>
+<p>Telemetry-free: no analytics, crash reporting, usage stats or tracking of any kind.</p>
