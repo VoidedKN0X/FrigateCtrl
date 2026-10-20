@@ -21,7 +21,7 @@ Part of the [Ctrl series](#the-ctrl-series) by VKNXWorks.
 - **Save or share clips** of any event or time range
 - **Camera switches**: camera on/off, detection, recording, snapshots, audio detection and notifications
 - **System health**: CPU, GPU, memory, detector speed, camera FPS and disk usage
-- **App lock** with PIN and fingerprint
+- **App lock** with its own PIN and optional fingerprint unlock; your login stays encrypted while the app is locked
 - **Private by default**: cameras are hidden from screenshots, screen recordings and the recent-apps preview (**Hide content in screenshots & recents**, on by default)
 - **Self-signed certificates** are pinned: you confirm the fingerprint once, and only that certificate is accepted after that
 
