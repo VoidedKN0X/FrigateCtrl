@@ -285,7 +285,7 @@ class FrigateApi(private val prefs: Prefs) {
 
     /**
      * WebRTC ICE servers from go2rtc's config (used for two-way talk). None if go2rtc doesn't list any:
-     * the phone then never contacts a third-party STUN server (it used to fall back to Google's).
+     * the phone then never contacts a third-party STUN server (it used to fall back to a public one).
      */
     @Volatile var iceServersJson: String = DEFAULT_ICE
         private set

@@ -4,6 +4,19 @@ What changed in each FrigateCtrl version. Every release on the [Releases page](h
 
 To publish a new version: bump `versionCode` and `versionName` in `app/build.gradle.kts`, add a section here, and push to `main`. Pushes without a version bump only build; they don't make a release.
 
+## 3.2.12 (2026-10-20)
+
+FrigateCtrl is now Google-free and de-Googled. Nothing changes in how you use it.
+
+### Privacy
+
+- **No mention of Google left in the app's own code.** FrigateCtrl has no Google Play services, Firebase or other Google services and never contacts Google: it only talks to your Frigate server and the STUN/TURN servers in your go2rtc config. The last mentions of Google in the app's code and setup file (notes about the emoji font, the built-in web view and the old public STUN server) are gone. It works the same on de-Googled phones such as GrapheneOS, CalyxOS, /e/OS and LineageOS without Google apps.
+
+### Changed
+
+- **README**: the Google-free line now reads "Google-free and de-Googled": no Google Play services, Firebase or other Google services, the app never contacts Google, and it works the same on de-Googled phones (GrapheneOS, CalyxOS, /e/OS, LineageOS without Google apps). It's the only place Google is mentioned in the README, and the Privacy section no longer repeats it.
+- **README**: the note that two-way talk's built-in web view has online page checks and usage reports turned off moved from Requirements to the Privacy section.
+
 ## 3.2.11 (2026-10-20)
 
 FrigateCtrl is now telemetry-free.

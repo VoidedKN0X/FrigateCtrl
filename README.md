@@ -35,7 +35,7 @@ Coming soon.
 - Frigate 0.14 or newer
 - go2rtc set up in Frigate for live video (it is by default). Without it, you get refreshing snapshots instead.
 - Microphone permission, only if you use two-way talk
-- **Google-free:** works without Google Play services, contains no Google libraries that contact Google, and draws emoji with your phone's own emoji font. The built-in web view used for two-way talk has Google Safe Browsing and WebView usage reports turned off
+- **Google-free and de-Googled:** no Google Play services, Firebase or other Google services, and the app never contacts Google. It works the same on de-Googled phones (GrapheneOS, CalyxOS, /e/OS, LineageOS without Google apps).
 
 ## Install
 
@@ -72,7 +72,7 @@ If the Obtainium button doesn't open the app, add `https://github.com/VoidedKN0X
 **Telemetry-free.** FrigateCtrl has no analytics, crash reporting, usage stats or tracking of any kind. It only talks to the servers you add.
 
 - **Servers it talks to:** your own Frigate server, and, for two-way talk, only the STUN/TURN servers listed in your go2rtc config. It never contacts a public STUN server on its own.
-- **Google-free:** no Google Play services, Firebase or other Google libraries that contact Google (see [Requirements](#requirements)).
+- **Two-way talk:** the built-in web view it runs in has online page checks and usage reports turned off.
 - **Links:** the Support, Report a bug, Source code and Licence rows in Settings open GitHub or gnu.org in your browser, only when you tap them.
 - Cameras are hidden from screenshots, screen recordings and the recent-apps preview by default, and your login is stored encrypted on your phone.
 
