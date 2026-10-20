@@ -2,7 +2,7 @@
 
 **Watch and review your Frigate cameras from your phone.**
 
-[![Latest release](https://img.shields.io/github/v/release/VoidedKN0X/FrigateCtrl?label=download)](https://github.com/VoidedKN0X/FrigateCtrl/releases/latest) ![Android 13+](https://img.shields.io/badge/Android-13%2B-3DDC84?logo=android&logoColor=white) [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE) [![Sponsor](https://img.shields.io/badge/sponsor-GitHub-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/VoidedKN0X)
+[![Latest release](https://img.shields.io/github/v/release/VoidedKN0X/FrigateCtrl?label=download)](https://github.com/VoidedKN0X/FrigateCtrl/releases/latest) ![Android 13+](https://img.shields.io/badge/Android-13%2B-3DDC84?logo=android&logoColor=white) [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE) ![Telemetry-free](https://img.shields.io/badge/telemetry-none-brightgreen) [![Sponsor](https://img.shields.io/badge/sponsor-GitHub-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/VoidedKN0X)
 
 FrigateCtrl is an Android app for [Frigate NVR](https://frigate.video). Watch your cameras live, scrub through recordings on a precise timeline, and control PTZ cameras.
 
@@ -67,17 +67,14 @@ If the Obtainium button doesn't open the app, add `https://github.com/VoidedKN0X
 - **Talk button missing:** it only shows when the camera has a speaker, and go2rtc's WebRTC port (8555) must be reachable from your phone.
 - **Talk connects at home but not away from it:** talk only uses the STUN/TURN servers listed under `go2rtc: webrtc: ice_servers:` in your Frigate config; the app never contacts a public STUN server on its own. Add one there (your own, or a public one if you're happy for it to see your IP address).
 
-## Usage stats
+## Privacy
 
-FrigateCtrl can share anonymous usage stats, **only if you say yes**. It asks once after you connect to your server, and you can change it any time in **Settings > Usage stats**.
+**Telemetry-free.** FrigateCtrl has no analytics, crash reporting, usage stats or tracking of any kind. It only talks to the servers you add.
 
-- **Shared:** which screens you open (the kind of screen, such as Cameras, Live or History, never which camera), whether you use live view, the history timeline, PTZ controls and event playback, the app version, Android version, phone model, language, phone or tablet, and whether you prefer the sub stream.
-- **Never shared:** your server address, username or passwords, camera names, zones, what was detected, event IDs, recording times or footage, or any ID that stays the same between sessions.
-- **Where:** VKNXWorks' own self-hosted [Aptabase](https://aptabase.com) server. Nothing goes to Google or analytics companies. Like any website, the server sees your IP address; Aptabase uses it only to work out the country and doesn't store it.
-
-Builds from source don't include the stats key, so they can't send anything and the setting is hidden. The code is in [`Telemetry.kt`](app/src/main/java/com/vknxworks/frigatectrl/data/Telemetry.kt).
-
-Apart from these opt-in stats, FrigateCtrl only talks to your own Frigate server (and, for two-way talk, the STUN/TURN servers from your go2rtc config).
+- **Servers it talks to:** your own Frigate server, and, for two-way talk, only the STUN/TURN servers listed in your go2rtc config. It never contacts a public STUN server on its own.
+- **Google-free:** no Google Play services, Firebase or other Google libraries that contact Google (see [Requirements](#requirements)).
+- **Links:** the Support, Report a bug, Source code and Licence rows in Settings open GitHub or gnu.org in your browser, only when you tap them.
+- Cameras are hidden from screenshots, screen recordings and the recent-apps preview by default, and your login is stored encrypted on your phone.
 
 ## Build from source
 
