@@ -31,7 +31,7 @@ Coming soon.
 
 ## Requirements
 
-- Android 13 or newer
+- Android 13 or newer, on a 64-bit ARM phone (nearly every phone from the last several years)
 - Frigate 0.14 or newer
 - go2rtc set up in Frigate for live video (it is by default). Without it, you get refreshing snapshots instead.
 - Microphone permission, only if you use two-way talk

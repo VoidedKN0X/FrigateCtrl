@@ -14,8 +14,10 @@ android {
         targetSdk = 35
         // CI passes the run number so every build installs over the previous one.
         // Bump both to publish a new release (see CHANGELOG.md).
-        versionCode = 34
-        versionName = "3.2.12"
+        versionCode = 35
+        versionName = "3.2.13"
+        // 64-bit ARM phones only (arm64-v8a), like every Ctrl app.
+        ndk { abiFilters += listOf("arm64-v8a") }
     }
 
     // Release signing from env (GitHub secrets). Local builds fall back to the debug key so the APK
