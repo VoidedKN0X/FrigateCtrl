@@ -4,10 +4,17 @@ What changed in each FrigateCtrl version. Every release on the [Releases page](h
 
 To publish a new version: bump `versionCode` and `versionName` in `app/build.gradle.kts`, add a section here, and push to `main`. Pushes without a version bump only build; they don't make a release.
 
-## Unreleased
+## 3.2.11 (2026-10-20)
+
+FrigateCtrl is now telemetry-free.
+
+### Privacy
+
+- **No more usage stats: FrigateCtrl is now telemetry-free.** The optional anonymous usage stats are gone completely, along with the Usage stats setting and the one-time question. The app no longer contacts VKNXWorks' stats server at all, and the settings it used are deleted from your phone when you update. FrigateCtrl has no analytics, crash reporting or tracking of any kind: it only talks to your own Frigate server (and, for two-way talk, the STUN/TURN servers from your go2rtc config).
 
 ### Changed
 
+- **README**: a new Privacy section and a "Telemetry-free" badge replace the old Usage stats section
 - **README**: a Screenshots section (screenshots are coming soon), and a link preview image (`.github/assets/social-preview.png`) with FrigateCtrl's icon, name and summary, for when the repo is shared on Reddit, Discord or elsewhere
 
 ## 3.2.10 (2026-10-19)

@@ -12,6 +12,17 @@ enum class ThemeMode { System, Light, Dark }
 class Settings(context: Context) {
     private val sp = context.getSharedPreferences("frigate_settings", Context.MODE_PRIVATE)
 
+    init {
+        // FrigateCtrl 3.2.11 removed the optional anonymous statistics. Delete what they stored
+        // (the on/off switch and whether the question was answered) so nothing of them stays on the phone.
+        val leftover = sp.all.keys.filter { it.startsWith("usage") }
+        if (leftover.isNotEmpty()) {
+            val editor = sp.edit()
+            leftover.forEach { editor.remove(it) }
+            editor.apply()
+        }
+    }
+
     private fun bool(key: String, def: Boolean) = mutableStateOf(sp.getBoolean(key, def))
     private fun int(key: String, def: Int) = mutableIntStateOf(sp.getInt(key, def))
 
@@ -87,17 +98,4 @@ class Settings(context: Context) {
     var eventPreroll: Int
         get() = _preroll.intValue
         set(v) { _preroll.intValue = v; sp.edit().putInt("event_preroll", v).apply() }
-
-    // Usage stats
-    /** Opt-in anonymous usage stats (off until the user says yes). */
-    private val _usageStats = bool("usage_stats", false)
-    var usageStats: Boolean
-        get() = _usageStats.value
-        set(v) { _usageStats.value = v; sp.edit().putBoolean("usage_stats", v).apply() }
-
-    /** Whether the one-time usage stats question has been answered. */
-    private val _usageStatsAsked = bool("usage_stats_asked", false)
-    var usageStatsAsked: Boolean
-        get() = _usageStatsAsked.value
-        set(v) { _usageStatsAsked.value = v; sp.edit().putBoolean("usage_stats_asked", v).apply() }
 }

@@ -27,7 +27,6 @@ import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Dns
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.HighQuality
-import androidx.compose.material.icons.outlined.Insights
 import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Refresh
@@ -240,15 +239,6 @@ fun SettingsScreen(onBack: () -> Unit, onServer: () -> Unit, onLogout: () -> Uni
                 Divider()
                 Toggle(Icons.Outlined.Vibration, "Haptic ticks", "Feel each time mark while scrubbing", s.timelineHaptics) {
                     s.timelineHaptics = it
-                }
-            }
-
-            if (App.telemetry.available) {
-                Section("Usage stats", footer = USAGE_STATS_DESCRIPTION) {
-                    Toggle(
-                        Icons.Outlined.Insights, "Share anonymous usage stats",
-                        "Helps decide what to improve next", s.usageStats,
-                    ) { App.telemetry.setOptIn(it) }
                 }
             }
 
