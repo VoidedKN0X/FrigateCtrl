@@ -172,10 +172,14 @@ class AppLockViewModel : ViewModel() {
         refreshLockout()
     }
 
+    /** The current trip away was started by the app itself (share sheet, a link). */
+    private var exemptTrip = false
+
     fun onBackground() {
-        // The app opened the share sheet or a link itself: that isn't leaving.
-        if (LockTrips.consume()) { backgroundedAt = 0L; return }
         backgroundedAt = SystemClock.elapsedRealtime()
+        // The app opened the share sheet or a link itself: that isn't leaving (unless you stay away long).
+        exemptTrip = LockTrips.consume()
+        if (exemptTrip) return
         // "Immediately" locks before the app is hidden, so cameras aren't visible on return and the
         // key is gone while the app is in the background.
         if (enabled && settings.lockAfterSeconds == 0) lockNow()
@@ -184,10 +188,14 @@ class AppLockViewModel : ViewModel() {
     fun onForeground() {
         refreshLockout()
         val since = backgroundedAt
+        val exempt = exemptTrip
         backgroundedAt = 0L
+        exemptTrip = false
         val after = settings.lockAfterSeconds
         if (!enabled || locked || since == 0L || after < 0) return
-        if (SystemClock.elapsedRealtime() - since >= after * 1000L) lockNow()
+        // A trip the app started still locks if you stay away long: after 5 minutes, or the chosen time if longer.
+        val limit = if (exempt) maxOf(after * 1000L, 5 * 60_000L) else after * 1000L
+        if (SystemClock.elapsedRealtime() - since >= limit) lockNow()
     }
 
     fun lockNow() {
