@@ -4,6 +4,13 @@ What changed in each FrigateCtrl version. Every release on the [Releases page](h
 
 To publish a new version: bump `versionCode` and `versionName` in `app/build.gradle.kts`, add a section here, and push to `main`. Pushes without a version bump only build; they don't make a release.
 
+## 3.4.2 (2026-10-21)
+
+### Changed
+
+- **Cameras and System health use the series tab title**: the big title at the top of both tabs now looks like every Ctrl app (large title on the left, your profile picture on the right) instead of the small coloured icon tile with a bold title. Nothing it showed is gone: on Cameras, your server's address, the number of cameras and the number of new alerts are on the line under the title, with the "Not encrypted (HTTP)" label under that when it applies; on System health, the live status ("Live · refreshes every 5 s", "Offline · showing last data" or "Loading…") is under the title.
+- **Whole sentences instead of joined pieces, ready for translations**: event times with their length, recording storage with its rate per hour and the " · " between details are now each one piece of text. The wording stays the same.
+
 ## 3.4.1 (2026-10-21)
 
 ### Changed

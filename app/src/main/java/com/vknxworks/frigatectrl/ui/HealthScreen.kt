@@ -80,29 +80,17 @@ fun HealthScreen(onYou: () -> Unit, bottomPadding: Dp = 0.dp) {
     }
 
     Column(Modifier.fillMaxSize().background(cs.background)) {
-        // ---- compact header, matching the Cameras tab ----
-        Row(
-            Modifier.fillMaxWidth().statusBarsPadding().padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(cs.primaryContainer),
-                contentAlignment = Alignment.Center,
-            ) { Icon(Icons.Outlined.MonitorHeart, null, tint = cs.onPrimaryContainer, modifier = Modifier.size(22.dp)) }
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(stringResource(R.string.system_health), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Text(
-                    when {
-                        error != null && stats != null -> stringResource(R.string.health_offline)
-                        stats == null -> stringResource(R.string.loading)
-                        else -> stringResource(R.string.health_live)
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (error != null) cs.error else cs.onSurfaceVariant,
-                )
-            }
-            ProfileButton(onYou)
+        // ---- series tab title, with the live status under it ----
+        TabTitle(stringResource(R.string.system_health), onYou, Modifier.statusBarsPadding()) {
+            Text(
+                when {
+                    error != null && stats != null -> stringResource(R.string.health_offline)
+                    stats == null -> stringResource(R.string.loading)
+                    else -> stringResource(R.string.health_live)
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = if (error != null) cs.error else cs.onSurfaceVariant,
+            )
         }
 
         val s = stats
@@ -147,7 +135,7 @@ fun HealthScreen(onYou: () -> Unit, bottomPadding: Dp = 0.dp) {
                         buildList {
                             if (!speed.isNaN()) add("${fmt1(speed)} ms")
                             if (!temp.isNaN()) add("${fmt1(temp)} °C")
-                        }.joinToString(" · "),
+                        }.joinToString(stringResource(R.string.list_separator)),
                         warn = !speed.isNaN() && speed > 100,
                     )
                 }
@@ -174,7 +162,7 @@ fun HealthScreen(onYou: () -> Unit, bottomPadding: Dp = 0.dp) {
                         Text(stringResource(R.string.health_per_camera), style = MaterialTheme.typography.labelLarge, color = cs.onSurfaceVariant)
                         rows.forEach { (cam, mb) ->
                             val bw = st.optJSONObject(cam)?.optDouble("bandwidth", Double.NaN) ?: Double.NaN
-                            StatRow(cam.replace('_', ' '), size(mb) + if (!bw.isNaN()) " · ${size(bw)}/h" else "")
+                            StatRow(cam.replace('_', ' '), if (!bw.isNaN()) stringResource(R.string.storage_with_rate, size(mb), size(bw)) else size(mb))
                         }
                     }
                 }
@@ -198,7 +186,7 @@ fun HealthScreen(onYou: () -> Unit, bottomPadding: Dp = 0.dp) {
                             add(detectText)
                             if (skipped > 0) add(skippedText)
                             if (quality.isNotBlank()) add(quality)
-                        }.joinToString(" · "),
+                        }.joinToString(stringResource(R.string.list_separator)),
                         warn = fps <= 0.0 || skipped > 0 || quality.equals("poor", true),
                     )
                 }
@@ -227,7 +215,7 @@ private fun OverviewCard(service: JSONObject?, s: JSONObject) {
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Outlined.NewReleases, null, tint = cs.tertiary, modifier = Modifier.size(18.dp))
-                Text("  " + stringResource(R.string.health_update, latest), style = MaterialTheme.typography.bodyMedium, color = cs.tertiary)
+                Text(stringResource(R.string.health_update, latest), style = MaterialTheme.typography.bodyMedium, color = cs.tertiary, modifier = Modifier.padding(start = 6.dp))
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
@@ -300,7 +288,7 @@ private fun Meter(label: String, percent: Double?, detail: String? = null) {
 private fun WarningLine(text: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(Icons.Outlined.Warning, null, tint = Status.alert, modifier = Modifier.size(18.dp))
-        Text("  $text", style = MaterialTheme.typography.bodyMedium, color = Status.alert)
+        Text(text, style = MaterialTheme.typography.bodyMedium, color = Status.alert, modifier = Modifier.padding(start = 6.dp))
     }
 }
 

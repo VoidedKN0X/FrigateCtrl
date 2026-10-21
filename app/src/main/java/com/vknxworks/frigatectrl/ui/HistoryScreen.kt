@@ -660,7 +660,7 @@ private fun EventsList(
                     },
                     supportingContent = {
                         val dur = r.end?.let { "${(it - r.start).toInt()} s" } ?: stringResource(R.string.event_ongoing)
-                        Text("${fmt.format(Date((r.start * 1000).toLong()))} · $dur")
+                        Text(stringResource(R.string.event_time_duration, fmt.format(Date((r.start * 1000).toLong())), dur))
                     },
                     trailingContent = {
                         Box {

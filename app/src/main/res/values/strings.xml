@@ -306,4 +306,12 @@
     <string name="talk_no_backchannel">This camera doesn\'t accept audio from Frigate (no backchannel)</string>
     <string name="talk_mic_denied">Microphone permission was denied</string>
     <string name="selected">Selected</string>
+
+    <!-- Whole sentences instead of joined pieces -->
+    <string name="list_separator">" · "</string>
+
+    <!-- Whole sentences instead of joined pieces -->
+    <string name="list_separator_wide">"  ·  "</string>
+    <string name="storage_with_rate">%1$s · %2$s/h</string>
+    <string name="event_time_duration">%1$s · %2$s</string>
 </resources>
