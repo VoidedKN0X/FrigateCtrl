@@ -276,6 +276,7 @@
     <string name="start_muted">Start muted</string>
     <string name="pip_setting">Picture-in-picture</string>
     <string name="pip_setting_subtitle">Keep the live view floating when you leave the app</string>
+    <string name="pip_locked">FrigateCtrl is locked</string>
     <string name="keep_screen_on">Keep screen on</string>
     <string name="keep_screen_on_subtitle">While watching live or history</string>
     <string name="timeline_span">Timeline span when opened</string>

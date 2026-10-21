@@ -81,6 +81,7 @@ Turn it on under **Settings > Privacy and security > App lock** (tap your profil
 - **Change app PIN** asks for your current PIN first, and turning the app lock off asks for the PIN too.
 - **Forgot your PIN?** It can't be recovered, because it encrypts your login. The lock screen offers to log out and forget the server, the app lock and anything kept from the server, so you can log in again; your Frigate server isn't changed.
 - **With the app lock on**, the recent-apps screen always shows a blank card, and nothing of your cameras is shown or streamed while the app is locked.
+- **Picture-in-picture counts as leaving.** When the live view floats in its own window, the lock timer starts as if you had left the app, and expanding the window back to full screen shows the lock screen when the lock is due. With **Lock again** set to as soon as you leave, the floating window only shows a lock, and the live view doesn't float by itself when you go home. With **Hide in screenshots** on, it doesn't float by itself either; you can still float it from the camera screen.
 
 **Hide in screenshots** and **Hide in recent apps** are in the same section, work without the app lock too, and are both off by default. The first keeps FrigateCtrl out of screenshots and screen recordings; the second shows a blank card in the recent-apps view instead of the app. Sign-in, the lock screen and the PIN screens are always kept out of screenshots, whatever the switches say.
 

@@ -50,6 +50,19 @@ class Prefs(context: Context, private val vault: LockVault) {
         token = t
     }
 
+    /**
+     * On every unlock: if the app lock is on but the login is still saved without its key (the app stopped
+     * between setting up the lock and encrypting the login), encrypt it now. Values already sealed stay as they are.
+     */
+    fun sealIfNeeded() {
+        if (!vault.enabled) return
+        for (key in listOf("password", "token")) {
+            val stored = decrypt(sp.getString(key, null))
+            if (stored.isEmpty() || LockVault.isSealed(stored)) continue
+            seal(stored)?.let { sp.edit().putString(key, encrypt(it)).apply() }
+        }
+    }
+
     /** Turning the app lock off (unlocked): [disable] forgets the lock's key, then the login is saved without it. */
     fun unsealCredentials(disable: () -> Unit) {
         val p = password

@@ -4,6 +4,22 @@ What changed in each FrigateCtrl version. Every release on the [Releases page](h
 
 To publish a new version: bump `versionCode` and `versionName` in `app/build.gradle.kts`, add a section here, and push to `main`. Pushes without a version bump only build; they don't make a release.
 
+## 3.4.3 (2026-10-21)
+
+### Security
+
+- **Picture-in-picture no longer gets around the app lock.** A floating live view only pauses the app, so FrigateCtrl never noticed you had left: the lock timer didn't start, and expanding the floating window back to full screen opened the app without asking for your PIN, however long you had been away. Floating the live view (by going home or with the picture-in-picture button) now counts as leaving the app, and expanding it counts as coming back, with the usual lock check: the lock screen shows when the lock is due. With **Lock again** set to as soon as you leave, FrigateCtrl locks the moment the view floats and the floating window only shows a lock.
+- **The live view no longer floats by itself when that would show it unprotected**: automatic picture-in-picture is now off while **Hide in screenshots** is on, and while the app lock is set to lock as soon as you leave. The picture-in-picture button on the camera screen still works.
+- **The login is always encrypted with the app lock's PIN after unlocking.** If FrigateCtrl stopped in the split second between setting up the app lock and encrypting your saved login, the login stayed encrypted with the phone's key only. The next unlock now finishes the job.
+
+### Privacy
+
+- **No Google dependency metadata in the APK.** Android's build tools used to add an encrypted list of the app's libraries to the APK's signature block that only Google can read, which F-Droid flags. It's switched off now, as in the other Ctrl apps.
+
+### Changed
+
+- **README**: the App lock section explains how picture-in-picture and the lock work together.
+
 ## 3.4.2 (2026-10-21)
 
 ### Changed

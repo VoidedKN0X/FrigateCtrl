@@ -38,6 +38,11 @@ fun rememberIsInPip(): Boolean {
     return inPip
 }
 
+/** Whether the live view floats by itself when you leave the app (a camera is open with auto picture-in-picture on). */
+object PipState {
+    @Volatile var autoArmed = false
+}
+
 private fun pipParams(autoEnter: Boolean) = PictureInPictureParams.Builder()
     .setAspectRatio(Rational(16, 9))
     .setAutoEnterEnabled(autoEnter)
@@ -53,7 +58,11 @@ fun rememberPipController(autoEnter: Boolean): () -> Unit {
     val activity: Activity? = LocalContext.current.activity()
     DisposableEffect(activity, autoEnter) {
         runCatching { activity?.setPictureInPictureParams(pipParams(autoEnter)) }
-        onDispose { runCatching { activity?.setPictureInPictureParams(pipParams(false)) } }
+        PipState.autoArmed = autoEnter
+        onDispose {
+            PipState.autoArmed = false
+            runCatching { activity?.setPictureInPictureParams(pipParams(false)) }
+        }
     }
     return remember(activity) { { runCatching { activity?.enterPictureInPictureMode(pipParams(autoEnter)) } } }
 }

@@ -1,5 +1,6 @@
 package com.vknxworks.frigatectrl
 
+import android.content.res.Configuration
 import android.graphics.Color
 import android.os.Bundle
 import android.view.WindowManager
@@ -30,6 +31,7 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.outlined.MonitorHeart
@@ -48,6 +50,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vknxworks.frigatectrl.ui.lock.AppLockViewModel
 import com.vknxworks.frigatectrl.ui.lock.ChooseNewPinScreen
@@ -58,6 +61,7 @@ import com.vknxworks.frigatectrl.ui.lock.resetBiometricKey
 import com.vknxworks.frigatectrl.ui.clearImageCache
 import com.vknxworks.frigatectrl.data.Clips
 import com.vknxworks.frigatectrl.ui.CameraScreen
+import com.vknxworks.frigatectrl.ui.PipState
 import com.vknxworks.frigatectrl.ui.CamerasScreen
 import com.vknxworks.frigatectrl.ui.FrigateTheme
 import com.vknxworks.frigatectrl.ui.HealthScreen
@@ -102,6 +106,21 @@ class MainActivity : FragmentActivity() {
             }
         }
     }
+
+    private val lockVm: AppLockViewModel get() = ViewModelProvider(this)[AppLockViewModel::class.java]
+
+    // Picture-in-picture: the activity is only paused, never stopped, so the lifecycle alone never sees you
+    // leave. Going home while the live view is about to float, and entering picture-in-picture, count as
+    // leaving; expanding the floating window back to full screen counts as returning, with the usual lock check.
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        if (PipState.autoArmed && !isChangingConfigurations) lockVm.onBackground()
+    }
+
+    override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        if (isInPictureInPictureMode) lockVm.onBackground() else lockVm.onForeground()
+    }
 }
 
 /** Screens that must never be captured (sign-in, the lock screen, PIN screens) bump [active] while shown. */
@@ -140,6 +159,8 @@ private fun Root(activity: FragmentActivity, lockVm: AppLockViewModel = viewMode
         route = "setup"
     }
 
+    val inPip = com.vknxworks.frigatectrl.ui.rememberIsInPip()
+
     // Lock when the app goes to the background (immediately, or after the chosen delay).
     val owner = LocalLifecycleOwner.current
     DisposableEffect(owner) {
@@ -147,6 +168,9 @@ private fun Root(activity: FragmentActivity, lockVm: AppLockViewModel = viewMode
             when (event) {
                 Lifecycle.Event.ON_STOP -> if (!activity.isChangingConfigurations) lockVm.onBackground()
                 Lifecycle.Event.ON_START -> lockVm.onForeground()
+                // Also back from something that only paused the app (picture-in-picture expanded to full
+                // screen, or a see-through screen such as the share sheet). Nothing happens if it never left.
+                Lifecycle.Event.ON_RESUME -> if (!activity.isInPictureInPictureMode) lockVm.onForeground()
                 else -> Unit
             }
         }
@@ -155,6 +179,17 @@ private fun Root(activity: FragmentActivity, lockVm: AppLockViewModel = viewMode
     }
 
     // While locked nothing else is composed, so live streams and audio stop too.
+    if (lockVm.locked && App.prefs.isConfigured && inPip) {
+        // Locked while floating: no camera, only a lock. Expanding the window shows the lock screen.
+        Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Black), contentAlignment = Alignment.Center) {
+            androidx.compose.material3.Icon(
+                Icons.Filled.Lock,
+                stringResource(R.string.pip_locked),
+                tint = androidx.compose.ui.graphics.Color.White,
+            )
+        }
+        return
+    }
     if (lockVm.locked && App.prefs.isConfigured) {
         LockScreen(
             vm = lockVm,
