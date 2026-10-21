@@ -115,7 +115,7 @@ fun CamerasScreen(onOpen: (String) -> Unit, onYou: () -> Unit, bottomPadding: Dp
             columns = if (settings.gridColumns == 0) GridCells.Adaptive(300.dp) else GridCells.Fixed(settings.gridColumns),
             contentPadding = PaddingValues(
                 start = 16.dp, end = 16.dp,
-                top = bars.calculateTopPadding() + 8.dp,
+                top = bars.calculateTopPadding(),
                 bottom = bottomPadding + 24.dp,
             ),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -172,24 +172,16 @@ fun CamerasScreen(onOpen: (String) -> Unit, onYou: () -> Unit, bottomPadding: Dp
 @Composable
 private fun Header(host: String, cameraCount: Int?, alertCount: Int, onYou: () -> Unit) {
     val cs = MaterialTheme.colorScheme
-    Row(Modifier.fillMaxWidth().padding(bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(cs.primaryContainer),
-            contentAlignment = Alignment.Center,
-        ) { Icon(Icons.Outlined.Videocam, null, tint = cs.onPrimaryContainer, modifier = Modifier.size(22.dp)) }
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            Text(stringResource(R.string.tab_cameras), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            val camsText = cameraCount?.let { pluralStringResource(R.plurals.cameras_count, it, it) }
-            val alertsText = if (alertCount > 0) pluralStringResource(R.plurals.new_alerts_count, alertCount, alertCount) else null
-            val parts = listOfNotNull(host, camsText, alertsText)
-            Text(
-                parts.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant,
-                maxLines = 1, overflow = TextOverflow.Ellipsis,
-            )
-            if (App.prefs.isHttp) NotEncryptedBadge(Modifier.padding(top = 2.dp))
-        }
-        ProfileButton(onYou)
+    // The parent grid already pads 16 dp on each side.
+    TabTitle(stringResource(R.string.tab_cameras), onYou, inset = 16.dp) {
+        val camsText = cameraCount?.let { pluralStringResource(R.plurals.cameras_count, it, it) }
+        val alertsText = if (alertCount > 0) pluralStringResource(R.plurals.new_alerts_count, alertCount, alertCount) else null
+        Text(
+            listOfNotNull(host, camsText, alertsText).joinToString(stringResource(R.string.list_separator)),
+            style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant,
+            maxLines = 1, overflow = TextOverflow.Ellipsis,
+        )
+        if (App.prefs.isHttp) NotEncryptedBadge(Modifier.padding(top = 2.dp))
     }
 }
 

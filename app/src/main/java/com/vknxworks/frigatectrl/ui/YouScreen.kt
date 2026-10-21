@@ -43,6 +43,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.Dp
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -87,6 +90,32 @@ fun ProfileButton(onClick: () -> Unit) {
             } else {
                 Text(initial, style = MaterialTheme.typography.titleMedium, color = cs.primary)
             }
+        }
+    }
+}
+
+/**
+ * Big left-aligned title for the main tabs with the profile picture at the end, as in every Ctrl app.
+ * [subtitle] is the short status line under the title; [inset] is horizontal padding the parent already adds.
+ */
+@Composable
+fun TabTitle(
+    title: String,
+    onYou: () -> Unit,
+    modifier: Modifier = Modifier,
+    inset: Dp = 0.dp,
+    subtitle: (@Composable ColumnScope.() -> Unit)? = null,
+) {
+    Column(modifier.fillMaxWidth()) {
+        Row(
+            Modifier.fillMaxWidth().padding(start = 20.dp - inset, end = (8.dp - inset).coerceAtLeast(0.dp), top = 12.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(title, style = MaterialTheme.typography.headlineLarge, modifier = Modifier.weight(1f))
+            ProfileButton(onYou)
+        }
+        if (subtitle != null) {
+            Column(Modifier.padding(start = 20.dp - inset, end = (20.dp - inset).coerceAtLeast(0.dp), bottom = 8.dp), content = subtitle)
         }
     }
 }
@@ -145,7 +174,7 @@ fun YouScreen(onBack: () -> Unit, onSettings: () -> Unit, onServer: () -> Unit, 
                     listOfNotNull(
                         if (username != null) host.ifBlank { null } else stringResource(R.string.you_no_login),
                         frigateVersion?.let { stringResource(R.string.you_frigate_version, it) },
-                    ).joinToString("  ·  "),
+                    ).joinToString(stringResource(R.string.list_separator_wide)),
                     style = MaterialTheme.typography.bodyMedium,
                     color = cs.onSurfaceVariant,
                     textAlign = TextAlign.Center,

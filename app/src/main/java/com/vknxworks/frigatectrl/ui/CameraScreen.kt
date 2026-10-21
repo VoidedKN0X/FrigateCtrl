@@ -271,8 +271,8 @@ private fun LiveScreen(
                     fontWeight = FontWeight.Bold, maxLines = 1)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(6.dp).clip(CircleShape).background(Status.live))
-                    Text("  " + (streams.getOrNull(streamIdx)?.takeIf { streams.size > 1 }?.let { stringResource(R.string.live_stream, it.label) } ?: stringResource(R.string.live_plain)),
-                        style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
+                    Text(streams.getOrNull(streamIdx)?.takeIf { streams.size > 1 }?.let { stringResource(R.string.live_stream, it.label) } ?: stringResource(R.string.live_plain),
+                        style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant, modifier = Modifier.padding(start = 6.dp))
                 }
             }
             if (streams.size > 1) Box {
