@@ -31,7 +31,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.ControlCamera
 import androidx.compose.material.icons.outlined.NotificationsActive
-import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material.icons.outlined.VideocamOff
 import androidx.compose.material3.Button
@@ -70,7 +69,7 @@ import com.vknxworks.frigatectrl.data.CameraInfo
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CamerasScreen(onOpen: (String) -> Unit, onSettings: () -> Unit, bottomPadding: Dp = 0.dp) {
+fun CamerasScreen(onOpen: (String) -> Unit, onYou: () -> Unit, bottomPadding: Dp = 0.dp) {
     val settings = App.settings
     val cs = MaterialTheme.colorScheme
     var cameras by remember { mutableStateOf<List<CameraInfo>?>(null) }
@@ -124,7 +123,7 @@ fun CamerasScreen(onOpen: (String) -> Unit, onSettings: () -> Unit, bottomPaddin
                     host = App.prefs.baseUrl.removePrefix("https://").removePrefix("http://"),
                     cameraCount = visible?.size,
                     alertCount = totalAlerts,
-                    onSettings = onSettings,
+                    onYou = onYou,
                 )
             }
             if (groups.isNotEmpty()) {
@@ -166,7 +165,7 @@ fun CamerasScreen(onOpen: (String) -> Unit, onSettings: () -> Unit, bottomPaddin
 }
 
 @Composable
-private fun Header(host: String, cameraCount: Int?, alertCount: Int, onSettings: () -> Unit) {
+private fun Header(host: String, cameraCount: Int?, alertCount: Int, onYou: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     Row(Modifier.fillMaxWidth().padding(bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(
@@ -187,7 +186,7 @@ private fun Header(host: String, cameraCount: Int?, alertCount: Int, onSettings:
             )
             if (App.prefs.isHttp) NotEncryptedBadge(Modifier.padding(top = 2.dp))
         }
-        FilledTonalIconButton(onSettings) { Icon(Icons.Outlined.Settings, "Settings") }
+        ProfileButton(onYou)
     }
 }
 

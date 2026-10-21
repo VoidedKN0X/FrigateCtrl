@@ -59,6 +59,8 @@ If the Obtainium button doesn't open the app, add `https://github.com/VoidedKN0X
 3. If Frigate uses its built-in self-signed certificate, turn on **Allow self-signed certificate**.
 4. Tap **Connect**. With a self-signed certificate, check that the SHA-256 fingerprint shown matches your server's and tap **Trust**. With a plain `http://` address, the app warns you first; tap **Connect anyway** only on your own network.
 
+Settings, the server and login, log out and About are behind your profile picture at the top right of the Cameras and Health tabs: tap it to open the You page, then **Settings**.
+
 ## Tips and troubleshooting
 
 - **No sound in live view:** the camera's audio needs to be AAC. Convert it in your go2rtc config, e.g. `- "ffmpeg:your_cam#video=copy#audio=aac"`.
@@ -69,7 +71,7 @@ If the Obtainium button doesn't open the app, add `https://github.com/VoidedKN0X
 
 ## App lock
 
-Turn it on under **Settings > Privacy and security > App lock**. It's off until you turn it on.
+Turn it on under **Settings > Privacy and security > App lock** (tap your profile picture at the top right, then **Settings**). It's off until you turn it on.
 
 - **Its own app PIN** of at least 6 digits, separate from your phone's screen lock. Very obvious PINs such as 111111 or 123456 are refused.
 - **Unlock with fingerprint** (optional) only accepts strong biometrics, such as the fingerprint sensor, checked by the phone's secure hardware. Face unlock that only uses the camera isn't accepted. The PIN is still needed after the phone restarts and at least every 72 hours, and adding a new fingerprint to the phone turns fingerprint unlock off until you turn it on again.
@@ -88,7 +90,7 @@ Turn it on under **Settings > Privacy and security > App lock**. It's off until 
 
 - **Servers it talks to:** your own Frigate server, and, for two-way talk, only the STUN/TURN servers listed in your go2rtc config. It never contacts a public STUN server on its own.
 - **Two-way talk:** the built-in web view it runs in has online page checks and usage reports turned off.
-- **Links:** the Support, Report a bug, Source code and Licence rows in Settings open GitHub or gnu.org in your browser, only when you tap them.
+- **Links:** the Support, Report a bug, Source code and Licence rows on the You page (tap your profile picture) open GitHub or gnu.org in your browser, only when you tap them.
 - Your login is stored encrypted on your phone. **Hide in screenshots** and **Hide in recent apps** (Settings > Privacy and security, both off by default) keep your cameras out of screenshots, screen recordings and the recent-apps preview.
 
 ## Build from source
@@ -111,7 +113,7 @@ Or open the folder in Android Studio and press **Run** with your phone connected
 
 ## Support the project
 
-FrigateCtrl is free and open source. If it's useful to you, tap **Support FrigateCtrl** under **Settings → About** in the app (the gear button on the Cameras screen) to sponsor development on [GitHub Sponsors](https://github.com/sponsors/VoidedKN0X). Found a problem or have an idea? Tap **Report a bug** in the same section, or [open an issue](https://github.com/VoidedKN0X/FrigateCtrl/issues). Starring the repo helps too.
+FrigateCtrl is free and open source. If it's useful to you, tap **Support FrigateCtrl** under **About** on the You page in the app (tap your profile picture at the top right) to sponsor development on [GitHub Sponsors](https://github.com/sponsors/VoidedKN0X). Found a problem or have an idea? Tap **Report a bug** in the same section, or [open an issue](https://github.com/VoidedKN0X/FrigateCtrl/issues). Starring the repo helps too.
 
 ## The Ctrl series
 

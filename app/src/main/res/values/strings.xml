@@ -11,6 +11,24 @@
     <string name="licence_title">Licence</string>
     <string name="licence_subtitle">GNU General Public License v3.0</string>
     <string name="about_footer">FrigateCtrl %1$s · VKNXWorks</string>
+
+    <!-- You page (tap the profile picture) -->
+    <string name="you_title">You</string>
+    <string name="account_and_settings">Account and settings</string>
+    <string name="you_not_set">Not set</string>
+    <string name="you_no_login">No login</string>
+    <string name="you_frigate_version">Frigate %1$s</string>
+    <string name="you_server_group">Server</string>
+    <string name="server_and_login">Server &amp; login</string>
+    <string name="server_not_encrypted">Not encrypted (HTTP)</string>
+    <string name="server_pinned_cert">Pinned certificate SHA-256 %1$s…</string>
+    <string name="settings">Settings</string>
+    <string name="settings_subtitle">Appearance, privacy and security, cameras, live view and history</string>
+    <string name="log_out">Log out</string>
+    <string name="log_out_title">Log out?</string>
+    <string name="log_out_body">The server address and saved login will be removed from this phone, and the app lock is turned off.</string>
+    <string name="back">Back</string>
+    <string name="cancel">Cancel</string>
     <!-- App lock and Privacy and security, shared by every Ctrl app -->
     <string name="lock_enter_pin">Enter your PIN</string>
     <string name="lock_pin_due">Enter your PIN. It\'s needed after a restart and every 72 hours.</string>

@@ -58,7 +58,7 @@ import java.util.Locale
 /** Frigate's /api/stats, refreshed every 5 seconds. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HealthScreen(bottomPadding: Dp = 0.dp) {
+fun HealthScreen(onYou: () -> Unit, bottomPadding: Dp = 0.dp) {
     val cs = MaterialTheme.colorScheme
     var stats by remember { mutableStateOf<JSONObject?>(null) }
     var storage by remember { mutableStateOf<JSONObject?>(null) }
@@ -98,6 +98,7 @@ fun HealthScreen(bottomPadding: Dp = 0.dp) {
                     color = if (error != null) cs.error else cs.onSurfaceVariant,
                 )
             }
+            ProfileButton(onYou)
         }
 
         val s = stats

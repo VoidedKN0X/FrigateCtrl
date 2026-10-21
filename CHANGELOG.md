@@ -4,6 +4,22 @@ What changed in each FrigateCtrl version. Every release on the [Releases page](h
 
 To publish a new version: bump `versionCode` and `versionName` in `app/build.gradle.kts`, add a section here, and push to `main`. Pushes without a version bump only build; they don't make a release.
 
+## 3.4.0 (2026-10-21)
+
+Settings now open from your profile picture, the same in every Ctrl app.
+
+### New
+
+- **Your profile picture at the top right** of the Cameras and Health tabs. It shows the first letter of your Frigate username, or the round placeholder picture the other Ctrl apps use when your Frigate has no login (port 5000). Frigate has no profile pictures of its own. Tapping it opens the new **You** page
+- **The You page** shows who you're logged in as, your Frigate server's address and Frigate version, then **Server & login** (change the address, login or certificate), **Settings** and **Log out**, and **About** (Support FrigateCtrl, Report a bug, Source code, Licence) with the version underneath, in the same layout as NaviCtrl, MemoCtrl, ProxCtrl and TrueCtrl
+- **System health has the profile picture too**, so you can open the You page from either tab
+
+### Changed
+
+- **Settings moved to your profile picture**: before, Settings opened from the gear button at the top right of the Cameras screen. The gear is gone; tap your profile picture, then **Settings** for Appearance, Privacy and security, Cameras, Live view and History. It's the only way in, as in every Ctrl app
+- **Server & login, Log out and About moved from Settings to the You page.** Log out still asks first. Cancelling or going back from Server & login now returns to the You page
+- **README**: Getting started says where Settings, the server and login, log out and About are; the App lock, Privacy and Support sections say "tap your profile picture" instead of the gear button
+
 ## 3.3.4 (2026-10-21)
 
 ### Changed
