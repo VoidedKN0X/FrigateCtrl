@@ -68,6 +68,8 @@ import javax.net.ssl.SSLPeerUnverifiedException
 
 @Composable
 fun SetupScreen(editing: Boolean, onDone: () -> Unit, onCancel: (() -> Unit)?) {
+    // The password is typed here: never in screenshots, recordings or casting.
+    com.vknxworks.frigatectrl.SecureWindow()
     val prefs = App.prefs
     val cs = MaterialTheme.colorScheme
     var url by remember { mutableStateOf(if (editing) prefs.baseUrl else "") }

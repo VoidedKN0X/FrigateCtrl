@@ -194,7 +194,7 @@ fun SettingsScreen(onBack: () -> Unit, onServer: () -> Unit, onLogout: () -> Uni
                 }
                 Toggle(
                     Icons.Outlined.VisibilityOff, "Hide in screenshots and recent apps",
-                    "Screenshots, screen recordings and the recent apps view show a blank screen", lock.hideContent,
+                    "Screenshots, screen recordings and the recent apps view show a blank screen. Sign-in and the lock screen are always hidden", lock.hideContent,
                 ) { lock.hideContent = it }
             }
 

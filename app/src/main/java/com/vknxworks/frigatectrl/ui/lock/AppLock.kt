@@ -431,3 +431,7 @@ fun PinRequestScreen(request: PinRequest) {
         )
     }
 }
+
+/** The lock and PIN screens are always kept out of screenshots, recordings and casting, like sign-in. */
+@Composable
+internal fun KeepOutOfScreenshots() = com.vknxworks.frigatectrl.SecureWindow()

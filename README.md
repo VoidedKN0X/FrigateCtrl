@@ -76,7 +76,7 @@ Turn it on in **Settings → Privacy and security → App lock** (the gear on th
 - **Wrong PINs make you wait**: 30 seconds after 5 wrong tries, doubling up to 15 minutes. Restarting the app or the phone, or changing the clock, doesn't end the wait.
 - **Your login stays encrypted while FrigateCtrl is locked**, with a key that only exists in memory while the app is unlocked and is wiped the moment it locks. Nothing of your cameras is shown or streamed while locked.
 - **Lock again**: as soon as you leave the app (the default), after 1, 5 or 15 minutes or 1 hour away, or only when the app restarts. Sharing a clip or opening a link from FrigateCtrl doesn't count as leaving, unless you're away for more than 5 minutes.
-- **Hide in screenshots and recent apps** (on by default, also without the app lock): screenshots, screen recordings and the recent apps view show a blank screen.
+- **Hide in screenshots and recent apps** (on by default, also without the app lock): screenshots, screen recordings and the recent apps view show a blank screen. Sign-in, the lock screen and the PIN screens are always hidden.
 - **Forgot PIN?** on the lock screen logs out and forgets the server, the app lock and anything kept from the server, so you can log in again. Your Frigate server isn't changed.
 
 ## Privacy
