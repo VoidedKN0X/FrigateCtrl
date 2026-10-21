@@ -16,6 +16,8 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManager
+import com.vknxworks.frigatectrl.App
+import com.vknxworks.frigatectrl.R
 
 data class StreamOption(val label: String, val streamName: String)
 
@@ -98,7 +100,7 @@ class FrigateApi(private val prefs: Prefs) {
                 )
             } else {
                 b.addInterceptor { chain ->
-                    if (!chain.request().url.isHttps) throw IOException("Blocked an unencrypted (http) connection")
+                    if (!chain.request().url.isHttps) throw IOException(App.str(R.string.error_blocked_http))
                     chain.proceed(chain.request())
                 }
             }
@@ -138,7 +140,7 @@ class FrigateApi(private val prefs: Prefs) {
      */
     suspend fun login(base: String, user: String, pass: String, pin: String, httpOk: Boolean): String =
         withContext(Dispatchers.IO) {
-            val baseHttp = base.toHttpUrlOrNull() ?: throw Exception("That isn't a valid address")
+            val baseHttp = base.toHttpUrlOrNull() ?: throw Exception(App.str(R.string.error_invalid_address))
             var tok = ""
             val client = baseClient(baseHttp, pin)
                 .addInterceptor(serverInterceptor(baseHttp, httpOk, { tok }, { tok = it }, null))
@@ -148,11 +150,11 @@ class FrigateApi(private val prefs: Prefs) {
             }
             // Verify we can actually read the config with this token.
             client.newCall(Request.Builder().url("$base/api/config").build()).execute().use { r ->
-                if (r.code == 401 || r.code == 403) throw AuthException("Server requires a login")
-                if (!r.isSuccessful) throw Exception("Server answered HTTP ${r.code}")
+                if (r.code == 401 || r.code == 403) throw AuthException(App.str(R.string.error_login_required))
+                if (!r.isSuccessful) throw Exception(App.str(R.string.error_server_http, r.code))
                 val body = r.body?.string().orEmpty()
                 if (!body.trimStart().startsWith("{") || !body.contains("cameras"))
-                    throw Exception("That doesn't look like a Frigate server")
+                    throw Exception(App.str(R.string.error_not_frigate))
             }
             tok
         }
@@ -168,8 +170,8 @@ class FrigateApi(private val prefs: Prefs) {
             .post(json.toRequestBody("application/json".toMediaType()))
             .build()
         client.newCall(req).execute().use { r ->
-            if (r.code == 401 || r.code == 400 || r.code == 403) throw AuthException("Wrong username or password")
-            if (!r.isSuccessful) throw Exception("Login failed: HTTP ${r.code}")
+            if (r.code == 401 || r.code == 400 || r.code == 403) throw AuthException(App.str(R.string.error_wrong_login))
+            if (!r.isSuccessful) throw Exception(App.str(R.string.error_login_http, r.code))
             return extractToken(r) ?: ""
         }
     }
@@ -207,7 +209,7 @@ class FrigateApi(private val prefs: Prefs) {
         fun send(req: Request): Response {
             val same = sameOrigin(req.url, base)
             if (!req.url.isHttps && !(httpOk && same))
-                throw IOException("Blocked an unencrypted (http) connection to ${req.url.host}")
+                throw IOException(App.str(R.string.error_blocked_http_host, req.url.host))
             val t = token()
             val resp = chain.proceed(
                 if (same && t.isNotEmpty()) req.newBuilder().header("Cookie", "frigate_token=$t").build()
@@ -273,8 +275,8 @@ class FrigateApi(private val prefs: Prefs) {
     private suspend fun getString(path: String): String = withContext(Dispatchers.IO) {
         try {
             http.newCall(Request.Builder().url(url(path)).build()).execute().use { r ->
-                if (r.code == 401) throw AuthException("Session expired — log in again")
-                if (!r.isSuccessful) throw Exception("HTTP ${r.code} for $path")
+                if (r.code == 401) throw AuthException(App.str(R.string.error_session_expired))
+                if (!r.isSuccessful) throw Exception(App.str(R.string.error_http_path, r.code, path))
                 r.body?.string().orEmpty()
             }
         } catch (e: IOException) {
@@ -326,7 +328,7 @@ class FrigateApi(private val prefs: Prefs) {
             }
             if (streams.isEmpty()) {
                 val sn = live?.optString("stream_name").orEmpty().ifBlank { name }
-                streams += StreamOption("Main", sn)
+                streams += StreamOption(App.str(R.string.stream_main), sn)
             }
             val onvifHost = c.optJSONObject("onvif")?.optString("host").orEmpty()
             val ui = c.optJSONObject("ui")
@@ -389,11 +391,11 @@ class FrigateApi(private val prefs: Prefs) {
             val body = JSONObject().put("ids", JSONArray(ids)).put("reviewed", true).toString()
             val req = Request.Builder().url(url("/api/reviews/viewed"))
                 .post(body.toRequestBody("application/json".toMediaType())).build()
-            http.newCall(req).execute().use { if (!it.isSuccessful) throw Exception("HTTP ${it.code}") }
+            http.newCall(req).execute().use { if (!it.isSuccessful) throw Exception(App.str(R.string.error_http, it.code)) }
         } else {
             for (id in ids) {
                 val req = Request.Builder().url(url("/api/review/$id/viewed")).delete().build()
-                http.newCall(req).execute().use { if (!it.isSuccessful) throw Exception("HTTP ${it.code}") }
+                http.newCall(req).execute().use { if (!it.isSuccessful) throw Exception(App.str(R.string.error_http, it.code)) }
             }
         }
     }

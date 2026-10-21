@@ -65,6 +65,9 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import java.io.IOException
 import javax.net.ssl.SSLException
 import javax.net.ssl.SSLPeerUnverifiedException
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalContext
+import com.vknxworks.frigatectrl.R
 
 @Composable
 fun SetupScreen(editing: Boolean, onDone: () -> Unit, onCancel: (() -> Unit)?) {
@@ -83,6 +86,7 @@ fun SetupScreen(editing: Boolean, onDone: () -> Unit, onCancel: (() -> Unit)?) {
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    val ctx = LocalContext.current
 
     // Security prompts: a self-signed certificate to confirm, or an http address to confirm.
     var certPrompt by remember { mutableStateOf<Pair<String, CertInfo>?>(null) }
@@ -121,7 +125,7 @@ fun SetupScreen(editing: Boolean, onDone: () -> Unit, onCancel: (() -> Unit)?) {
                 certPrompt = base to fetchCertInfo(base)
             } catch (e: Exception) {
                 if (httpFallback != null && e is IOException && e !is SSLException) httpPrompt = httpFallback
-                else error = "Couldn't read the server's certificate: " + (e.message ?: e.javaClass.simpleName)
+                else error = ctx.getString(R.string.cert_read_failed, e.message ?: e.javaClass.simpleName)
             }
             busy = false
         }
@@ -151,10 +155,8 @@ fun SetupScreen(editing: Boolean, onDone: () -> Unit, onCancel: (() -> Unit)?) {
                     e is AuthException -> error = e.message
                     // The pinned certificate no longer matches: show the new one and let the user decide.
                     insecure && pin.isNotBlank() && certError -> promptCert(base, changed = true)
-                    certError || e is SSLPeerUnverifiedException -> error = "Certificate not trusted. If Frigate uses its " +
-                        "default self-signed certificate, turn on \"Allow self-signed certificate\"."
-                    e is SSLException -> error = "Secure connection failed (" + (e.message ?: e.javaClass.simpleName) +
-                        "). If your server only serves plain http (e.g. port 5000), type http:// in front of the address."
+                    certError || e is SSLPeerUnverifiedException -> error = ctx.getString(R.string.cert_not_trusted)
+                    e is SSLException -> error = ctx.getString(R.string.tls_failed, e.message ?: e.javaClass.simpleName)
                     httpFallback != null && e is IOException -> httpPrompt = httpFallback
                     else -> error = e.message ?: e.javaClass.simpleName
                 }
@@ -204,7 +206,7 @@ fun SetupScreen(editing: Boolean, onDone: () -> Unit, onCancel: (() -> Unit)?) {
         HttpWarningDialog(
             host = base.toHttpUrlOrNull()?.host ?: base,
             intro = if (!url.trim().startsWith("http", ignoreCase = true))
-                "Couldn't connect to ${base.removePrefix("http://")} over https." else null,
+                stringResource(R.string.https_failed, base.removePrefix("http://")) else null,
             onConfirm = { httpPrompt = null; attempt(base, "", true, null) },
             onCancel = { httpPrompt = null },
         )
@@ -225,12 +227,12 @@ fun SetupScreen(editing: Boolean, onDone: () -> Unit, onCancel: (() -> Unit)?) {
             }
             Spacer(Modifier.height(20.dp))
             Text(
-                if (editing) "Server settings" else "Welcome to FrigateCtrl",
+                stringResource(if (editing) R.string.server_settings else R.string.setup_welcome),
                 style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
             )
             Text(
-                "Enter the address you use to open Frigate in a browser.",
+                stringResource(R.string.setup_intro),
                 color = cs.onSurfaceVariant, style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp, bottom = 28.dp),
             )
@@ -241,38 +243,38 @@ fun SetupScreen(editing: Boolean, onDone: () -> Unit, onCancel: (() -> Unit)?) {
             ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
-                        url, { url = it }, label = { Text("Frigate URL") }, singleLine = true,
+                        url, { url = it }, label = { Text(stringResource(R.string.setup_url)) }, singleLine = true,
                         placeholder = { Text("https://192.168.1.20:8971") },
                         leadingIcon = { Icon(Icons.Outlined.Dns, null) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next),
                         modifier = Modifier.fillMaxWidth(),
                     )
                     OutlinedTextField(
-                        user, { user = it }, label = { Text("Username") }, singleLine = true,
+                        user, { user = it }, label = { Text(stringResource(R.string.setup_username)) }, singleLine = true,
                         leadingIcon = { Icon(Icons.Outlined.Person, null) },
-                        supportingText = { Text("Leave empty if authentication is off (port 5000)") },
+                        supportingText = { Text(stringResource(R.string.setup_username_hint)) },
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                         modifier = Modifier.fillMaxWidth(),
                     )
                     OutlinedTextField(
-                        pass, { pass = it }, label = { Text("Password") }, singleLine = true,
+                        pass, { pass = it }, label = { Text(stringResource(R.string.setup_password)) }, singleLine = true,
                         leadingIcon = { Icon(Icons.Outlined.Lock, null) },
-                        supportingText = if (hasSavedPass) ({ Text("Leave empty to keep the saved password") }) else null,
+                        supportingText = if (hasSavedPass) ({ Text(stringResource(R.string.setup_password_keep)) }) else null,
                         visualTransformation = if (showPass) VisualTransformation.None else PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
                         keyboardActions = KeyboardActions(onDone = { connect() }),
                         trailingIcon = {
                             IconButton({ showPass = !showPass }) {
                                 Icon(if (showPass) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
-                                    if (showPass) "Hide password" else "Show password")
+                                    stringResource(if (showPass) R.string.hide_password else R.string.show_password))
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
                     )
                     if (url.trim().startsWith("http://", ignoreCase = true)) NotEncryptedBadge()
                     ListItem(
-                        headlineContent = { Text("Allow self-signed certificate") },
-                        supportingContent = { Text("You confirm the certificate's fingerprint once; only that certificate is accepted") },
+                        headlineContent = { Text(stringResource(R.string.setup_self_signed)) },
+                        supportingContent = { Text(stringResource(R.string.setup_self_signed_subtitle)) },
                         trailingContent = { Switch(insecure, { insecure = it }) },
                         colors = ListItemDefaults.colors(containerColor = cs.surfaceContainerLow),
                     )
@@ -299,9 +301,9 @@ fun SetupScreen(editing: Boolean, onDone: () -> Unit, onCancel: (() -> Unit)?) {
                 modifier = Modifier.fillMaxWidth().height(56.dp),
             ) {
                 if (busy) CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp, color = cs.onPrimary)
-                else Text(if (editing) "Save & reconnect" else "Connect", style = MaterialTheme.typography.titleMedium)
+                else Text(stringResource(if (editing) R.string.setup_save_reconnect else R.string.setup_connect), style = MaterialTheme.typography.titleMedium)
             }
-            if (onCancel != null) TextButton(onCancel, Modifier.fillMaxWidth().padding(top = 4.dp)) { Text("Cancel") }
+            if (onCancel != null) TextButton(onCancel, Modifier.fillMaxWidth().padding(top = 4.dp)) { Text(stringResource(R.string.cancel)) }
         }
     }
 }

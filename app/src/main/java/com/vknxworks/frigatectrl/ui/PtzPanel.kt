@@ -57,6 +57,8 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.roundToInt
+import androidx.compose.ui.res.stringResource
+import com.vknxworks.frigatectrl.R
 
 /** Horizontally scrolling preset chips. */
 @Composable
@@ -142,10 +144,10 @@ fun PtzJoystick(send: (String) -> Unit, modifier: Modifier = Modifier, size: Dp 
         contentAlignment = Alignment.Center,
     ) {
         val arrowTint = { d: String -> if (dir == d) cs.primary else cs.onSurfaceVariant.copy(alpha = 0.7f) }
-        Icon(Icons.Default.KeyboardArrowUp, "Up", Modifier.align(Alignment.TopCenter).padding(top = 6.dp), tint = arrowTint("MOVE_UP"))
-        Icon(Icons.Default.KeyboardArrowDown, "Down", Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp), tint = arrowTint("MOVE_DOWN"))
-        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Left", Modifier.align(Alignment.CenterStart).padding(start = 6.dp), tint = arrowTint("MOVE_LEFT"))
-        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Right", Modifier.align(Alignment.CenterEnd).padding(end = 6.dp), tint = arrowTint("MOVE_RIGHT"))
+        Icon(Icons.Default.KeyboardArrowUp, stringResource(R.string.ptz_up), Modifier.align(Alignment.TopCenter).padding(top = 6.dp), tint = arrowTint("MOVE_UP"))
+        Icon(Icons.Default.KeyboardArrowDown, stringResource(R.string.ptz_down), Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp), tint = arrowTint("MOVE_DOWN"))
+        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, stringResource(R.string.ptz_left), Modifier.align(Alignment.CenterStart).padding(start = 6.dp), tint = arrowTint("MOVE_LEFT"))
+        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, stringResource(R.string.ptz_right), Modifier.align(Alignment.CenterEnd).padding(end = 6.dp), tint = arrowTint("MOVE_RIGHT"))
         Box(
             Modifier
                 .offset { IntOffset(thumb.value.x.roundToInt(), thumb.value.y.roundToInt()) }
@@ -160,12 +162,12 @@ fun PtzJoystick(send: (String) -> Unit, modifier: Modifier = Modifier, size: Dp 
 fun PtzZoomPill(send: (String) -> Unit, zoom: Boolean, focus: Boolean, modifier: Modifier = Modifier) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         if (zoom) Pill {
-            HoldButton(Icons.Outlined.Add, "Zoom in", "ZOOM_IN", send)
-            HoldButton(Icons.Outlined.Remove, "Zoom out", "ZOOM_OUT", send)
+            HoldButton(Icons.Outlined.Add, stringResource(R.string.ptz_zoom_in), "ZOOM_IN", send)
+            HoldButton(Icons.Outlined.Remove, stringResource(R.string.ptz_zoom_out), "ZOOM_OUT", send)
         }
         if (focus) Pill {
-            HoldButton(Icons.Outlined.CenterFocusStrong, "Focus near", "FOCUS_IN", send)
-            HoldButton(Icons.Outlined.CenterFocusWeak, "Focus far", "FOCUS_OUT", send)
+            HoldButton(Icons.Outlined.CenterFocusStrong, stringResource(R.string.ptz_focus_near), "FOCUS_IN", send)
+            HoldButton(Icons.Outlined.CenterFocusWeak, stringResource(R.string.ptz_focus_far), "FOCUS_OUT", send)
         }
     }
 }

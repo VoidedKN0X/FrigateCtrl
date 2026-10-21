@@ -22,6 +22,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
+import com.vknxworks.frigatectrl.R
 
 /**
  * Plays Frigate recordings through its VOD HLS endpoint (/vod/<cam>/start/<s>/end/<e>/index.m3u8)
@@ -29,7 +30,7 @@ import kotlin.math.min
  * gaps between recordings, so the mapping walks the segment list exactly like the web UI does.
  */
 @OptIn(UnstableApi::class)
-class Playback(context: Context, private val camera: String, private val scope: CoroutineScope) {
+class Playback(private val context: Context, private val camera: String, private val scope: CoroutineScope) {
 
     private class Clip(val start: Double, val durMs: Long)
 
@@ -65,7 +66,7 @@ class Playback(context: Context, private val camera: String, private val scope: 
             }
             override fun onPlayerError(e: PlaybackException) {
                 loading = false
-                error = "Playback error: ${e.errorCodeName}"
+                error = context.getString(R.string.playback_error, e.errorCodeName)
             }
         })
     }

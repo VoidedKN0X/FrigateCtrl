@@ -66,6 +66,10 @@ import androidx.compose.ui.unit.sp
 import com.vknxworks.frigatectrl.App
 import com.vknxworks.frigatectrl.data.CameraGroup
 import com.vknxworks.frigatectrl.data.CameraInfo
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.platform.LocalContext
+import com.vknxworks.frigatectrl.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,13 +83,14 @@ fun CamerasScreen(onOpen: (String) -> Unit, onYou: () -> Unit, bottomPadding: Dp
     var reload by remember { mutableIntStateOf(0) }
     var refreshing by remember { mutableStateOf(false) }
     var group by rememberSaveable { mutableStateOf<String?>(null) }
+    val ctx = LocalContext.current
 
     LaunchedEffect(reload) {
         error = null
         try {
             cameras = App.api.cameras()
             groups = App.api.groups
-        } catch (e: Exception) { error = e.message ?: "Couldn't load cameras" }
+        } catch (e: Exception) { error = e.message ?: ctx.getString(R.string.cameras_load_failed) }
         alerts = try {
             App.api.reviews("all", nowSec() - 86400, nowSec())
                 .filter { it.isAlert && !it.reviewed }.groupingBy { it.camera }.eachCount()
@@ -132,7 +137,7 @@ fun CamerasScreen(onOpen: (String) -> Unit, onYou: () -> Unit, bottomPadding: Dp
                         Modifier.horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        FilterChip(group == null, { group = null }, label = { Text("All") })
+                        FilterChip(group == null, { group = null }, label = { Text(stringResource(R.string.filter_all)) })
                         groups.forEach { g ->
                             FilterChip(
                                 group == g.name, { group = if (group == g.name) null else g.name },
@@ -145,13 +150,13 @@ fun CamerasScreen(onOpen: (String) -> Unit, onYou: () -> Unit, bottomPadding: Dp
 
             when {
                 error != null && cameras == null -> item(span = { GridItemSpan(maxLineSpan) }, key = "err") {
-                    EmptyState("Can't reach Frigate", error!!, "Retry") { reload++ }
+                    EmptyState(stringResource(R.string.cant_reach_frigate), error!!, stringResource(R.string.retry)) { reload++ }
                 }
                 visible == null -> item(span = { GridItemSpan(maxLineSpan) }, key = "loading") {
                     Box(Modifier.fillMaxWidth().height(320.dp), Alignment.Center) { CircularProgressIndicator() }
                 }
                 visible.isEmpty() -> item(span = { GridItemSpan(maxLineSpan) }, key = "empty") {
-                    EmptyState("No cameras here", "Nothing matches this view.", null) {}
+                    EmptyState(stringResource(R.string.no_cameras), stringResource(R.string.no_cameras_body), null) {}
                 }
                 else -> items(visible, key = { it.name }) { cam ->
                     CameraCard(
@@ -174,12 +179,10 @@ private fun Header(host: String, cameraCount: Int?, alertCount: Int, onYou: () -
         ) { Icon(Icons.Outlined.Videocam, null, tint = cs.onPrimaryContainer, modifier = Modifier.size(22.dp)) }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text("Cameras", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            val parts = buildList {
-                add(host)
-                cameraCount?.let { add("$it cams") }
-                if (alertCount > 0) add("$alertCount new alerts")
-            }
+            Text(stringResource(R.string.tab_cameras), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            val camsText = cameraCount?.let { pluralStringResource(R.plurals.cameras_count, it, it) }
+            val alertsText = if (alertCount > 0) pluralStringResource(R.plurals.new_alerts_count, alertCount, alertCount) else null
+            val parts = listOfNotNull(host, camsText, alertsText)
             Text(
                 parts.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant,
                 maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -241,7 +244,7 @@ private fun CameraCard(cam: CameraInfo, alerts: Int, compact: Boolean, modifier:
             } else {
                 Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Outlined.VideocamOff, null, tint = cs.onSurfaceVariant)
-                    Text("Disabled", color = cs.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
+                    Text(stringResource(R.string.camera_disabled), color = cs.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
                 }
             }
 

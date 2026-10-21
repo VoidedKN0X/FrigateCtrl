@@ -24,6 +24,7 @@ import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import org.json.JSONObject
 import java.net.URLEncoder
+import com.vknxworks.frigatectrl.R
 
 enum class TalkState { Idle, Connecting, Talking, Error }
 
@@ -90,9 +91,9 @@ class TalkSession(private val activity: Activity, private val stream: String) {
             }
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
                 val why = when (response?.code) {
-                    401, 403 -> "Login rejected"
-                    404 -> "Stream not found"
-                    else -> t.message ?: "Connection failed"
+                    401, 403 -> activity.getString(R.string.talk_login_rejected)
+                    404 -> activity.getString(R.string.talk_stream_not_found)
+                    else -> t.message ?: activity.getString(R.string.talk_connection_failed)
                 }
                 main.post { fail(why) }
             }
@@ -107,7 +108,7 @@ class TalkSession(private val activity: Activity, private val stream: String) {
                 when {
                     s == "connected" -> { state = TalkState.Talking; routeToSpeaker(true) }
                     s == "failed" || s == "disconnected" ->
-                        if (state != TalkState.Idle) fail("Connection to the camera was lost")
+                        if (state != TalkState.Idle) fail(activity.getString(R.string.talk_lost))
                     s.startsWith("error:") -> fail(s.removePrefix("error:"))
                 }
             }
@@ -122,8 +123,8 @@ class TalkSession(private val activity: Activity, private val stream: String) {
 
     private fun friendly(raw: String): String = when {
         raw.contains("backchannel", true) || raw.contains("codecs not matched", true) ||
-            raw.contains("sendonly", true) -> "This camera doesn't accept audio from Frigate (no backchannel)"
-        raw.contains("NotAllowed", true) -> "Microphone permission was denied"
+            raw.contains("sendonly", true) -> activity.getString(R.string.talk_no_backchannel)
+        raw.contains("NotAllowed", true) -> activity.getString(R.string.talk_mic_denied)
         else -> raw
     }
 

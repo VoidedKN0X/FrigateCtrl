@@ -4,6 +4,16 @@ What changed in each FrigateCtrl version. Every release on the [Releases page](h
 
 To publish a new version: bump `versionCode` and `versionName` in `app/build.gradle.kts`, add a section here, and push to `main`. Pushes without a version bump only build; they don't make a release.
 
+## 3.4.1 (2026-10-21)
+
+### Changed
+
+- **All text is now in one place, ready for translations.** About 200 pieces of text that were written straight into the code (camera and history screens, System health, the camera settings sheet, PTZ controls, sign-in, certificate and connection warnings, Settings rows, clip and talk messages and error messages) now come from the app's text resources. The wording stays the same.
+
+### Fixed
+
+- **Counts read correctly in the singular**: the Cameras header now says "1 cam" and "1 new alert" instead of "1 cams" and "1 new alerts".
+
 ## 3.4.0 (2026-10-21)
 
 Settings now open from your profile picture, the same in every Ctrl app.
