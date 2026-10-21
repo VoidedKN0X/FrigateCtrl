@@ -87,7 +87,14 @@ import com.vknxworks.frigatectrl.ui.lock.PIN_MIN
 import com.vknxworks.frigatectrl.ui.lock.biometricAvailable
 import com.vknxworks.frigatectrl.ui.lock.disableAppLock
 import com.vknxworks.frigatectrl.ui.lock.enableAppLock
-import com.vknxworks.frigatectrl.ui.lock.isObviousPin
+import com.vknxworks.frigatectrl.ui.lock.PinRequest
+import com.vknxworks.frigatectrl.ui.lock.PinRequests
+import com.vknxworks.frigatectrl.ui.lock.lockActivity
+import com.vknxworks.frigatectrl.ui.settings.Group
+import com.vknxworks.frigatectrl.ui.settings.GroupChoice
+import com.vknxworks.frigatectrl.ui.settings.GroupRow
+import com.vknxworks.frigatectrl.ui.settings.GroupSwitch
+import android.widget.Toast
 import com.vknxworks.frigatectrl.data.lock.LockVault
 import com.vknxworks.frigatectrl.ui.lock.showBiometricPrompt
 import kotlinx.coroutines.Dispatchers
@@ -107,7 +114,6 @@ fun SettingsScreen(onBack: () -> Unit, onServer: () -> Unit, onLogout: () -> Uni
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     var confirmLogout by remember { mutableStateOf(false) }
     val lock = App.lock
-    var pinDialog by remember { mutableStateOf<PinMode?>(null) }
     val bioAvailable = remember { biometricAvailable(ctx) }
     var frigateVersion by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) { frigateVersion = App.api.version() }
@@ -126,75 +132,70 @@ fun SettingsScreen(onBack: () -> Unit, onServer: () -> Unit, onLogout: () -> Uni
             Modifier.fillMaxSize().padding(pad).verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp).padding(bottom = 32.dp),
         ) {
-            Section("Security") {
+            Section("Appearance") {
+                Choice(
+                    Icons.Outlined.DarkMode, "Theme",
+                    THEMES.map { it.label },
+                    THEMES.indexOf(s.theme).coerceAtLeast(0),
+                ) { s.theme = THEMES[it] }
+                Toggle(
+                    Icons.Outlined.Palette, "Use wallpaper colours", "Replaces the default colours with ones from your wallpaper", s.dynamicColor,
+                ) { s.dynamicColor = it }
+            }
+
+            Section(
+                "Privacy and security",
+                footer = "FrigateCtrl has no analytics or tracking. It only talks to your own Frigate server.",
+            ) {
                 val vault = App.vault
                 Toggle(
                     Icons.Outlined.Lock, "App lock",
-                    "Ask for a PIN when opening the app. While it's locked, your login stays encrypted with the PIN",
+                    "Ask for an app PIN (and optionally your fingerprint) when opening FrigateCtrl. While locked, your login " +
+                        "stays encrypted with the PIN, and no camera is shown or streamed.",
                     vault.enabled,
-                ) { on ->
-                    pinDialog = if (on) PinMode.New else PinMode.Disable
-                }
+                ) { on -> PinRequests.request = if (on) PinRequest.ENABLE else PinRequest.DISABLE }
                 if (vault.enabled) {
-                    Divider()
+                    GroupRow(
+                        "Change app PIN",
+                        "At least $PIN_MIN digits, separate from your phone's PIN",
+                        icon = Icons.Outlined.Password,
+                        showChevron = true,
+                        onClick = { PinRequests.request = PinRequest.CHANGE },
+                    )
                     Toggle(
                         Icons.Outlined.Fingerprint, "Unlock with fingerprint",
-                        if (bioAvailable) "Strong biometrics only. Your PIN is still needed after a restart and every 72 hours"
-                        else "No secure fingerprint unlock is set up on this phone",
+                        if (bioAvailable || vault.biometricEnabled) "Only strong biometrics such as your fingerprint, checked by the phone's " +
+                            "secure hardware. The PIN is still needed after a restart and every 72 hours."
+                        else "Set up a fingerprint on this phone first",
                         vault.biometricEnabled, enabled = bioAvailable || vault.biometricEnabled,
                     ) { on ->
-                        val act = ctx as? FragmentActivity
+                        val act = ctx.lockActivity() as? FragmentActivity
                         if (on && act != null) {
                             // A fresh key each time, bound to the fingerprints enrolled now.
                             val cipher = vault.biometricEnrolCipher()
-                            if (cipher != null) showBiometricPrompt(act, "Confirm to turn on", cipher) { vault.finishBiometricEnrol(it) }
-                        } else {
+                            if (cipher == null) Toast.makeText(ctx, "Couldn't set up fingerprint unlock", Toast.LENGTH_SHORT).show()
+                            else showBiometricPrompt(act, "Turn on fingerprint unlock", cipher, subtitle = "Confirm your fingerprint") {
+                                if (!vault.finishBiometricEnrol(it)) Toast.makeText(ctx, "Couldn't set up fingerprint unlock", Toast.LENGTH_SHORT).show()
+                            }
+                        } else if (!on) {
                             vault.disableBiometric()
                         }
                     }
-                    Divider()
                     // Seconds; -1 = only when the app restarts.
                     val afters = listOf(0, 60, 300, 900, 3600, -1)
                     Choice(
-                        Icons.Outlined.Timer, "Lock again after leaving the app",
-                        listOf("Instantly", "1 min", "5 min", "15 min", "1 hour", "On restart"),
+                        Icons.Outlined.Timer, "Lock again",
+                        listOf(
+                            "As soon as you leave the app", "After 1 minute away", "After 5 minutes away",
+                            "After 15 minutes away", "After 1 hour away", "Only when the app restarts",
+                        ),
                         afters.indexOf(lock.lockAfterSeconds).coerceAtLeast(0),
                     ) { lock.lockAfterSeconds = afters[it] }
-                    Divider()
-                    ListItem(
-                        leadingContent = { Icon(Icons.Outlined.Password, null) },
-                        headlineContent = { Text("Change PIN") },
-                        colors = itemColors(),
-                        modifier = Modifier.clickableItem { pinDialog = PinMode.Change },
-                    )
                 }
-                Divider()
                 Toggle(
-                    Icons.Outlined.VisibilityOff, "Hide content in screenshots & recents",
-                    "Blank preview in the app switcher; blocks screenshots and screen recording", lock.hideContent,
+                    Icons.Outlined.VisibilityOff, "Hide in screenshots and recent apps",
+                    "Screenshots, screen recordings and the recent apps view show a blank screen", lock.hideContent,
                 ) { lock.hideContent = it }
-            }
-
-            Section("Appearance") {
-                Choice(
-                    icon = when (s.theme) {
-                        ThemeMode.Light -> Icons.Outlined.LightMode
-                        ThemeMode.Dark -> Icons.Outlined.DarkMode
-                        ThemeMode.System -> Icons.Outlined.Contrast
-                    },
-                    title = "Theme",
-                    options = listOf("System", "Light", "Dark"),
-                    selected = s.theme.ordinal,
-                    onSelect = { s.theme = ThemeMode.entries[it] },
-                )
-                Divider()
-                Toggle(
-                    Icons.Outlined.Palette, "Material You colours", "Match the app to your wallpaper", s.dynamicColor,
-                ) { s.dynamicColor = it }
-                Divider()
-                Toggle(Icons.Outlined.DarkMode, "Pure black", "True black backgrounds in dark mode (saves power on OLED)", s.pureBlack) {
-                    s.pureBlack = it
-                }
             }
 
             Section("Cameras") {
@@ -252,29 +253,25 @@ fun SettingsScreen(onBack: () -> Unit, onServer: () -> Unit, onLogout: () -> Uni
             }
 
             Section("Server") {
-                ListItem(
-                    leadingContent = { Icon(Icons.Outlined.Dns, null) },
-                    headlineContent = { Text("Server & login") },
-                    supportingContent = {
-                        Column {
-                            Text(App.prefs.baseUrl.ifBlank { "Not set" } +
-                                    (frigateVersion?.let { " · Frigate $it" } ?: ""))
-                            if (App.prefs.isHttp) NotEncryptedBadge(Modifier.padding(top = 4.dp))
-                            else if (App.prefs.allowInsecureTls && App.prefs.certPin.isNotBlank()) Text(
-                                "Pinned certificate SHA-256 ${App.prefs.certPin.take(23)}…",
-                                style = MaterialTheme.typography.bodySmall,
-                            )
-                        }
-                    },
-                    colors = itemColors(),
-                    modifier = Modifier.clickableItem(onServer),
+                GroupRow(
+                    "Server & login",
+                    App.prefs.baseUrl.ifBlank { "Not set" } + (frigateVersion?.let { " · Frigate $it" } ?: "") +
+                        when {
+                            App.prefs.isHttp -> "\nNot encrypted (HTTP)"
+                            App.prefs.allowInsecureTls && App.prefs.certPin.isNotBlank() ->
+                                "\nPinned certificate SHA-256 ${App.prefs.certPin.take(23)}…"
+                            else -> ""
+                        },
+                    icon = Icons.Outlined.Dns,
+                    showChevron = true,
+                    onClick = onServer,
                 )
-                Divider()
-                ListItem(
-                    leadingContent = { Icon(Icons.AutoMirrored.Outlined.Logout, null, tint = cs.error) },
-                    headlineContent = { Text("Log out", color = cs.error) },
-                    colors = itemColors(),
-                    modifier = Modifier.clickableItem { confirmLogout = true },
+                GroupRow(
+                    "Log out",
+                    icon = Icons.AutoMirrored.Outlined.Logout,
+                    iconTint = cs.error,
+                    titleColor = cs.error,
+                    onClick = { confirmLogout = true },
                 )
             }
 
@@ -297,7 +294,6 @@ fun SettingsScreen(onBack: () -> Unit, onServer: () -> Unit, onLogout: () -> Uni
         }
     }
 
-    pinDialog?.let { mode -> PinSetupDialog(mode, onDismiss = { pinDialog = null }) }
 
     if (confirmLogout) {
         AlertDialog(
@@ -324,43 +320,23 @@ private fun openLink(ctx: Context, url: String) {
     }
 }
 
+/** In the same order as every Ctrl app. */
+private val THEMES = listOf(ThemeMode.System, ThemeMode.Dark, ThemeMode.Light, ThemeMode.Black)
+
 @Composable
-private fun AboutRow(icon: ImageVector, title: Int, subtitle: Int, onClick: () -> Unit) = ListItem(
-    leadingContent = { Icon(icon, null) },
-    headlineContent = { Text(stringResource(title)) },
-    supportingContent = { Text(stringResource(subtitle)) },
-    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) },
-    colors = itemColors(),
-    modifier = Modifier.clickableItem(onClick),
-)
+private fun AboutRow(icon: ImageVector, title: Int, subtitle: Int, onClick: () -> Unit) =
+    GroupRow(stringResource(title), stringResource(subtitle), icon, showChevron = true, onClick = onClick)
+
+// Settings rows look the same as in every Ctrl app (see ui/settings/SettingsKit.kt).
 
 @Composable
 private fun Section(title: String, footer: String? = null, content: @Composable () -> Unit) {
-    Spacer(Modifier.height(20.dp))
-    Text(
-        title, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
-    )
-    Card(
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-        modifier = Modifier.fillMaxWidth(),
-    ) { Column { content() } }
-    if (footer != null) Text(
-        footer, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
-    )
+    Group(title, footer = footer, gutter = 0.dp) { content() }
 }
 
+/** Rows in a group are set apart by their spacing, as in the other Ctrl apps. */
 @Composable
-private fun itemColors() = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
-
-@Composable
-private fun Divider() = HorizontalDivider(
-    Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-)
-
-private fun Modifier.clickableItem(onClick: () -> Unit) = this.clickable(onClick = onClick)
+private fun Divider() = Unit
 
 @Composable
 private fun Toggle(
@@ -370,18 +346,8 @@ private fun Toggle(
     checked: Boolean,
     enabled: Boolean = true,
     onChange: (Boolean) -> Unit,
-) {
-    ListItem(
-        leadingContent = { Icon(icon, null) },
-        headlineContent = { Text(title) },
-        supportingContent = subtitle?.let { { Text(it) } },
-        trailingContent = { Switch(checked, onChange, enabled = enabled) },
-        colors = itemColors(),
-        modifier = Modifier.clickable(enabled) { onChange(!checked) },
-    )
-}
+) = GroupSwitch(title, subtitle, checked, icon, enabled, onChange)
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun Choice(
     icon: ImageVector,
@@ -389,98 +355,4 @@ private fun Choice(
     options: List<String>,
     selected: Int,
     onSelect: (Int) -> Unit,
-) {
-    Column(Modifier.padding(bottom = 12.dp)) {
-        ListItem(
-            leadingContent = { Icon(icon, null) },
-            headlineContent = { Text(title) },
-            colors = itemColors(),
-        )
-        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-            options.forEachIndexed { i, label ->
-                SegmentedButton(
-                    selected = i == selected,
-                    onClick = { onSelect(i) },
-                    shape = SegmentedButtonDefaults.itemShape(i, options.size),
-                ) { Text(label, maxLines = 1) }
-            }
-        }
-    }
-}
-
-private enum class PinMode { New, Change, Disable }
-
-@Composable
-private fun PinSetupDialog(mode: PinMode, onDismiss: () -> Unit) {
-    val lock = App.lock
-    val needsCurrent = mode != PinMode.New
-    val needsNew = mode != PinMode.Disable
-    var current by remember { mutableStateOf("") }
-    var first by remember { mutableStateOf("") }
-    var second by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf<String?>(null) }
-    var working by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
-    fun digits(v: String) = v.filter { it.isDigit() }.take(PIN_MAX)
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        icon = { Icon(Icons.Outlined.Lock, null) },
-        title = {
-            Text(when (mode) { PinMode.New -> "Set a PIN"; PinMode.Change -> "Change PIN"; PinMode.Disable -> "Turn off app lock" })
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                if (needsCurrent) PinField("Current PIN", current) { current = digits(it) }
-                if (needsNew) {
-                    PinField("New PIN ($PIN_MIN–$PIN_MAX digits)", first) { first = digits(it) }
-                    PinField("Repeat new PIN", second) { second = digits(it) }
-                }
-                error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
-            }
-        },
-        confirmButton = {
-            TextButton(enabled = !working, onClick = {
-                scope.launch {
-                    working = true
-                    val vault = App.vault
-                    // The current PIN shares the lock screen's wrong-PIN counter and lockout, so it
-                    // can't be guessed here without limit while the app is unlocked.
-                    val wait = if (needsCurrent) vault.lockoutRemaining() else 0L
-                    // Slow on purpose; keep it off the main thread.
-                    val currentOk = wait <= 0 && (!needsCurrent ||
-                        withContext(Dispatchers.Default) { vault.unlockWithPin(current) == LockVault.PinResult.Ok })
-                    val left = if (needsCurrent) vault.lockoutRemaining() else 0L
-                    error = when {
-                        wait > 0 || left > 0 && !currentOk -> "Too many tries. Try again in ${(maxOf(wait, left) + 999) / 1000} s"
-                        !currentOk -> "Current PIN is wrong"
-                        needsNew && first.length < PIN_MIN -> "Use at least $PIN_MIN digits"
-                        needsNew && first != second -> "The PINs don't match"
-                        needsNew && isObviousPin(first) -> "Too easy to guess. Pick a less obvious PIN"
-                        else -> null
-                    }
-                    if (error == null) {
-                        when (mode) {
-                            PinMode.New -> enableAppLock(first)
-                            PinMode.Change -> withContext(Dispatchers.Default) { vault.changePin(first) }
-                            PinMode.Disable -> withContext(Dispatchers.Default) { disableAppLock() }
-                        }
-                        onDismiss()
-                    }
-                    working = false
-                }
-            }) { Text(if (mode == PinMode.Disable) "Turn off" else "Save") }
-        },
-        dismissButton = { TextButton(onDismiss) { Text("Cancel") } },
-    )
-}
-
-@Composable
-private fun PinField(label: String, value: String, onChange: (String) -> Unit) {
-    OutlinedTextField(
-        value = value, onValueChange = onChange, label = { Text(label) }, singleLine = true,
-        visualTransformation = PasswordVisualTransformation(),
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-        modifier = Modifier.fillMaxWidth(),
-    )
-}
+) = GroupChoice(title, options.mapIndexed { i, label -> i to label }, selected, icon) { onSelect(it) }

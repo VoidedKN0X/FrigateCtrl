@@ -4,6 +4,20 @@ What changed in each FrigateCtrl version. Every release on the [Releases page](h
 
 To publish a new version: bump `versionCode` and `versionName` in `app/build.gradle.kts`, add a section here, and push to `main`. Pushes without a version bump only build; they don't make a release.
 
+## 3.3.2 (2026-10-21)
+
+The app lock and Settings now look and work the same as in every other Ctrl app.
+
+### Changed
+
+- **New lock screen look**, the same as in the other Ctrl apps: a round lock badge, PIN dots that show a spinner while your PIN is checked, and **Forgot PIN?** (it still asks first, then logs out and resets).
+- **Turning the app lock on, changing the PIN and turning the lock off now use the same full-screen PIN pad** as the lock screen, instead of a dialog with text boxes. Choosing a PIN asks for it twice; changing it asks for your current PIN first; turning the lock off asks for your PIN.
+- **Settings are grouped like in the other Ctrl apps**: **Appearance** first, then **Privacy and security** (formerly "Security"), Cameras, Live view, History, Server and **About** at the bottom. Rows have the same look as the other apps, and choices such as Theme, Lock again, Grid columns and Thumbnail refresh open a list to pick from.
+- **Privacy and security** has the same rows, wording and icons as every Ctrl app: **App lock**, **Change app PIN**, **Unlock with fingerprint**, **Lock again** (now worded "As soon as you leave the app", "After 1 minute away" … "Only when the app restarts") and **Hide in screenshots and recent apps** (formerly "Hide content in screenshots & recents"). A note under the section says FrigateCtrl only talks to your own Frigate server.
+- **Theme choices are the same as in the other Ctrl apps**: Follow system, Dark, Light or **Pure black**. Pure black is now one of the themes instead of a separate switch: if you had Dark with pure black on, you now get the Pure black theme; with "System" and pure black on, FrigateCtrl follows the system with the normal dark colours (pick Pure black again if you want it). "Material You colours" is now called **Use wallpaper colours**.
+- **The fingerprint prompts** now say what they're for ("Confirm it's you to see your cameras" when unlocking, "Confirm your fingerprint" when turning fingerprint unlock on), and say so if fingerprint unlock couldn't be set up or didn't unlock.
+- **README**: a new App lock section that explains the PIN, fingerprint unlock, the wrong-PIN wait, Lock again, hiding the app in screenshots and recent apps, and Forgot PIN. The Ctrl series table now lists AdCtrl and MemoCtrl.
+
 ## 3.3.1 (2026-10-21)
 
 ### Security

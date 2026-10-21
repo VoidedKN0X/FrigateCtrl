@@ -72,9 +72,6 @@ const val PIN_MAX = LockVault.PIN_MAX
 fun biometricAvailable(context: Context): Boolean =
     BiometricManager.from(context).canAuthenticate(BIOMETRIC_STRONG) == BiometricManager.BIOMETRIC_SUCCESS
 
-/** PINs that are too easy to guess: one repeated digit, or a straight run like 123456 or 987654. */
-fun isObviousPin(pin: String): Boolean =
-    pin.toSet().size == 1 || "0123456789012".contains(pin) || "9876543210987".contains(pin)
 
 /**
  * Trips the app itself starts to another app (share sheet, browser). Coming back from them within
@@ -101,6 +98,7 @@ fun showBiometricPrompt(
     activity: FragmentActivity,
     title: String,
     cipher: Cipher,
+    subtitle: String? = null,
     onSuccess: (Cipher) -> Unit,
 ) {
     val prompt = BiometricPrompt(
@@ -115,6 +113,7 @@ fun showBiometricPrompt(
     prompt.authenticate(
         BiometricPrompt.PromptInfo.Builder()
             .setTitle(title)
+            .apply { if (subtitle != null) setSubtitle(subtitle) }
             .setNegativeButtonText("Use PIN")
             .setAllowedAuthenticators(BIOMETRIC_STRONG)
             .build(),
@@ -203,6 +202,7 @@ class AppLockViewModel : ViewModel() {
             locked = true
             biometricShown = false
             mustChoosePin = false
+            PinRequests.request = null
             // Wipe the key from memory and stop everything that holds the login.
             vault.close()
             App.api.forgetSession()
@@ -259,8 +259,15 @@ class AppLockViewModel : ViewModel() {
         mustChoosePin = false
     }
 
-    fun unlockWithFingerprint(cipher: Cipher) {
-        if (vault.unlockWithBiometric(cipher)) unlock()
+    fun unlockWithFingerprint(cipher: Cipher): Boolean {
+        if (!vault.unlockWithBiometric(cipher)) return false
+        unlock()
+        return true
+    }
+
+    /** Typing again clears "Wrong PIN". */
+    fun clearError() {
+        pinError = null
     }
 
     // Uses the monotonic clock, so changing the phone's time can't end it.
@@ -283,18 +290,20 @@ fun resetBiometricKey() {
     runCatching { KeyStore.getInstance("AndroidKeyStore").apply { load(null) }.deleteEntry("frigatectrl_biometric_unlock_key") }
 }
 
+/** The lock screen: PIN pad, fingerprint, and "Forgot PIN?" (the same look and flow as every Ctrl app). */
 @Composable
 fun LockScreen(vm: AppLockViewModel, onForgot: () -> Unit) {
     val context = LocalContext.current
-    val activity = context as? FragmentActivity
-    val cs = MaterialTheme.colorScheme
+    val activity = remember(context) { context.lockActivity() as? FragmentActivity }
     val haptics = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
     val shake = remember { Animatable(0f) }
     var pin by remember { mutableStateOf("") }
+    var bioMessage by remember { mutableStateOf<String?>(null) }
     var confirmForgot by remember { mutableStateOf(false) }
     // Old PINs from 3.2.x could be 4 digits.
     val minLen = if (vm.vault.enabled) PIN_MIN else 4
+    val savedLength = if (vm.vault.enabled) vm.vault.pinLength else vm.settings.pinLength
     // The PIN is needed after a restart and every 72 hours, like Android's own screen lock.
     val pinDue = remember(vm.locked) { vm.vault.pinRequired() }
     val canBio = !vm.biometricInvalidated && vm.vault.biometricEnabled && !pinDue && activity != null && biometricAvailable(context)
@@ -306,7 +315,9 @@ fun LockScreen(vm: AppLockViewModel, onForgot: () -> Unit) {
                 // Fingerprints changed (the vault turned fingerprint unlock off): the PIN is needed.
                 if (!vm.vault.biometricEnabled) vm.biometricInvalidated = true
             } else {
-                showBiometricPrompt(activity, "Unlock FrigateCtrl", cipher) { vm.unlockWithFingerprint(it) }
+                showBiometricPrompt(activity, "Unlock FrigateCtrl", cipher, subtitle = "Confirm it's you to see your cameras") {
+                    if (!vm.unlockWithFingerprint(it)) bioMessage = "Couldn't unlock with your fingerprint. Use your PIN."
+                }
             }
         }
     }
@@ -318,124 +329,50 @@ fun LockScreen(vm: AppLockViewModel, onForgot: () -> Unit) {
 
     val wrong: () -> Unit = {
         pin = ""
-        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-        scope.launch {
-            for (x in listOf(18f, -14f, 10f, -6f, 0f)) shake.animateTo(x, androidx.compose.animation.core.tween(45))
-        }
+        scope.shakePin(shake, haptics)
     }
 
-    fun press(d: Char) {
-        if (vm.lockoutRemaining > 0 || vm.checking || pin.length >= PIN_MAX) return
-        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-        pin += d
-        val len = if (vm.vault.enabled) vm.vault.pinLength else vm.settings.pinLength
-        if (pin.length == len) vm.submitPin(pin, wrong)
-    }
-
-    Surface(Modifier.fillMaxSize(), color = cs.background) {
-        Column(
-            Modifier.fillMaxSize().safeDrawingPadding().padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Box(
-                Modifier.size(72.dp).clip(CircleShape).background(cs.primaryContainer),
-                contentAlignment = Alignment.Center,
-            ) { Icon(Icons.Outlined.Lock, null, tint = cs.onPrimaryContainer, modifier = Modifier.size(34.dp)) }
-            Spacer(Modifier.height(18.dp))
-            Text("FrigateCtrl is locked", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(6.dp))
-            val err = vm.pinError != null || vm.lockoutRemaining > 0 || vm.biometricInvalidated
-            Text(
-                when {
-                    vm.lockoutRemaining > 0 -> "Too many tries. Try again in ${(vm.lockoutRemaining + 999) / 1000} s"
-                    vm.biometricInvalidated -> "Fingerprint unlock needs to be set up again (fingerprints changed). Enter your PIN, then turn it on again in Settings."
-                    vm.pinError != null -> vm.pinError!!
-                    vm.vault.biometricEnabled && pinDue -> "Enter your PIN. It's needed after a restart and every 72 hours."
-                    else -> "Enter your PIN"
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (err) cs.error else cs.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(24.dp))
-            Box(Modifier.offset { IntOffset(shake.value.roundToInt(), 0) }) { PinDots(pin.length, minLen) }
-            Spacer(Modifier.height(32.dp))
-            PinPad(
-                onDigit = ::press,
-                onBackspace = { if (pin.isNotEmpty()) pin = pin.dropLast(1) },
-                onConfirm = { if (pin.length >= minLen) vm.submitPin(pin, wrong) },
-                confirmEnabled = pin.length >= minLen && !vm.checking && vm.lockoutRemaining == 0L,
-            )
-            Spacer(Modifier.height(20.dp))
-            if (canBio) {
-                FilledTonalButton(onClick = askBiometric) {
-                    Icon(Icons.Outlined.Fingerprint, null)
-                    Spacer(Modifier.size(8.dp))
-                    Text("Use fingerprint")
-                }
+    PinPadScreen(
+        title = "FrigateCtrl is locked",
+        message = when {
+            vm.lockoutRemaining > 0 -> lockoutText(vm.lockoutRemaining)
+            vm.pinError != null -> vm.pinError!!
+            bioMessage != null -> bioMessage!!
+            vm.biometricInvalidated -> "A fingerprint was added or removed. Unlock with your PIN, then turn fingerprint unlock on again."
+            !vm.vault.enabled -> "Enter your PIN to finish the security update"
+            vm.vault.biometricEnabled && pinDue -> "Enter your PIN. It's needed after a restart and every 72 hours."
+            else -> "Enter your PIN"
+        },
+        isError = vm.pinError != null || vm.lockoutRemaining > 0 || vm.biometricInvalidated || bioMessage != null,
+        pin = pin,
+        shake = shake.value,
+        checking = vm.checking,
+        enabled = vm.lockoutRemaining == 0L && !vm.checking,
+        onDigit = { d ->
+            if (pin.length < PIN_MAX) {
+                bioMessage = null
+                vm.clearError()
+                pin += d
+                if (pin.length == savedLength) vm.submitPin(pin, wrong)
             }
-            TextButton(onClick = { confirmForgot = true }) { Text("Forgot PIN? Log out") }
-        }
-    }
+        },
+        onBackspace = { pin = pin.dropLast(1) },
+        onConfirm = { if (pin.length >= minLen) vm.submitPin(pin, wrong) },
+        showConfirm = pin.length >= minLen && pin.length != savedLength,
+        minDots = if (vm.vault.enabled) PIN_MIN else maxOf(minLen, savedLength),
+        bottom = { LockScreenButtons(showFingerprint = canBio, onFingerprint = askBiometric, onForgot = { confirmForgot = true }) },
+    )
     if (confirmForgot) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { confirmForgot = false },
-            title = { Text("Forgot your PIN?") },
-            text = {
-                Text(
-                    "The PIN can't be recovered, because your login is encrypted with it. FrigateCtrl will log out " +
-                        "and forget the server, the app lock and anything kept from the server. Your Frigate server isn't changed."
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = { confirmForgot = false; onForgot() }) { Text("Log out", color = cs.error) }
-            },
-            dismissButton = { TextButton(onClick = { confirmForgot = false }) { Text("Cancel") } },
-        )
-    }
-}
-
-@Composable
-fun PinDots(count: Int, min: Int = PIN_MIN) {
-    val cs = MaterialTheme.colorScheme
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        repeat(maxOf(count, min)) { i ->
-            Box(
-                Modifier.size(14.dp).clip(CircleShape)
-                    .background(if (i < count) cs.primary else cs.surfaceContainerHighest)
-            )
+        ForgotPinDialog(
+            body = "The PIN can't be recovered, because your login is encrypted with it. FrigateCtrl will log out " +
+                "and forget the server, the app lock and anything kept from the server. Your Frigate server isn't changed.",
+            confirm = "Log out and reset",
+            onDismiss = { confirmForgot = false },
+        ) {
+            confirmForgot = false
+            onForgot()
         }
     }
-}
-
-@Composable
-fun PinPad(onDigit: (Char) -> Unit, onBackspace: () -> Unit, onConfirm: () -> Unit, confirmEnabled: Boolean) {
-    Column(verticalArrangement = Arrangement.spacedBy(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        listOf("123", "456", "789").forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(22.dp)) { row.forEach { d -> DigitKey(d.toString()) { onDigit(d) } } }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(22.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBackspace, modifier = Modifier.size(72.dp)) {
-                Icon(Icons.AutoMirrored.Outlined.Backspace, "Delete")
-            }
-            DigitKey("0") { onDigit('0') }
-            TextButton(onClick = onConfirm, enabled = confirmEnabled, modifier = Modifier.size(72.dp)) { Text("OK") }
-        }
-    }
-}
-
-@Composable
-private fun DigitKey(label: String, onClick: () -> Unit) {
-    val source = remember { MutableInteractionSource() }
-    FilledIconButton(
-        onClick = onClick,
-        interactionSource = source,
-        colors = androidx.compose.material3.IconButtonDefaults.filledIconButtonColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            contentColor = MaterialTheme.colorScheme.onSurface,
-        ),
-        modifier = Modifier.size(72.dp).pressScale(source, 0.9f),
-    ) { Text(label, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Medium) }
 }
 
 /**
@@ -444,74 +381,53 @@ private fun DigitKey(label: String, onClick: () -> Unit) {
  */
 @Composable
 fun ChooseNewPinScreen(vm: AppLockViewModel) {
-    val context = LocalContext.current
-    val activity = context as? FragmentActivity
-    val cs = MaterialTheme.colorScheme
-    val haptics = LocalHapticFeedback.current
-    val scope = rememberCoroutineScope()
-    val shake = remember { Animatable(0f) }
-    var pin by remember { mutableStateOf("") }
-    var first by remember { mutableStateOf<String?>(null) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var saving by remember { mutableStateOf(false) }
-    BackHandler { activity?.moveTaskToBack(true) }
+    PinSetupScreen(
+        vault = vm.vault,
+        title = "Choose an app PIN",
+        intro = "PINs now need at least $PIN_MIN digits, different from your phone's PIN. " +
+            "Your login is encrypted with it while the app is locked.",
+        verifyCurrent = false,
+        cancellable = false,
+        onDone = { pin -> vm.chooseNewPin(pin) },
+        onCancel = {},
+    )
+}
 
-    fun wrong(msg: String) {
-        error = msg
-        pin = ""
-        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-        scope.launch { for (x in listOf(18f, -14f, 10f, -6f, 0f)) shake.animateTo(x, androidx.compose.animation.core.tween(45)) }
-    }
-
-    fun confirm() {
-        if (saving || pin.length < PIN_MIN) return
-        val f = first
-        when {
-            f == null && isObviousPin(pin) -> wrong("Too easy to guess. Try a less obvious PIN.")
-            f == null -> { first = pin; pin = ""; error = null }
-            f != pin -> { first = null; wrong("The PINs didn't match. Start again.") }
-            else -> {
-                saving = true
-                scope.launch { vm.chooseNewPin(pin) }
-            }
-        }
-    }
-
-    Surface(Modifier.fillMaxSize(), color = cs.background) {
-        Column(
-            Modifier.fillMaxSize().safeDrawingPadding().padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Box(
-                Modifier.size(72.dp).clip(CircleShape).background(cs.primaryContainer),
-                contentAlignment = Alignment.Center,
-            ) { Icon(Icons.Outlined.Lock, null, tint = cs.onPrimaryContainer, modifier = Modifier.size(34.dp)) }
-            Spacer(Modifier.height(18.dp))
-            Text("Choose a new PIN", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(6.dp))
-            Text(
-                error ?: if (first == null) "The app lock now needs at least $PIN_MIN digits, and your login is encrypted with it."
-                else "Enter the same PIN again",
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (error != null) cs.error else cs.onSurfaceVariant,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            )
-            Spacer(Modifier.height(24.dp))
-            Box(Modifier.offset { IntOffset(shake.value.roundToInt(), 0) }) { PinDots(pin.length) }
-            Spacer(Modifier.height(32.dp))
-            PinPad(
-                onDigit = { d ->
-                    if (pin.length < PIN_MAX && !saving) {
-                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        error = null
-                        pin += d
-                    }
-                },
-                onBackspace = { if (pin.isNotEmpty()) pin = pin.dropLast(1) },
-                onConfirm = ::confirm,
-                confirmEnabled = pin.length >= PIN_MIN && !saving,
-            )
-        }
+/** Turning the lock on or off, or changing the PIN, from Settings: a PIN screen on top of the app. */
+@Composable
+fun PinRequestScreen(request: PinRequest) {
+    val vault = App.vault
+    val done = { PinRequests.request = null }
+    when (request) {
+        PinRequest.ENABLE -> PinSetupScreen(
+            vault = vault,
+            title = "Choose an app PIN",
+            intro = "At least $PIN_MIN digits, different from your phone's PIN. " +
+                "If you forget it, the only way back in is to log out and log in again.",
+            verifyCurrent = false,
+            cancellable = true,
+            onDone = { pin -> enableAppLock(pin); done() },
+            onCancel = done,
+        )
+        PinRequest.CHANGE -> PinSetupScreen(
+            vault = vault,
+            title = "Change app PIN",
+            intro = "At least $PIN_MIN digits, different from your phone's PIN.",
+            verifyCurrent = true,
+            cancellable = true,
+            // Same key, new PIN: fingerprint unlock keeps working.
+            onDone = { pin -> withContext(Dispatchers.Default) { check(vault.changePin(pin)) }; done() },
+            onCancel = done,
+        )
+        PinRequest.DISABLE -> PinSetupScreen(
+            vault = vault,
+            title = "Turn off app lock",
+            intro = "Enter your app PIN to turn the lock off.",
+            verifyCurrent = true,
+            verifyOnly = true,
+            cancellable = true,
+            onDone = { withContext(Dispatchers.Default) { disableAppLock() }; done() },
+            onCancel = done,
+        )
     }
 }

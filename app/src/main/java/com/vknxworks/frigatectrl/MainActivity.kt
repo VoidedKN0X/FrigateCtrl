@@ -52,6 +52,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vknxworks.frigatectrl.ui.lock.AppLockViewModel
 import com.vknxworks.frigatectrl.ui.lock.ChooseNewPinScreen
 import com.vknxworks.frigatectrl.ui.lock.LockScreen
+import com.vknxworks.frigatectrl.ui.lock.PinRequestScreen
+import com.vknxworks.frigatectrl.ui.lock.PinRequests
 import com.vknxworks.frigatectrl.ui.lock.resetBiometricKey
 import com.vknxworks.frigatectrl.ui.clearImageCache
 import com.vknxworks.frigatectrl.data.Clips
@@ -203,6 +205,8 @@ private fun Root(activity: FragmentActivity, lockVm: AppLockViewModel = viewMode
             }
         }
     }
+    // Turning the lock on or off, or changing the PIN (from Settings), on top of the app.
+    PinRequests.request?.let { PinRequestScreen(it) }
 }
 
 private fun depth(route: String): Int = when {
