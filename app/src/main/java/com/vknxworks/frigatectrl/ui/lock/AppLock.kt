@@ -64,6 +64,8 @@ import kotlinx.coroutines.withContext
 import java.security.KeyStore
 import javax.crypto.Cipher
 import kotlin.math.roundToInt
+import androidx.compose.ui.res.stringResource
+import com.vknxworks.frigatectrl.R
 
 const val PIN_MIN = LockVault.PIN_MIN
 const val PIN_MAX = LockVault.PIN_MAX
@@ -114,7 +116,7 @@ fun showBiometricPrompt(
         BiometricPrompt.PromptInfo.Builder()
             .setTitle(title)
             .apply { if (subtitle != null) setSubtitle(subtitle) }
-            .setNegativeButtonText("Use PIN")
+            .setNegativeButtonText(activity.getString(R.string.lock_use_pin))
             .setAllowedAuthenticators(BIOMETRIC_STRONG)
             .build(),
         BiometricPrompt.CryptoObject(cipher),
@@ -142,7 +144,8 @@ class AppLockViewModel : ViewModel() {
 
     var locked by mutableStateOf(enabled)
         private set
-    var pinError by mutableStateOf<String?>(null)
+    /** A string resource: why the last try didn't unlock. */
+    var pinError by mutableStateOf<Int?>(null)
         private set
     var checking by mutableStateOf(false)
         private set
@@ -240,7 +243,7 @@ class AppLockViewModel : ViewModel() {
             checking = false
             refreshLockout()
             if (ok) { unlock(); return@launch }
-            pinError = "Wrong PIN"
+            pinError = R.string.lock_wrong_pin
             onWrong()
         }
     }
@@ -315,8 +318,8 @@ fun LockScreen(vm: AppLockViewModel, onForgot: () -> Unit) {
                 // Fingerprints changed (the vault turned fingerprint unlock off): the PIN is needed.
                 if (!vm.vault.biometricEnabled) vm.biometricInvalidated = true
             } else {
-                showBiometricPrompt(activity, "Unlock FrigateCtrl", cipher, subtitle = "Confirm it's you to see your cameras") {
-                    if (!vm.unlockWithFingerprint(it)) bioMessage = "Couldn't unlock with your fingerprint. Use your PIN."
+                showBiometricPrompt(activity, context.getString(R.string.lock_fingerprint_title), cipher, subtitle = context.getString(R.string.lock_fingerprint_subtitle)) {
+                    if (!vm.unlockWithFingerprint(it)) bioMessage = context.getString(R.string.lock_fingerprint_failed)
                 }
             }
         }
@@ -333,15 +336,15 @@ fun LockScreen(vm: AppLockViewModel, onForgot: () -> Unit) {
     }
 
     PinPadScreen(
-        title = "FrigateCtrl is locked",
+        title = stringResource(R.string.lock_title),
         message = when {
             vm.lockoutRemaining > 0 -> lockoutText(vm.lockoutRemaining)
-            vm.pinError != null -> vm.pinError!!
+            vm.pinError != null -> stringResource(vm.pinError!!)
             bioMessage != null -> bioMessage!!
-            vm.biometricInvalidated -> "A fingerprint was added or removed. Unlock with your PIN, then turn fingerprint unlock on again."
-            !vm.vault.enabled -> "Enter your PIN to finish the security update"
-            vm.vault.biometricEnabled && pinDue -> "Enter your PIN. It's needed after a restart and every 72 hours."
-            else -> "Enter your PIN"
+            vm.biometricInvalidated -> stringResource(R.string.lock_fingerprint_changed)
+            !vm.vault.enabled -> stringResource(R.string.lock_legacy_pin)
+            vm.vault.biometricEnabled && pinDue -> stringResource(R.string.lock_pin_due)
+            else -> stringResource(R.string.lock_enter_pin)
         },
         isError = vm.pinError != null || vm.lockoutRemaining > 0 || vm.biometricInvalidated || bioMessage != null,
         pin = pin,
@@ -364,9 +367,8 @@ fun LockScreen(vm: AppLockViewModel, onForgot: () -> Unit) {
     )
     if (confirmForgot) {
         ForgotPinDialog(
-            body = "The PIN can't be recovered, because your login is encrypted with it. FrigateCtrl will log out " +
-                "and forget the server, the app lock and anything kept from the server. Your Frigate server isn't changed.",
-            confirm = "Log out and reset",
+            body = stringResource(R.string.lock_forgot_body),
+            confirm = stringResource(R.string.lock_forgot_confirm),
             onDismiss = { confirmForgot = false },
         ) {
             confirmForgot = false
@@ -383,9 +385,8 @@ fun LockScreen(vm: AppLockViewModel, onForgot: () -> Unit) {
 fun ChooseNewPinScreen(vm: AppLockViewModel) {
     PinSetupScreen(
         vault = vm.vault,
-        title = "Choose an app PIN",
-        intro = "PINs now need at least $PIN_MIN digits, different from your phone's PIN. " +
-            "Your login is encrypted with it while the app is locked.",
+        title = stringResource(R.string.lock_choose_title),
+        intro = stringResource(R.string.lock_migrate_intro, PIN_MIN),
         verifyCurrent = false,
         cancellable = false,
         onDone = { pin -> vm.chooseNewPin(pin) },
@@ -401,9 +402,8 @@ fun PinRequestScreen(request: PinRequest) {
     when (request) {
         PinRequest.ENABLE -> PinSetupScreen(
             vault = vault,
-            title = "Choose an app PIN",
-            intro = "At least $PIN_MIN digits, different from your phone's PIN. " +
-                "If you forget it, the only way back in is to log out and log in again.",
+            title = stringResource(R.string.lock_choose_title),
+            intro = stringResource(R.string.lock_choose_intro, PIN_MIN),
             verifyCurrent = false,
             cancellable = true,
             onDone = { pin -> enableAppLock(pin); done() },
@@ -411,8 +411,8 @@ fun PinRequestScreen(request: PinRequest) {
         )
         PinRequest.CHANGE -> PinSetupScreen(
             vault = vault,
-            title = "Change app PIN",
-            intro = "At least $PIN_MIN digits, different from your phone's PIN.",
+            title = stringResource(R.string.lock_change_title),
+            intro = stringResource(R.string.lock_change_intro, PIN_MIN),
             verifyCurrent = true,
             cancellable = true,
             // Same key, new PIN: fingerprint unlock keeps working.
@@ -421,8 +421,8 @@ fun PinRequestScreen(request: PinRequest) {
         )
         PinRequest.DISABLE -> PinSetupScreen(
             vault = vault,
-            title = "Turn off app lock",
-            intro = "Enter your app PIN to turn the lock off.",
+            title = stringResource(R.string.lock_disable_title),
+            intro = stringResource(R.string.lock_disable_intro),
             verifyCurrent = true,
             verifyOnly = true,
             cancellable = true,

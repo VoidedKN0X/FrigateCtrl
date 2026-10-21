@@ -34,11 +34,28 @@ class LockSettings(context: Context) {
         get() = _after
         set(v) { _after = v; prefs.edit().putInt(KEY_LOCK_AFTER, v).apply() }
 
-    /** Hide the app in the recent-apps screen and block screenshots/screen recording (works with or without a PIN). */
-    private var _hide by mutableStateOf(prefs.getBoolean(KEY_HIDE, true))
-    var hideContent: Boolean
-        get() = _hide
-        set(v) { _hide = v; prefs.edit().putBoolean(KEY_HIDE, v).apply() }
+    init {
+        // Before 3.3.4 one setting, "Hide content in screenshots & recents" (on unless turned off), did both. Only a
+        // choice the user made themselves is kept: turned on, both new switches are on; otherwise both start off.
+        if (prefs.contains(KEY_HIDE)) {
+            val on = prefs.getBoolean(KEY_HIDE, false)
+            val edit = prefs.edit().remove(KEY_HIDE)
+            if (on) edit.putBoolean(KEY_HIDE_SCREENSHOTS, true).putBoolean(KEY_HIDE_RECENTS, true)
+            edit.commit()
+        }
+    }
+
+    /** FLAG_SECURE: screenshots and screen recordings show a blank screen. Off by default. */
+    private var _hideShots by mutableStateOf(prefs.getBoolean(KEY_HIDE_SCREENSHOTS, false))
+    var hideScreenshots: Boolean
+        get() = _hideShots
+        set(v) { _hideShots = v; prefs.edit().putBoolean(KEY_HIDE_SCREENSHOTS, v).apply() }
+
+    /** The recent-apps view shows a blank card instead of the app. Off by default. */
+    private var _hideRecents by mutableStateOf(prefs.getBoolean(KEY_HIDE_RECENTS, false))
+    var hideRecents: Boolean
+        get() = _hideRecents
+        set(v) { _hideRecents = v; prefs.edit().putBoolean(KEY_HIDE_RECENTS, v).apply() }
 
     /** Lets the lock screen submit as soon as enough digits are entered. */
     val pinLength: Int get() = prefs.getInt(KEY_PIN_LENGTH, 0)
@@ -129,6 +146,8 @@ class LockSettings(context: Context) {
         const val KEY_BIOMETRIC = "biometric"
         const val KEY_LOCK_AFTER = "lock_after"
         const val KEY_HIDE = "hide_content"
+        const val KEY_HIDE_SCREENSHOTS = "hide_screenshots"
+        const val KEY_HIDE_RECENTS = "hide_recents"
         const val KEY_FAILED = "pin_failed"
         const val KEY_LOCKOUT_UNTIL = "pin_lockout_until"
         const val KEY_LOCKOUT_LEN = "pin_lockout_len"

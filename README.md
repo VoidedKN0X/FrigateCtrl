@@ -22,7 +22,7 @@ Part of the [Ctrl series](#the-ctrl-series) by VKNXWorks.
 - **Camera switches**: camera on/off, detection, recording, snapshots, audio detection and notifications
 - **System health**: CPU, GPU, memory, detector speed, camera FPS and disk usage
 - **App lock** with its own PIN and optional fingerprint unlock; your login stays encrypted while the app is locked
-- **Private by default**: cameras are hidden from screenshots, screen recordings and the recent-apps preview (**Hide in screenshots and recent apps**, on by default)
+- **Hide in screenshots** and **Hide in recent apps** switches keep your cameras out of screenshots, screen recordings and the recent-apps preview when you turn them on
 - **Self-signed certificates** are pinned: you confirm the fingerprint once, and only that certificate is accepted after that
 
 ## Screenshots
@@ -69,15 +69,18 @@ If the Obtainium button doesn't open the app, add `https://github.com/VoidedKN0X
 
 ## App lock
 
-Turn it on in **Settings → Privacy and security → App lock** (the gear on the Cameras tab). It's off until you turn it on.
+Turn it on under **Settings > Privacy and security > App lock**. It's off until you turn it on.
 
-- **An app PIN of its own**, at least 6 digits and separate from your phone's. Very obvious PINs, like 111111 or 123456, are refused. The PIN is never stored: it's stretched with 600,000 rounds of PBKDF2 and mixed with a key that never leaves the phone's secure hardware, so a copy of the app's files isn't enough to guess it somewhere else.
-- **Unlock with fingerprint** (optional): strong biometrics only, checked by the phone's secure hardware. Adding a fingerprint to the phone turns it off until you turn it on again. The PIN is still needed after the phone restarts and at least every 72 hours.
-- **Wrong PINs make you wait**: 30 seconds after 5 wrong tries, doubling up to 15 minutes. Restarting the app or the phone, or changing the clock, doesn't end the wait.
-- **Your login stays encrypted while FrigateCtrl is locked**, with a key that only exists in memory while the app is unlocked and is wiped the moment it locks. Nothing of your cameras is shown or streamed while locked.
-- **Lock again**: as soon as you leave the app (the default), after 1, 5 or 15 minutes or 1 hour away, or only when the app restarts. Sharing a clip or opening a link from FrigateCtrl doesn't count as leaving, unless you're away for more than 5 minutes.
-- **Hide in screenshots and recent apps** (on by default, also without the app lock): screenshots, screen recordings and the recent apps view show a blank screen. Sign-in, the lock screen and the PIN screens are always hidden.
-- **Forgot PIN?** on the lock screen logs out and forgets the server, the app lock and anything kept from the server, so you can log in again. Your Frigate server isn't changed.
+- **Its own app PIN** of at least 6 digits, separate from your phone's screen lock. Very obvious PINs such as 111111 or 123456 are refused.
+- **Unlock with fingerprint** (optional) only accepts strong biometrics, such as the fingerprint sensor, checked by the phone's secure hardware. Face unlock that only uses the camera isn't accepted. The PIN is still needed after the phone restarts and at least every 72 hours, and adding a new fingerprint to the phone turns fingerprint unlock off until you turn it on again.
+- **Your login is encrypted with the PIN while FrigateCtrl is locked.** The key only exists in memory while the app is unlocked and is wiped the moment it locks. The PIN itself is never stored: it's stretched with 600,000 rounds of PBKDF2 and mixed with a key held in the phone's secure hardware, so a copy of the app's files isn't enough to guess it on a computer.
+- **Wrong PINs:** after 5 tries you wait 30 seconds, doubling up to 15 minutes. Restarting the app or the phone, or changing the clock, doesn't skip the wait.
+- **Lock again:** as soon as you leave the app (the default), after 1, 5 or 15 minutes or 1 hour away, or only when the app restarts. Sharing a clip and opening a link from FrigateCtrl don't count as leaving, unless you stay away for more than 5 minutes.
+- **Change app PIN** asks for your current PIN first, and turning the app lock off asks for the PIN too.
+- **Forgot your PIN?** It can't be recovered, because it encrypts your login. The lock screen offers to log out and forget the server, the app lock and anything kept from the server, so you can log in again; your Frigate server isn't changed.
+- **With the app lock on**, the recent-apps screen always shows a blank card, and nothing of your cameras is shown or streamed while the app is locked.
+
+**Hide in screenshots** and **Hide in recent apps** are in the same section, work without the app lock too, and are both off by default. The first keeps FrigateCtrl out of screenshots and screen recordings; the second shows a blank card in the recent-apps view instead of the app. Sign-in, the lock screen and the PIN screens are always kept out of screenshots, whatever the switches say.
 
 ## Privacy
 
@@ -86,7 +89,7 @@ Turn it on in **Settings → Privacy and security → App lock** (the gear on th
 - **Servers it talks to:** your own Frigate server, and, for two-way talk, only the STUN/TURN servers listed in your go2rtc config. It never contacts a public STUN server on its own.
 - **Two-way talk:** the built-in web view it runs in has online page checks and usage reports turned off.
 - **Links:** the Support, Report a bug, Source code and Licence rows in Settings open GitHub or gnu.org in your browser, only when you tap them.
-- Cameras are hidden from screenshots, screen recordings and the recent-apps preview by default, and your login is stored encrypted on your phone.
+- Your login is stored encrypted on your phone. **Hide in screenshots** and **Hide in recent apps** (Settings > Privacy and security, both off by default) keep your cameras out of screenshots, screen recordings and the recent-apps preview.
 
 ## Build from source
 

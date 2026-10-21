@@ -1,13 +1,17 @@
 package com.vknxworks.frigatectrl.data
 
 import android.content.Context
+import androidx.annotation.StringRes
+import com.vknxworks.frigatectrl.R
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 
 /** The theme choices every Ctrl app offers. Stored by position, so new ones go at the end. */
-enum class ThemeMode(val label: String) { System("Follow system"), Light("Light"), Dark("Dark"), Black("Pure black") }
+enum class ThemeMode(@StringRes val label: Int) {
+    System(R.string.theme_system), Light(R.string.theme_light), Dark(R.string.theme_dark), Black(R.string.theme_black),
+}
 
 /** User preferences, backed by SharedPreferences and observable from Compose. */
 class Settings(context: Context) {

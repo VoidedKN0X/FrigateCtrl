@@ -4,6 +4,15 @@ What changed in each FrigateCtrl version. Every release on the [Releases page](h
 
 To publish a new version: bump `versionCode` and `versionName` in `app/build.gradle.kts`, add a section here, and push to `main`. Pushes without a version bump only build; they don't make a release.
 
+## 3.3.4 (2026-10-21)
+
+### Changed
+
+- **Hide in screenshots** and **Hide in recent apps** are now two separate switches in Settings › Privacy and security, both off by default, the same in every Ctrl app. Hide in screenshots makes screenshots and screen recordings show a blank screen; Hide in recent apps shows a blank card in the recent-apps view instead of the app (screenshots still work). Before, one setting hid your cameras from screenshots, recordings and the recent-apps preview and was on by default, and the recent-apps view always showed a blank card. **What changes for you:** if you had turned that setting on yourself, both new switches are on. If you never changed it, both are now off, so screenshots of your cameras work and the recent-apps view shows FrigateCtrl; turn the switches on if you want the old behaviour. With the app lock on, the recent-apps view always shows a blank card.
+- **Always protected, whatever the switches say:** sign-in, the lock screen and the PIN screens are never in screenshots, screen recordings or casting.
+- The app lock's text and the Privacy and security rows now come from the app's translatable text resources, with the same wording as the other Ctrl apps. Nothing else changes in how they work.
+- **README**: the App lock section now uses the same wording as the other Ctrl apps and describes the two switches, and the feature list and Privacy section no longer say cameras are hidden by default.
+
 ## 3.3.3 (2026-10-21)
 
 ### Security
