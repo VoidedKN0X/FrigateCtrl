@@ -1,30 +1,18 @@
 package com.vknxworks.frigatectrl.ui
 
-import android.content.ActivityNotFoundException
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.BugReport
-import androidx.compose.material.icons.filled.Code
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Gavel
-import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.automirrored.outlined.VolumeOff
 import androidx.compose.material.icons.outlined.Contrast
 import androidx.compose.material.icons.outlined.DarkMode
-import androidx.compose.material.icons.outlined.Dns
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.HighQuality
 import androidx.compose.material.icons.outlined.LightMode
@@ -35,7 +23,6 @@ import androidx.compose.material.icons.outlined.SkipPrevious
 import androidx.compose.material.icons.outlined.Timeline
 import androidx.compose.material.icons.outlined.Vibration
 import androidx.compose.material.icons.outlined.VideocamOff
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -52,12 +39,9 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -66,7 +50,6 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.text.KeyboardOptions
@@ -102,29 +85,26 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.vknxworks.frigatectrl.App
-import com.vknxworks.frigatectrl.BuildConfig
 import com.vknxworks.frigatectrl.R
 import com.vknxworks.frigatectrl.data.ThemeMode
 
+/** Settings, opened from the You page (tap your profile picture). Server, log out and About are on the You page. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(onBack: () -> Unit, onServer: () -> Unit, onLogout: () -> Unit) {
+fun SettingsScreen(onBack: () -> Unit) {
     val s = App.settings
     val cs = MaterialTheme.colorScheme
     val ctx = LocalContext.current
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
-    var confirmLogout by remember { mutableStateOf(false) }
     val lock = App.lock
     val bioAvailable = remember { biometricAvailable(ctx) }
-    var frigateVersion by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(Unit) { frigateVersion = App.api.version() }
 
     Scaffold(
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
         topBar = {
             LargeTopAppBar(
-                title = { Text("Settings", fontWeight = FontWeight.SemiBold) },
-                navigationIcon = { IconButton(onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
+                title = { Text(stringResource(R.string.settings), fontWeight = FontWeight.SemiBold) },
+                navigationIcon = { IconButton(onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) } },
                 scrollBehavior = scroll,
             )
         },
@@ -253,81 +233,12 @@ fun SettingsScreen(onBack: () -> Unit, onServer: () -> Unit, onLogout: () -> Uni
                     s.timelineHaptics = it
                 }
             }
-
-            Section("Server") {
-                GroupRow(
-                    "Server & login",
-                    App.prefs.baseUrl.ifBlank { "Not set" } + (frigateVersion?.let { " · Frigate $it" } ?: "") +
-                        when {
-                            App.prefs.isHttp -> "\nNot encrypted (HTTP)"
-                            App.prefs.allowInsecureTls && App.prefs.certPin.isNotBlank() ->
-                                "\nPinned certificate SHA-256 ${App.prefs.certPin.take(23)}…"
-                            else -> ""
-                        },
-                    icon = Icons.Outlined.Dns,
-                    showChevron = true,
-                    onClick = onServer,
-                )
-                GroupRow(
-                    "Log out",
-                    icon = Icons.AutoMirrored.Outlined.Logout,
-                    iconTint = cs.error,
-                    titleColor = cs.error,
-                    onClick = { confirmLogout = true },
-                )
-            }
-
-            Section(stringResource(R.string.group_about)) {
-                AboutRow(Icons.Filled.Favorite, R.string.support_title, R.string.support_subtitle) { openLink(ctx, SPONSOR_URL) }
-                Divider()
-                AboutRow(Icons.Filled.BugReport, R.string.bugs_title, R.string.bugs_subtitle) { openLink(ctx, ISSUES_URL) }
-                Divider()
-                AboutRow(Icons.Filled.Code, R.string.source_title, R.string.source_subtitle) { openLink(ctx, REPO_URL) }
-                Divider()
-                AboutRow(Icons.Filled.Gavel, R.string.licence_title, R.string.licence_subtitle) { openLink(ctx, LICENCE_URL) }
-            }
-            Text(
-                stringResource(R.string.about_footer, BuildConfig.VERSION_NAME),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
-            )
         }
-    }
-
-
-    if (confirmLogout) {
-        AlertDialog(
-            onDismissRequest = { confirmLogout = false },
-            icon = { Icon(Icons.AutoMirrored.Outlined.Logout, null) },
-            title = { Text("Log out?") },
-            text = { Text("The server address and saved login will be removed from this phone, and the app lock is turned off.") },
-            confirmButton = { TextButton({ confirmLogout = false; onLogout() }) { Text("Log out") } },
-            dismissButton = { TextButton({ confirmLogout = false }) { Text("Cancel") } },
-        )
-    }
-}
-
-private const val SPONSOR_URL = "https://github.com/sponsors/VoidedKN0X"
-private const val REPO_URL = "https://github.com/VoidedKN0X/FrigateCtrl"
-private const val ISSUES_URL = "$REPO_URL/issues"
-private const val LICENCE_URL = "https://www.gnu.org/licenses/gpl-3.0.html"
-
-private fun openLink(ctx: Context, url: String) {
-    try {
-        com.vknxworks.frigatectrl.ui.lock.LockTrips.expectReturn()
-        ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-    } catch (_: ActivityNotFoundException) {
     }
 }
 
 /** In the same order as every Ctrl app. */
 private val THEMES = listOf(ThemeMode.System, ThemeMode.Dark, ThemeMode.Light, ThemeMode.Black)
-
-@Composable
-private fun AboutRow(icon: ImageVector, title: Int, subtitle: Int, onClick: () -> Unit) =
-    GroupRow(stringResource(title), stringResource(subtitle), icon, showChevron = true, onClick = onClick)
 
 // Settings rows look the same as in every Ctrl app (see ui/settings/SettingsKit.kt).
 

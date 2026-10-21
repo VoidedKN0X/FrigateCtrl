@@ -63,6 +63,7 @@ import com.vknxworks.frigatectrl.ui.FrigateTheme
 import com.vknxworks.frigatectrl.ui.HealthScreen
 import com.vknxworks.frigatectrl.ui.SettingsScreen
 import com.vknxworks.frigatectrl.ui.SetupScreen
+import com.vknxworks.frigatectrl.ui.YouScreen
 import com.vknxworks.frigatectrl.ui.ConnectionSecurityCheck
 import com.vknxworks.frigatectrl.ui.needsConnectionCheck
 import com.vknxworks.frigatectrl.ui.isAppInDarkTheme
@@ -116,7 +117,7 @@ fun SecureWindow() {
     }
 }
 
-/** Routes: "setup", "setup-edit", "cameras", "settings", "camera:<name>" */
+/** Routes: "setup", "setup-edit", "cameras", "you" (the profile picture), "settings" (from You), "camera:<name>" */
 @Composable
 private fun Root(activity: FragmentActivity, lockVm: AppLockViewModel = viewModel()) {
     var route by rememberSaveable { mutableStateOf(if (App.prefs.isConfigured) "cameras" else "setup") }
@@ -193,26 +194,31 @@ private fun Root(activity: FragmentActivity, lockVm: AppLockViewModel = viewMode
     ) { r ->
         when {
             r == "setup" || r == "setup-edit" -> {
-                if (r == "setup-edit") BackHandler { route = "settings" }
+                if (r == "setup-edit") BackHandler { route = "you" }
                 SetupScreen(
                     editing = r == "setup-edit",
                     onDone = { route = "cameras" },
-                    onCancel = if (r == "setup-edit") ({ route = "settings" }) else null,
+                    onCancel = if (r == "setup-edit") ({ route = "you" }) else null,
                 )
             }
             r == "cameras" -> HomeScreen(
                 tab = homeTab,
                 onTab = { homeTab = it },
                 onOpen = { route = "camera:$it" },
-                onSettings = { route = "settings" },
+                onYou = { route = "you" },
             )
-            r == "settings" -> {
+            r == "you" -> {
                 BackHandler { route = "cameras" }
-                SettingsScreen(
+                YouScreen(
                     onBack = { route = "cameras" },
+                    onSettings = { route = "settings" },
                     onServer = { route = "setup-edit" },
                     onLogout = ::logout,
                 )
+            }
+            r == "settings" -> {
+                BackHandler { route = "you" }
+                SettingsScreen(onBack = { route = "you" })
             }
             r.startsWith("camera:") -> {
                 BackHandler { route = "cameras" }
@@ -220,20 +226,20 @@ private fun Root(activity: FragmentActivity, lockVm: AppLockViewModel = viewMode
             }
         }
     }
-    // Turning the lock on or off, or changing the PIN (from Settings), on top of the app.
+    // Turning the lock on or off, or changing the PIN (from Settings, behind the profile picture), on top of the app.
     PinRequests.request?.let { PinRequestScreen(it) }
 }
 
 private fun depth(route: String): Int = when {
     route == "setup" -> 0
     route == "cameras" -> 1
-    route == "settings" || route.startsWith("camera:") -> 2
-    else -> 3
+    route == "you" || route.startsWith("camera:") -> 2
+    else -> 3 // "settings" and "setup-edit", both opened from You
 }
 
 /** Dashboard: Cameras and System health as bottom tabs. */
 @Composable
-private fun HomeScreen(tab: Int, onTab: (Int) -> Unit, onOpen: (String) -> Unit, onSettings: () -> Unit) {
+private fun HomeScreen(tab: Int, onTab: (Int) -> Unit, onOpen: (String) -> Unit, onYou: () -> Unit) {
     // Back on the Health tab returns to Cameras first.
     if (tab != 0) BackHandler { onTab(0) }
     val haze = remember { HazeState() }
@@ -255,8 +261,8 @@ private fun HomeScreen(tab: Int, onTab: (Int) -> Unit, onOpen: (String) -> Unit,
                 label = "tab",
             ) { t ->
                 when (t) {
-                    0 -> CamerasScreen(onOpen = onOpen, onSettings = onSettings, bottomPadding = contentBottom)
-                    else -> HealthScreen(bottomPadding = contentBottom)
+                    0 -> CamerasScreen(onOpen = onOpen, onYou = onYou, bottomPadding = contentBottom)
+                    else -> HealthScreen(onYou = onYou, bottomPadding = contentBottom)
                 }
             }
         }
