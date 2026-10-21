@@ -1,6 +1,7 @@
 package com.vknxworks.frigatectrl
 
 import android.content.Context
+import androidx.annotation.StringRes
 import com.vknxworks.frigatectrl.data.FrigateApi
 import com.vknxworks.frigatectrl.data.LockSettings
 import com.vknxworks.frigatectrl.data.Prefs
@@ -21,8 +22,14 @@ object App {
     lateinit var vault: LockVault
         private set
 
+    private lateinit var appContext: Context
+
+    /** Text from strings.xml for code that has no Context of its own (errors from the data layer). */
+    fun str(@StringRes id: Int, vararg args: Any): String = appContext.getString(id, *args)
+
     fun init(ctx: Context) {
         if (::prefs.isInitialized) return
+        appContext = ctx.applicationContext
         vault = LockVault(ctx.applicationContext, "frigatectrl")
         prefs = Prefs(ctx.applicationContext, vault)
         api = FrigateApi(prefs)

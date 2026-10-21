@@ -100,6 +100,9 @@ import com.vknxworks.frigatectrl.App
 import com.vknxworks.frigatectrl.data.CameraInfo
 import com.vknxworks.frigatectrl.data.PtzInfo
 import com.vknxworks.frigatectrl.data.FrigateSocket
+import androidx.compose.ui.res.stringResource
+import androidx.annotation.StringRes
+import com.vknxworks.frigatectrl.R
 
 @Composable
 fun CameraScreen(camera: String, onBack: () -> Unit) {
@@ -189,7 +192,7 @@ private fun LiveScreen(
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) { talk?.stop() }
     val micPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
         if (ok) talk?.start()
-        else Toast.makeText(context, "Microphone permission is needed to talk", Toast.LENGTH_SHORT).show()
+        else Toast.makeText(context, context.getString(R.string.talk_mic_needed), Toast.LENGTH_SHORT).show()
     }
     val toggleTalk: () -> Unit = {
         when (talk?.state) {
@@ -202,7 +205,7 @@ private fun LiveScreen(
         }
     }
     LaunchedEffect(talk?.error) {
-        talk?.error?.let { Toast.makeText(context, "Talk: $it", Toast.LENGTH_LONG).show() }
+        talk?.error?.let { Toast.makeText(context, context.getString(R.string.talk_error, it), Toast.LENGTH_LONG).show() }
     }
 
     // ---- picture-in-picture ----
@@ -222,29 +225,29 @@ private fun LiveScreen(
 
     val videoOverlay: @Composable BoxScope.() -> Unit = {
         if (zoom.zoomed) OverlayChip(
-            "${"%.1f".format(zoom.scale)}× · reset", null,
+            stringResource(R.string.zoom_reset, "%.1f".format(zoom.scale)), null,
             Modifier.align(Alignment.TopEnd).padding(12.dp), onClick = { zoom.reset() },
         )
         if (talk?.state == TalkState.Talking) OverlayChip(
-            "TALKING", Status.alert, Modifier.align(Alignment.TopCenter).padding(12.dp), pulse = true,
+            stringResource(R.string.chip_talking), Status.alert, Modifier.align(Alignment.TopCenter).padding(12.dp), pulse = true,
         )
     }
 
     if (immersive) {
         Box(Modifier.fillMaxSize().background(Color.Black).zoomable(zoom)) {
             LiveView(camera, stream, muted, Modifier.fillMaxSize(), zoom = zoom)
-            OverlayChip("LIVE", Status.live, Modifier.align(Alignment.TopStart).padding(16.dp), pulse = true)
+            OverlayChip(stringResource(R.string.chip_live), Status.live, Modifier.align(Alignment.TopStart).padding(16.dp), pulse = true)
             videoOverlay()
             Row(Modifier.align(Alignment.BottomEnd).padding(8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 if (canTalk) VideoIconButton(
-                    if (talk?.state == TalkState.Talking) Icons.Filled.Mic else Icons.Outlined.MicNone, "Talk", onClick = toggleTalk,
+                    if (talk?.state == TalkState.Talking) Icons.Filled.Mic else Icons.Outlined.MicNone, stringResource(R.string.talk), onClick = toggleTalk,
                 )
                 VideoIconButton(
-                    if (muted) Icons.AutoMirrored.Outlined.VolumeOff else Icons.AutoMirrored.Outlined.VolumeUp, "Audio",
+                    if (muted) Icons.AutoMirrored.Outlined.VolumeOff else Icons.AutoMirrored.Outlined.VolumeUp, stringResource(R.string.audio),
                 ) { muted = !muted }
-                VideoIconButton(Icons.Outlined.PictureInPictureAlt, "Picture in picture", onClick = enterPip)
-                VideoIconButton(Icons.Outlined.History, "History", onClick = onHistory)
-                VideoIconButton(Icons.Outlined.FullscreenExit, "Exit fullscreen") {
+                VideoIconButton(Icons.Outlined.PictureInPictureAlt, stringResource(R.string.picture_in_picture), onClick = enterPip)
+                VideoIconButton(Icons.Outlined.History, stringResource(R.string.history), onClick = onHistory)
+                VideoIconButton(Icons.Outlined.FullscreenExit, stringResource(R.string.exit_fullscreen)) {
                     if (fullscreen) fullscreen = false else onBack()
                 }
             }
@@ -262,18 +265,18 @@ private fun LiveScreen(
             Modifier.fillMaxWidth().statusBarsPadding().padding(start = 4.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
+            IconButton(onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
             Column(Modifier.weight(1f)) {
                 Text(info?.displayName ?: camera, style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold, maxLines = 1)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(6.dp).clip(CircleShape).background(Status.live))
-                    Text("  Live" + (streams.getOrNull(streamIdx)?.let { if (streams.size > 1) " · ${it.label}" else "" } ?: ""),
+                    Text("  " + (streams.getOrNull(streamIdx)?.takeIf { streams.size > 1 }?.let { stringResource(R.string.live_stream, it.label) } ?: stringResource(R.string.live_plain)),
                         style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
                 }
             }
             if (streams.size > 1) Box {
-                IconButton({ streamMenu = true }) { Icon(Icons.Outlined.HighQuality, "Stream") }
+                IconButton({ streamMenu = true }) { Icon(Icons.Outlined.HighQuality, stringResource(R.string.stream)) }
                 DropdownMenu(streamMenu, { streamMenu = false }) {
                     streams.forEachIndexed { i, s ->
                         DropdownMenuItem(
@@ -283,7 +286,7 @@ private fun LiveScreen(
                     }
                 }
             }
-            FilledTonalIconButton({ showToggles = true }) { Icon(Icons.Outlined.Tune, "Camera settings") }
+            FilledTonalIconButton({ showToggles = true }) { Icon(Icons.Outlined.Tune, stringResource(R.string.camera_settings)) }
         }
 
         // ---- video ----
@@ -292,15 +295,15 @@ private fun LiveScreen(
                 .clip(RoundedCornerShape(28.dp)).background(Color.Black).zoomable(zoom)
         ) {
             LiveView(camera, stream, muted, Modifier.fillMaxSize(), zoom = zoom)
-            OverlayChip("LIVE", Status.live, Modifier.align(Alignment.TopStart).padding(12.dp), pulse = true)
+            OverlayChip(stringResource(R.string.chip_live), Status.live, Modifier.align(Alignment.TopStart).padding(12.dp), pulse = true)
             videoOverlay()
             Row(Modifier.align(Alignment.BottomEnd).padding(6.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                 VideoIconButton(
                     if (muted) Icons.AutoMirrored.Outlined.VolumeOff else Icons.AutoMirrored.Outlined.VolumeUp,
-                    if (muted) "Unmute" else "Mute",
+                    stringResource(if (muted) R.string.unmute else R.string.mute),
                 ) { muted = !muted }
-                VideoIconButton(Icons.Outlined.PictureInPictureAlt, "Picture in picture", onClick = enterPip)
-                VideoIconButton(Icons.Outlined.Fullscreen, "Fullscreen") { fullscreen = true }
+                VideoIconButton(Icons.Outlined.PictureInPictureAlt, stringResource(R.string.picture_in_picture), onClick = enterPip)
+                VideoIconButton(Icons.Outlined.Fullscreen, stringResource(R.string.fullscreen)) { fullscreen = true }
             }
         }
 
@@ -318,7 +321,7 @@ private fun LiveScreen(
                         .clip(RoundedCornerShape(50)).background(cs.outlineVariant)
                 )
                 if (hasPresets) {
-                    Text("Presets", style = MaterialTheme.typography.labelLarge, color = cs.onSurfaceVariant,
+                    Text(stringResource(R.string.ptz_presets), style = MaterialTheme.typography.labelLarge, color = cs.onSurfaceVariant,
                         modifier = Modifier.padding(start = 20.dp, top = 10.dp, bottom = 6.dp))
                     PtzPresets(p!!.presets, send)
                 }
@@ -355,16 +358,16 @@ private fun LiveScreen(
 private enum class CameraToggle(
     val feature: String,
     val configKey: String,
-    val label: String,
-    val description: String,
+    @StringRes val label: Int,
+    @StringRes val description: Int,
     val icon: ImageVector,
 ) {
-    Enabled("enabled", "enabled", "Camera", "Turn the whole camera on or off in Frigate", Icons.Outlined.Videocam),
-    Detect("detect", "detect", "Object detection", "Look for people, cars and other objects", Icons.Outlined.CenterFocusStrong),
-    Record("recordings", "record", "Recording", "Save recordings to disk", Icons.Outlined.FiberManualRecord),
-    Snapshots("snapshots", "snapshots", "Snapshots", "Save a picture of each detected object", Icons.Outlined.PhotoCamera),
-    Audio("audio", "audio", "Audio detection", "Listen for sounds like barking or alarms", Icons.Outlined.GraphicEq),
-    Notifications("notifications", "notifications", "Notifications", "Frigate's own push notifications", Icons.Outlined.Notifications),
+    Enabled("enabled", "enabled", R.string.toggle_camera, R.string.toggle_camera_desc, Icons.Outlined.Videocam),
+    Detect("detect", "detect", R.string.toggle_detect, R.string.toggle_detect_desc, Icons.Outlined.CenterFocusStrong),
+    Record("recordings", "record", R.string.toggle_record, R.string.toggle_record_desc, Icons.Outlined.FiberManualRecord),
+    Snapshots("snapshots", "snapshots", R.string.toggle_snapshots, R.string.toggle_snapshots_desc, Icons.Outlined.PhotoCamera),
+    Audio("audio", "audio", R.string.toggle_audio, R.string.toggle_audio_desc, Icons.Outlined.GraphicEq),
+    Notifications("notifications", "notifications", R.string.toggle_notifications, R.string.toggle_notifications_desc, Icons.Outlined.Notifications),
 }
 
 @Composable
@@ -383,11 +386,11 @@ private fun CameraTogglesSheet(
     }
     Column(Modifier.padding(bottom = 24.dp)) {
         Text(
-            "${info?.displayName ?: "Camera"} settings", style = MaterialTheme.typography.titleLarge,
+            stringResource(R.string.camera_settings_title, info?.displayName ?: stringResource(R.string.toggle_camera)), style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 24.dp),
         )
         Text(
-            "Changes apply straight away. Older Frigate versions reset them when Frigate restarts.",
+            stringResource(R.string.camera_settings_note),
             style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant,
             modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 4.dp, bottom = 8.dp),
         )
@@ -395,8 +398,8 @@ private fun CameraTogglesSheet(
             val on = state[t.feature]
             ListItem(
                 leadingContent = { Icon(t.icon, null) },
-                headlineContent = { Text(t.label) },
-                supportingContent = { Text(t.description) },
+                headlineContent = { Text(stringResource(t.label)) },
+                supportingContent = { Text(stringResource(t.description)) },
                 trailingContent = {
                     if (on == null) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
                     else Switch(on, { onToggle(t, it) })
@@ -427,7 +430,7 @@ private fun TalkButton(state: TalkState, onClick: () -> Unit) {
         else Icon(if (active) Icons.Filled.Mic else Icons.Outlined.MicNone, null, Modifier.size(18.dp))
         Spacer(Modifier.width(6.dp))
         Text(
-            when (state) { TalkState.Talking -> "Stop talking"; TalkState.Connecting -> "Connecting…"; else -> "Talk" },
+            stringResource(when (state) { TalkState.Talking -> R.string.talk_stop; TalkState.Connecting -> R.string.connecting; else -> R.string.talk }),
             style = MaterialTheme.typography.labelLarge,
         )
     }
@@ -457,7 +460,7 @@ private fun HistoryButton(alerts: Int?, onClick: () -> Unit, modifier: Modifier 
         ) {
             Icon(Icons.Outlined.History, null, Modifier.size(18.dp))
             Spacer(Modifier.width(6.dp))
-            Text("History", style = MaterialTheme.typography.labelLarge)
+            Text(stringResource(R.string.history), style = MaterialTheme.typography.labelLarge)
         }
     }
 }

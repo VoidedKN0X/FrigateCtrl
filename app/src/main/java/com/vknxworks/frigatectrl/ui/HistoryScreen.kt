@@ -118,6 +118,10 @@ import java.util.Locale
 import java.util.TimeZone
 import kotlin.math.floor
 import kotlin.math.min
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
+import androidx.annotation.StringRes
+import com.vknxworks.frigatectrl.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -227,20 +231,20 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit) {
     fun runClip(start: Double, end: Double, share: Boolean) {
         if (clipBusy) return
         val a = minOf(start, end); val b = maxOf(start, end)
-        if (b - a < 1) { Toast.makeText(ctx, "Move the playhead to choose where the clip ends", Toast.LENGTH_SHORT).show(); return }
-        if (b - a > Clips.MAX_SECONDS) { Toast.makeText(ctx, "Clips can be at most 1 hour", Toast.LENGTH_SHORT).show(); return }
+        if (b - a < 1) { Toast.makeText(ctx, ctx.getString(R.string.clip_move_playhead), Toast.LENGTH_SHORT).show(); return }
+        if (b - a > Clips.MAX_SECONDS) { Toast.makeText(ctx, ctx.getString(R.string.clip_too_long), Toast.LENGTH_SHORT).show(); return }
         clipBusy = true
-        Toast.makeText(ctx, "Preparing clip…", Toast.LENGTH_SHORT).show()
+        Toast.makeText(ctx, ctx.getString(R.string.clip_preparing), Toast.LENGTH_SHORT).show()
         scope.launch {
             try {
                 if (share) Clips.share(ctx, camera, a, b)
                 else {
                     val name = Clips.save(ctx, camera, a, b)
-                    Toast.makeText(ctx, "Saved $name to Movies/FrigateCtrl (visible to other apps with media access)", Toast.LENGTH_LONG).show()
+                    Toast.makeText(ctx, ctx.getString(R.string.clip_saved, name), Toast.LENGTH_LONG).show()
                 }
                 clipStart = null
             } catch (e: Exception) {
-                Toast.makeText(ctx, "Clip failed: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(ctx, ctx.getString(R.string.clip_failed, e.message.orEmpty()), Toast.LENGTH_LONG).show()
             } finally { clipBusy = false }
         }
     }
@@ -252,7 +256,7 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit) {
         reviews = reviews.map { if (it.id in set) it.copy(reviewed = reviewed) else it }
         scope.launch {
             try { api.setReviewed(ids, reviewed) }
-            catch (e: Exception) { Toast.makeText(ctx, "Couldn't update: ${e.message}", Toast.LENGTH_SHORT).show() }
+            catch (e: Exception) { Toast.makeText(ctx, ctx.getString(R.string.update_failed, e.message.orEmpty()), Toast.LENGTH_SHORT).show() }
         }
     }
 
@@ -263,16 +267,16 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit) {
             if (playback.loading && previewTime == null)
                 CircularProgressIndicator(Modifier.align(Alignment.Center).size(36.dp), strokeWidth = 3.dp, color = Color.White)
             if (playback.noRecording && previewTime == null)
-                OverlayChip("No recording at this time", null, Modifier.align(Alignment.Center))
+                OverlayChip(stringResource(R.string.no_recording_here), null, Modifier.align(Alignment.Center))
             playback.error?.let {
                 OverlayChip(it, Status.alert, Modifier.align(Alignment.BottomStart).padding(8.dp))
             }
             OverlayChip(
-                if (playback.speed == 1f) "PLAYBACK" else "PLAYBACK · ${speedLabel(playback.speed)}",
+                if (playback.speed == 1f) stringResource(R.string.chip_playback) else stringResource(R.string.chip_playback_speed, speedLabel(playback.speed)),
                 cs.primary, Modifier.align(Alignment.TopStart).padding(10.dp),
             )
             if (zoom.zoomed) OverlayChip(
-                "${"%.1f".format(zoom.scale)}× · reset", null,
+                stringResource(R.string.zoom_reset, "%.1f".format(zoom.scale)), null,
                 Modifier.align(Alignment.TopEnd).padding(10.dp), onClick = { zoom.reset() },
             )
         }
@@ -320,10 +324,10 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit) {
             Box(Modifier.fillMaxWidth().weight(1f)) {
                 video(Modifier.fillMaxSize())
                 Row(Modifier.align(Alignment.TopEnd).padding(6.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    VideoIconButton(Icons.Outlined.ContentCut, "Make a clip") { clipStart = if (clipStart == null) tl.center else null }
-                    VideoIconButton(Icons.Outlined.CalendarMonth, "Pick date") { showDate = true }
-                    VideoIconButton(Icons.AutoMirrored.Outlined.List, "Events") { showEvents = true }
-                    VideoIconButton(Icons.AutoMirrored.Filled.ArrowBack, "Back to live", onClick = onBack)
+                    VideoIconButton(Icons.Outlined.ContentCut, stringResource(R.string.make_clip)) { clipStart = if (clipStart == null) tl.center else null }
+                    VideoIconButton(Icons.Outlined.CalendarMonth, stringResource(R.string.pick_date)) { showDate = true }
+                    VideoIconButton(Icons.AutoMirrored.Outlined.List, stringResource(R.string.events)) { showEvents = true }
+                    VideoIconButton(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back_to_live), onClick = onBack)
                 }
             }
             Column(Modifier.navigationBarsPadding()) { controls() }
@@ -335,23 +339,23 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit) {
                 Modifier.fillMaxWidth().statusBarsPadding().padding(start = 4.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                IconButton(onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back to live") }
+                IconButton(onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back_to_live)) }
                 Column(Modifier.weight(1f)) {
                     Text(info?.displayName ?: camera, style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold, maxLines = 1)
-                    Text("History", style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
+                    Text(stringResource(R.string.history), style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
                 }
                 IconButton({ clipStart = if (clipStart == null) tl.center else null }) {
-                    Icon(Icons.Outlined.ContentCut, "Make a clip", tint = if (clipStart != null) cs.primary else cs.onSurfaceVariant)
+                    Icon(Icons.Outlined.ContentCut, stringResource(R.string.make_clip), tint = if (clipStart != null) cs.primary else cs.onSurfaceVariant)
                 }
-                FilledTonalIconButton({ showDate = true }) { Icon(Icons.Outlined.CalendarMonth, "Pick date") }
+                FilledTonalIconButton({ showDate = true }) { Icon(Icons.Outlined.CalendarMonth, stringResource(R.string.pick_date)) }
                 Spacer(Modifier.width(6.dp))
                 FilledTonalIconButton({ showEvents = true }) {
                     BadgedBox(badge = {
                         val unseen = reviews.count { !it.reviewed }
                         if (unseen > 0) Badge { Text("${unseen.coerceAtMost(99)}") }
                     }) {
-                        Icon(Icons.AutoMirrored.Outlined.List, "Events")
+                        Icon(Icons.AutoMirrored.Outlined.List, stringResource(R.string.events))
                     }
                 }
             }
@@ -418,9 +422,9 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit) {
                         tl.spp = (6 * 3600.0 / widthPx).coerceIn(MIN_SPP, MAX_SPP)
                         seekTo(target, play = false)
                     }
-                }) { Text("Go") }
+                }) { Text(stringResource(R.string.go)) }
             },
-            dismissButton = { TextButton({ showDate = false }) { Text("Cancel") } },
+            dismissButton = { TextButton({ showDate = false }) { Text(stringResource(R.string.cancel)) } },
         ) { DatePicker(dp) }
     }
 }
@@ -448,9 +452,9 @@ private fun TimeReadout(t: Double, spp: Double, widthPx: Float, onZoomIn: () -> 
         }
         Surface(shape = RoundedCornerShape(50), color = cs.surfaceContainerHigh) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onZoomOut) { Icon(Icons.Outlined.ZoomOut, "Zoom timeline out") }
+                IconButton(onZoomOut) { Icon(Icons.Outlined.ZoomOut, stringResource(R.string.zoom_timeline_out)) }
                 Text(zoomLabel(spp * widthPx), style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
-                IconButton(onZoomIn) { Icon(Icons.Outlined.ZoomIn, "Zoom timeline in") }
+                IconButton(onZoomIn) { Icon(Icons.Outlined.ZoomIn, stringResource(R.string.zoom_timeline_in)) }
             }
         }
     }
@@ -477,16 +481,16 @@ private fun Transport(
             Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton({ onEvent(false) }) { Icon(Icons.Outlined.SkipPrevious, "Previous event") }
+            IconButton({ onEvent(false) }) { Icon(Icons.Outlined.SkipPrevious, stringResource(R.string.previous_event)) }
             StepButton("−10s") { onStep(-10.0) }
             StepButton("−1s") { onStep(-1.0) }
             FilledIconButton(onPlay, Modifier.size(60.dp)) {
-                Icon(if (playing) Icons.Default.Pause else Icons.Default.PlayArrow, if (playing) "Pause" else "Play",
+                Icon(if (playing) Icons.Default.Pause else Icons.Default.PlayArrow, stringResource(if (playing) R.string.pause else R.string.play),
                     modifier = Modifier.size(32.dp))
             }
             StepButton("+1s") { onStep(1.0) }
             StepButton("+10s") { onStep(10.0) }
-            IconButton({ onEvent(true) }) { Icon(Icons.Outlined.SkipNext, "Next event") }
+            IconButton({ onEvent(true) }) { Icon(Icons.Outlined.SkipNext, stringResource(R.string.next_event)) }
         }
         Spacer(Modifier.height(6.dp))
         Row(
@@ -526,13 +530,13 @@ private fun Legend() {
         Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        LegendDot(st.recording, "Recording")
-        LegendDot(st.motion, "Motion")
-        LegendDot(st.detection, "Detection")
-        LegendDot(st.alert, "Alert")
+        LegendDot(st.recording, stringResource(R.string.toggle_record))
+        LegendDot(st.motion, stringResource(R.string.legend_motion))
+        LegendDot(st.detection, stringResource(R.string.legend_detection))
+        LegendDot(st.alert, stringResource(R.string.legend_alert))
     }
     Text(
-        "Drag to scrub · pinch to zoom · tap to jump · fling for long jumps",
+        stringResource(R.string.timeline_help),
         color = cs.onSurfaceVariant, style = MaterialTheme.typography.bodySmall,
         modifier = Modifier.padding(horizontal = 20.dp),
     )
@@ -547,7 +551,7 @@ private fun LegendDot(c: Color, label: String) {
     }
 }
 
-private enum class EventFilter(val label: String) { All("All"), Unreviewed("Unreviewed"), Alerts("Alerts") }
+private enum class EventFilter(@StringRes val label: Int) { All(R.string.filter_all), Unreviewed(R.string.filter_unreviewed), Alerts(R.string.filter_alerts) }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -573,16 +577,16 @@ private fun EventsList(
 
     Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            Text("Events", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.events), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             Text(
-                if (unseen > 0) "$unseen unreviewed · swipe right to mark reviewed" else "All caught up",
+                if (unseen > 0) pluralStringResource(R.plurals.events_unreviewed, unseen, unseen) else stringResource(R.string.events_all_caught_up),
                 style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant,
             )
         }
         if (unseen > 0) TextButton(onMarkAll) {
             Icon(Icons.Outlined.DoneAll, null, Modifier.size(18.dp))
             Spacer(Modifier.width(6.dp))
-            Text("Mark all")
+            Text(stringResource(R.string.mark_all))
         }
     }
     Row(
@@ -590,12 +594,12 @@ private fun EventsList(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         EventFilter.entries.forEach { f ->
-            FilterChip(filter == f, { filter = f }, label = { Text(f.label) })
+            FilterChip(filter == f, { filter = f }, label = { Text(stringResource(f.label)) })
         }
     }
     if (shown.isEmpty()) {
         Text(
-            if (filter == EventFilter.Unreviewed) "Nothing left to review here" else "No events in this part of the timeline",
+            stringResource(if (filter == EventFilter.Unreviewed) R.string.events_none_unreviewed else R.string.events_none),
             color = cs.onSurfaceVariant, modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp),
         )
         return
@@ -621,7 +625,7 @@ private fun EventsList(
                             tint = cs.onPrimaryContainer,
                         )
                         Spacer(Modifier.width(10.dp))
-                        Text(if (r.reviewed) "Mark unreviewed" else "Mark reviewed", color = cs.onPrimaryContainer)
+                        Text(stringResource(if (r.reviewed) R.string.mark_unreviewed else R.string.mark_reviewed), color = cs.onPrimaryContainer)
                     }
                 },
                 modifier = Modifier.animateItem(),
@@ -655,25 +659,25 @@ private fun EventsList(
                         }
                     },
                     supportingContent = {
-                        val dur = r.end?.let { "${(it - r.start).toInt()} s" } ?: "ongoing"
+                        val dur = r.end?.let { "${(it - r.start).toInt()} s" } ?: stringResource(R.string.event_ongoing)
                         Text("${fmt.format(Date((r.start * 1000).toLong()))} · $dur")
                     },
                     trailingContent = {
                         Box {
-                            IconButton({ menu = true }) { Icon(Icons.Outlined.MoreVert, "More") }
+                            IconButton({ menu = true }) { Icon(Icons.Outlined.MoreVert, stringResource(R.string.more)) }
                             DropdownMenu(menu, { menu = false }) {
                                 DropdownMenuItem(
-                                    text = { Text(if (r.reviewed) "Mark unreviewed" else "Mark reviewed") },
+                                    text = { Text(stringResource(if (r.reviewed) R.string.mark_unreviewed else R.string.mark_reviewed)) },
                                     leadingIcon = { Icon(if (r.reviewed) Icons.Outlined.MarkEmailUnread else Icons.Outlined.DoneAll, null) },
                                     onClick = { menu = false; onReviewed(r, !r.reviewed) },
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Save clip") },
+                                    text = { Text(stringResource(R.string.clip_save)) },
                                     leadingIcon = { Icon(Icons.Outlined.Download, null) },
                                     onClick = { menu = false; onClip(r, false) },
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Share clip") },
+                                    text = { Text(stringResource(R.string.clip_share)) },
                                     leadingIcon = { Icon(Icons.Outlined.Share, null) },
                                     onClick = { menu = false; onClip(r, true) },
                                 )
@@ -708,18 +712,18 @@ private fun ClipBar(
     ) {
         Row(Modifier.padding(start = 16.dp, end = 4.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("Clip · %d:%02d".format(len / 60, len % 60), fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.clip_length, len / 60, len % 60), fontWeight = FontWeight.Bold)
                 Text(
-                    if (len < 1) "Scrub to where the clip should end" else "${fmt.format(Date((a * 1000).toLong()))} → ${fmt.format(Date((b * 1000).toLong()))}",
+                    if (len < 1) stringResource(R.string.clip_scrub_to_end) else "${fmt.format(Date((a * 1000).toLong()))} → ${fmt.format(Date((b * 1000).toLong()))}",
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
             if (busy) CircularProgressIndicator(Modifier.size(22.dp).padding(end = 8.dp), strokeWidth = 2.dp)
             else {
-                IconButton(onSave) { Icon(Icons.Outlined.Download, "Save to gallery") }
-                IconButton(onShare) { Icon(Icons.Outlined.Share, "Share") }
+                IconButton(onSave) { Icon(Icons.Outlined.Download, stringResource(R.string.save_to_gallery)) }
+                IconButton(onShare) { Icon(Icons.Outlined.Share, stringResource(R.string.share)) }
             }
-            IconButton(onCancel) { Icon(Icons.Outlined.Close, "Cancel clip") }
+            IconButton(onCancel) { Icon(Icons.Outlined.Close, stringResource(R.string.clip_cancel)) }
         }
     }
 }

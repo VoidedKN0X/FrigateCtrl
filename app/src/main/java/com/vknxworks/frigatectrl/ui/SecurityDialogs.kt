@@ -39,13 +39,15 @@ import com.vknxworks.frigatectrl.data.Tls
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import androidx.compose.ui.res.stringResource
+import com.vknxworks.frigatectrl.R
 
 /** What the user is asked to trust: the server's certificate as fetched (nothing was sent to it). */
 data class CertInfo(val host: String, val subject: String, val fingerprint: String)
 
 /** Fetches the certificate [baseUrl] presents, without trusting it or sending anything to it. */
 suspend fun fetchCertInfo(baseUrl: String): CertInfo = withContext(Dispatchers.IO) {
-    val u = baseUrl.toHttpUrlOrNull() ?: throw Exception("That isn't a valid address")
+    val u = baseUrl.toHttpUrlOrNull() ?: throw Exception(App.str(R.string.error_invalid_address))
     val leaf = Tls.fetchLeaf(u.host, u.port)
     CertInfo(u.host, leaf.subjectX500Principal.name, Tls.fingerprint(leaf))
 }
@@ -57,32 +59,31 @@ fun CertTrustDialog(cert: CertInfo, changed: Boolean, intro: String? = null, onT
     AlertDialog(
         onDismissRequest = onCancel,
         icon = { Icon(Icons.Outlined.VerifiedUser, null) },
-        title = { Text(if (changed) "Certificate changed" else "Trust this certificate?") },
+        title = { Text(stringResource(if (changed) R.string.cert_changed_title else R.string.cert_trust_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 intro?.let { Text(it) }
                 if (changed) Text(
-                    "${cert.host} now presents a different certificate from the one you trusted. " +
-                        "Only continue if you replaced it yourself.",
+                    stringResource(R.string.cert_changed_body, cert.host),
                     color = cs.error,
                 )
-                Text("Check that this SHA-256 fingerprint matches the certificate on ${cert.host}:")
+                Text(stringResource(R.string.cert_check_fingerprint, cert.host))
                 Text(
                     cert.fingerprint,
                     fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(cs.surfaceContainerHighest).padding(10.dp),
                 )
                 if (cert.subject.isNotBlank()) Text(
-                    "Issued to: ${cert.subject}", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant,
+                    stringResource(R.string.cert_issued_to, cert.subject), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant,
                 )
                 Text(
-                    "From now on FrigateCtrl only accepts this exact certificate from this server.",
+                    stringResource(R.string.cert_pinned_note),
                     style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant,
                 )
             }
         },
-        confirmButton = { TextButton(onTrust) { Text("Trust") } },
-        dismissButton = { TextButton(onCancel) { Text("Cancel") } },
+        confirmButton = { TextButton(onTrust) { Text(stringResource(R.string.cert_trust)) } },
+        dismissButton = { TextButton(onCancel) { Text(stringResource(R.string.cancel)) } },
     )
 }
 
@@ -92,18 +93,15 @@ fun HttpWarningDialog(host: String, intro: String? = null, onConfirm: () -> Unit
     AlertDialog(
         onDismissRequest = onCancel,
         icon = { Icon(Icons.Outlined.NoEncryption, null, tint = MaterialTheme.colorScheme.error) },
-        title = { Text("Connect without encryption?") },
+        title = { Text(stringResource(R.string.http_warning_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 intro?.let { Text(it) }
-                Text(
-                    "$host is reached over plain http. Your password, login token and camera video are sent " +
-                        "unencrypted and can be read by anyone on the same network. Only continue on a network you trust."
-                )
+                Text(stringResource(R.string.http_warning_body, host))
             }
         },
-        confirmButton = { TextButton(onConfirm) { Text("Connect anyway") } },
-        dismissButton = { TextButton(onCancel) { Text("Cancel") } },
+        confirmButton = { TextButton(onConfirm) { Text(stringResource(R.string.http_warning_confirm)) } },
+        dismissButton = { TextButton(onCancel) { Text(stringResource(R.string.cancel)) } },
     )
 }
 
@@ -118,7 +116,7 @@ fun NotEncryptedBadge(modifier: Modifier = Modifier) {
         Icon(Icons.Outlined.LockOpen, null, tint = cs.onErrorContainer, modifier = Modifier.size(12.dp))
         Spacer(Modifier.width(4.dp))
         Text(
-            "Not encrypted (HTTP)", color = cs.onErrorContainer,
+            stringResource(R.string.server_not_encrypted), color = cs.onErrorContainer,
             style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Medium,
         )
     }
@@ -145,7 +143,7 @@ fun ConnectionSecurityCheck(onDone: () -> Unit, onServerSettings: () -> Unit) {
         if (prefs.isHttp) {
             HttpWarningDialog(
                 host = host,
-                intro = "FrigateCtrl now asks before using a server without encryption.",
+                intro = stringResource(R.string.http_check_intro),
                 onConfirm = {
                     prefs.httpConfirmed = true
                     App.api.reload()
@@ -178,8 +176,7 @@ private fun CertPinCheck(host: String, onDone: () -> Unit, onServerSettings: () 
         when {
             c != null -> CertTrustDialog(
                 cert = c, changed = false,
-                intro = "\"Allow self-signed certificate\" used to accept any certificate. FrigateCtrl now " +
-                    "pins your server's certificate instead, so confirm it once.",
+                intro = stringResource(R.string.cert_check_intro),
                 onTrust = {
                     prefs.certPin = c.fingerprint
                     App.api.reload()
@@ -190,10 +187,10 @@ private fun CertPinCheck(host: String, onDone: () -> Unit, onServerSettings: () 
             err != null -> AlertDialog(
                 onDismissRequest = onServerSettings,
                 icon = { Icon(Icons.Outlined.VerifiedUser, null) },
-                title = { Text("Couldn't check the certificate") },
-                text = { Text("FrigateCtrl needs to confirm your server's certificate once, but couldn't reach $host: $err") },
-                confirmButton = { TextButton({ attempt++ }) { Text("Retry") } },
-                dismissButton = { TextButton(onServerSettings) { Text("Server settings") } },
+                title = { Text(stringResource(R.string.cert_check_failed_title)) },
+                text = { Text(stringResource(R.string.cert_check_failed_body, host, err)) },
+                confirmButton = { TextButton({ attempt++ }) { Text(stringResource(R.string.retry)) } },
+                dismissButton = { TextButton(onServerSettings) { Text(stringResource(R.string.server_settings)) } },
             )
             else -> CircularProgressIndicator()
         }

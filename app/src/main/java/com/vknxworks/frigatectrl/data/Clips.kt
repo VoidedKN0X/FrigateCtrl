@@ -15,6 +15,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
+import com.vknxworks.frigatectrl.R
 
 /** Downloads recording clips from Frigate and saves them to the gallery or shares them. */
 object Clips {
@@ -50,16 +51,16 @@ object Clips {
             // Old shared clips are only needed until the receiving app has read them.
             cleanup(context)
             val out = File(dir, fileName(camera, start))
-            if (out.canonicalFile.parentFile != dir.canonicalFile) throw Exception("Invalid clip name")
+            if (out.canonicalFile.parentFile != dir.canonicalFile) throw Exception(App.str(R.string.clip_error_name))
             try {
                 // Frigate stitches the clip together on request, which can take a while for long ranges.
                 val client = App.api.http.newBuilder().readTimeout(5, TimeUnit.MINUTES).build()
                 client.newCall(Request.Builder().url(App.api.clipUrl(camera, start, end)).build()).execute().use { r ->
-                    if (!r.isSuccessful) throw Exception(if (r.code == 404) "No recordings in that range" else "HTTP ${r.code}")
-                    val body = r.body ?: throw Exception("Empty response")
+                    if (!r.isSuccessful) throw Exception(if (r.code == 404) App.str(R.string.clip_error_no_recordings) else App.str(R.string.error_http, r.code))
+                    val body = r.body ?: throw Exception(App.str(R.string.error_empty_response))
                     out.outputStream().use { body.byteStream().copyTo(it) }
                 }
-                if (out.length() < 1024) throw Exception("No recordings in that range")
+                if (out.length() < 1024) throw Exception(App.str(R.string.clip_error_no_recordings))
             } catch (e: Throwable) {
                 // Never leave a partial recording behind (also when the download is cancelled).
                 out.delete()
@@ -82,9 +83,9 @@ object Clips {
                     put(MediaStore.Video.Media.IS_PENDING, 1)
                 }
                 val created = resolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, values)
-                    ?: throw Exception("Couldn't create the file")
+                    ?: throw Exception(App.str(R.string.clip_error_create))
                 uri = created
-                val o = resolver.openOutputStream(created) ?: throw Exception("Couldn't write the file")
+                val o = resolver.openOutputStream(created) ?: throw Exception(App.str(R.string.clip_error_write))
                 o.use { file.inputStream().use { i -> i.copyTo(it) } }
                 values.clear()
                 values.put(MediaStore.Video.Media.IS_PENDING, 0)
@@ -110,6 +111,6 @@ object Clips {
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
         com.vknxworks.frigatectrl.ui.lock.LockTrips.expectReturn()
-        context.startActivity(Intent.createChooser(send, "Share clip").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        context.startActivity(Intent.createChooser(send, context.getString(R.string.clip_share)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 }

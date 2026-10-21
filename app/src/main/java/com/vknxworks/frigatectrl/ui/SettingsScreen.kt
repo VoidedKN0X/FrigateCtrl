@@ -180,56 +180,56 @@ fun SettingsScreen(onBack: () -> Unit) {
                 ) { lock.hideRecents = it }
             }
 
-            Section("Cameras") {
+            Section(stringResource(R.string.tab_cameras)) {
                 Choice(
-                    Icons.Outlined.GridView, "Grid columns",
-                    listOf("Auto", "1", "2", "3"),
+                    Icons.Outlined.GridView, stringResource(R.string.grid_columns),
+                    listOf(stringResource(R.string.auto), "1", "2", "3"),
                     s.gridColumns.coerceIn(0, 3),
                 ) { s.gridColumns = it }
                 Divider()
                 val refreshOptions = listOf(0, 2, 4, 10)
                 Choice(
-                    Icons.Outlined.Refresh, "Thumbnail refresh",
-                    listOf("Off", "2 s", "4 s", "10 s"),
+                    Icons.Outlined.Refresh, stringResource(R.string.thumb_refresh),
+                    listOf(stringResource(R.string.off), "2 s", "4 s", "10 s"),
                     refreshOptions.indexOf(s.thumbRefreshSec).coerceAtLeast(0),
                 ) { s.thumbRefreshSec = refreshOptions[it] }
                 Divider()
-                Toggle(Icons.Outlined.VideocamOff, "Show disabled cameras", null, s.showDisabled) { s.showDisabled = it }
+                Toggle(Icons.Outlined.VideocamOff, stringResource(R.string.show_disabled), null, s.showDisabled) { s.showDisabled = it }
             }
 
-            Section("Live view") {
-                Toggle(Icons.Outlined.HighQuality, "Prefer sub stream", "Lower quality, loads faster on mobile data", s.preferSubStream) {
+            Section(stringResource(R.string.group_live_view)) {
+                Toggle(Icons.Outlined.HighQuality, stringResource(R.string.prefer_sub), stringResource(R.string.prefer_sub_subtitle), s.preferSubStream) {
                     s.preferSubStream = it
                 }
                 Divider()
-                Toggle(Icons.AutoMirrored.Outlined.VolumeOff, "Start muted", null, s.startMuted) { s.startMuted = it }
+                Toggle(Icons.AutoMirrored.Outlined.VolumeOff, stringResource(R.string.start_muted), null, s.startMuted) { s.startMuted = it }
                 Divider()
                 Toggle(
-                    Icons.Outlined.PictureInPictureAlt, "Picture-in-picture",
-                    "Keep the live view floating when you leave the app", s.autoPip,
+                    Icons.Outlined.PictureInPictureAlt, stringResource(R.string.pip_setting),
+                    stringResource(R.string.pip_setting_subtitle), s.autoPip,
                 ) { s.autoPip = it }
                 Divider()
-                Toggle(Icons.Outlined.ScreenLockPortrait, "Keep screen on", "While watching live or history", s.keepScreenOn) {
+                Toggle(Icons.Outlined.ScreenLockPortrait, stringResource(R.string.keep_screen_on), stringResource(R.string.keep_screen_on_subtitle), s.keepScreenOn) {
                     s.keepScreenOn = it
                 }
             }
 
-            Section("History") {
+            Section(stringResource(R.string.history)) {
                 val spans = listOf(5, 15, 60, 360)
                 Choice(
-                    Icons.Outlined.Timeline, "Timeline span when opened",
+                    Icons.Outlined.Timeline, stringResource(R.string.timeline_span),
                     listOf("5 min", "15 min", "1 h", "6 h"),
                     spans.indexOf(s.timelineMinutes).coerceAtLeast(0),
                 ) { s.timelineMinutes = spans[it] }
                 Divider()
                 val pre = listOf(0, 3, 5, 10)
                 Choice(
-                    Icons.Outlined.SkipPrevious, "Start events early by",
+                    Icons.Outlined.SkipPrevious, stringResource(R.string.event_preroll),
                     listOf("0 s", "3 s", "5 s", "10 s"),
                     pre.indexOf(s.eventPreroll).coerceAtLeast(0),
                 ) { s.eventPreroll = pre[it] }
                 Divider()
-                Toggle(Icons.Outlined.Vibration, "Haptic ticks", "Feel each time mark while scrubbing", s.timelineHaptics) {
+                Toggle(Icons.Outlined.Vibration, stringResource(R.string.haptic_ticks), stringResource(R.string.haptic_ticks_subtitle), s.timelineHaptics) {
                     s.timelineHaptics = it
                 }
             }

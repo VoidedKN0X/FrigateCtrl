@@ -48,6 +48,8 @@ import androidx.media3.ui.PlayerView
 import com.vknxworks.frigatectrl.App
 import kotlinx.coroutines.delay
 import java.net.URLEncoder
+import androidx.compose.ui.res.stringResource
+import com.vknxworks.frigatectrl.R
 
 /**
  * Native live view: go2rtc's fMP4 stream read from Frigate's /live/mse websocket and played by
@@ -74,7 +76,7 @@ fun LiveView(
 
     DisposableEffect(player) {
         if (player == null) return@DisposableEffect onDispose {}
-        val label = "Video"
+        val label = ctx.getString(R.string.video)
         val listener = object : Player.Listener {
             override fun onRenderedFirstFrame() { rendered = true }
             override fun onPlayerError(error: PlaybackException) {
@@ -82,7 +84,7 @@ fun LiveView(
                     // Was working and dropped — just reconnect the same way.
                     attempt++
                 } else {
-                    notes = notes + "$label: ${describe(error)}"
+                    notes = notes + "$label: ${describe(ctx, error)}"
                     mode++
                 }
             }
@@ -114,7 +116,7 @@ fun LiveView(
         if (player == null) return@LaunchedEffect
         delay(15_000)
         if (!rendered) {
-            notes = notes + "Video: no frames received"
+            notes = notes + ctx.getString(R.string.video_no_frames)
             mode++
         }
     }
@@ -148,7 +150,7 @@ fun LiveView(
                     .clickable { attempt++ }
                     .padding(horizontal = 10.dp, vertical = 6.dp)
             ) {
-                Text("Snapshot mode · tap to retry video", color = Color.White, fontSize = 12.sp)
+                Text(stringResource(R.string.snapshot_mode), color = Color.White, fontSize = 12.sp)
                 notes.forEach { Text(it, color = Color(0xFFB9C2CE), fontSize = 11.sp, maxLines = 2) }
             }
         }
@@ -164,14 +166,14 @@ private fun buildLivePlayer(ctx: Context): ExoPlayer {
 }
 
 @OptIn(UnstableApi::class)
-private fun describe(e: PlaybackException): String {
+private fun describe(ctx: Context, e: PlaybackException): String {
     var c: Throwable? = e
     while (c != null) {
         if (c is HttpDataSource.InvalidResponseCodeException) {
             return when (c.responseCode) {
-                401, 403 -> "login rejected (HTTP ${c.responseCode})"
-                404 -> "stream not found (HTTP 404) — check the go2rtc stream name"
-                else -> "HTTP ${c.responseCode}"
+                401, 403 -> ctx.getString(R.string.video_login_rejected, c.responseCode)
+                404 -> ctx.getString(R.string.video_stream_not_found)
+                else -> ctx.getString(R.string.error_http, c.responseCode)
             }
         }
         c = c.cause

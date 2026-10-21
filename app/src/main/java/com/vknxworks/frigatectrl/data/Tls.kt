@@ -13,6 +13,8 @@ import javax.net.ssl.SSLSocket
 import javax.net.ssl.SSLPeerUnverifiedException
 import javax.net.ssl.TrustManagerFactory
 import javax.net.ssl.X509TrustManager
+import com.vknxworks.frigatectrl.App
+import com.vknxworks.frigatectrl.R
 
 /**
  * Trust-on-first-use certificate pinning for servers with a self-signed certificate.
@@ -33,8 +35,7 @@ object Tls {
     }
 
     class PinMismatchException : CertificateException(
-        "The server's certificate has changed since you trusted it. If you replaced it yourself, " +
-            "check and trust the new one in Settings › Server & login."
+        com.vknxworks.frigatectrl.App.str(R.string.cert_pin_mismatch)
     )
 
     /** Accepts the chain only if its leaf matches [pin]; otherwise falls back to normal validation. */
@@ -98,7 +99,7 @@ object Tls {
         } finally {
             runCatching { raw.close() }
         }
-        return chain?.firstOrNull() ?: throw CertificateException("The server sent no certificate")
+        return chain?.firstOrNull() ?: throw CertificateException(com.vknxworks.frigatectrl.App.str(R.string.cert_none))
     }
 
     private fun causes(e: Throwable): Sequence<Throwable> = generateSequence(e) { it.cause.takeIf { c -> c !== it } }

@@ -67,6 +67,7 @@ import com.vknxworks.frigatectrl.ui.YouScreen
 import com.vknxworks.frigatectrl.ui.ConnectionSecurityCheck
 import com.vknxworks.frigatectrl.ui.needsConnectionCheck
 import com.vknxworks.frigatectrl.ui.isAppInDarkTheme
+import androidx.compose.ui.res.stringResource
 
 // FragmentActivity (a ComponentActivity) is required by the fingerprint prompt.
 class MainActivity : FragmentActivity() {
@@ -243,10 +244,12 @@ private fun HomeScreen(tab: Int, onTab: (Int) -> Unit, onOpen: (String) -> Unit,
     // Back on the Health tab returns to Cameras first.
     if (tab != 0) BackHandler { onTab(0) }
     val haze = remember { HazeState() }
-    val tabs = remember {
+    val camerasLabel = stringResource(R.string.tab_cameras)
+    val healthLabel = stringResource(R.string.tab_health)
+    val tabs = remember(camerasLabel, healthLabel) {
         listOf(
-            GlassTab("Cameras", Icons.Outlined.Videocam, Icons.Filled.Videocam),
-            GlassTab("Health", Icons.Outlined.MonitorHeart, Icons.Filled.MonitorHeart),
+            GlassTab(camerasLabel, Icons.Outlined.Videocam, Icons.Filled.Videocam),
+            GlassTab(healthLabel, Icons.Outlined.MonitorHeart, Icons.Filled.MonitorHeart),
         )
     }
     val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()

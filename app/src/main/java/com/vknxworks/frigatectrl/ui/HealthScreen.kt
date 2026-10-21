@@ -54,6 +54,9 @@ import com.vknxworks.frigatectrl.App
 import kotlinx.coroutines.delay
 import org.json.JSONObject
 import java.util.Locale
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalContext
+import com.vknxworks.frigatectrl.R
 
 /** Frigate's /api/stats, refreshed every 5 seconds. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -63,6 +66,7 @@ fun HealthScreen(onYou: () -> Unit, bottomPadding: Dp = 0.dp) {
     var stats by remember { mutableStateOf<JSONObject?>(null) }
     var storage by remember { mutableStateOf<JSONObject?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
+    val ctx = LocalContext.current
 
     LaunchedEffect(Unit) {
         var n = 0
@@ -70,7 +74,7 @@ fun HealthScreen(onYou: () -> Unit, bottomPadding: Dp = 0.dp) {
             try {
                 stats = App.api.stats(); error = null
                 if (n++ % 6 == 0) storage = App.api.recordingStorage() // slower to compute; every 30 s
-            } catch (e: Exception) { error = e.message ?: "Couldn't load stats" }
+            } catch (e: Exception) { error = e.message ?: ctx.getString(R.string.stats_load_failed) }
             delay(5000)
         }
     }
@@ -87,12 +91,12 @@ fun HealthScreen(onYou: () -> Unit, bottomPadding: Dp = 0.dp) {
             ) { Icon(Icons.Outlined.MonitorHeart, null, tint = cs.onPrimaryContainer, modifier = Modifier.size(22.dp)) }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text("System health", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.system_health), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 Text(
                     when {
-                        error != null && stats != null -> "Offline · showing last data"
-                        stats == null -> "Loading…"
-                        else -> "Live · refreshes every 5 s"
+                        error != null && stats != null -> stringResource(R.string.health_offline)
+                        stats == null -> stringResource(R.string.loading)
+                        else -> stringResource(R.string.health_live)
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = if (error != null) cs.error else cs.onSurfaceVariant,
@@ -119,21 +123,21 @@ fun HealthScreen(onYou: () -> Unit, bottomPadding: Dp = 0.dp) {
             // ---- system ----
             val system = s.optJSONObject("cpu_usages")?.optJSONObject("frigate.full_system")
             val gpus = s.optJSONObject("gpu_usages")
-            if (system != null || gpus != null) HealthCard("System") {
+            if (system != null || gpus != null) HealthCard(stringResource(R.string.health_system)) {
                 system?.let {
                     Meter("CPU", pct(it.opt("cpu")))
-                    Meter("Memory", pct(it.opt("mem")))
+                    Meter(stringResource(R.string.health_memory), pct(it.opt("mem")))
                 }
                 gpus?.keys()?.forEach { name ->
                     val g = gpus.optJSONObject(name) ?: return@forEach
-                    Meter("$name GPU", pct(g.opt("gpu")))
-                    if (g.has("mem")) Meter("$name memory", pct(g.opt("mem")))
+                    Meter(stringResource(R.string.health_gpu, name), pct(g.opt("gpu")))
+                    if (g.has("mem")) Meter(stringResource(R.string.health_gpu_memory, name), pct(g.opt("mem")))
                 }
             }
 
             // ---- detectors ----
             val detectors = s.optJSONObject("detectors")
-            if (detectors != null && detectors.length() > 0) HealthCard("Detectors") {
+            if (detectors != null && detectors.length() > 0) HealthCard(stringResource(R.string.health_detectors)) {
                 detectors.keys().forEach { name ->
                     val d = detectors.optJSONObject(name) ?: return@forEach
                     val speed = d.optDouble("inference_speed", Double.NaN)
@@ -147,19 +151,19 @@ fun HealthScreen(onYou: () -> Unit, bottomPadding: Dp = 0.dp) {
                         warn = !speed.isNaN() && speed > 100,
                     )
                 }
-                Text("Inference time per frame — lower is better. Above ~100 ms detection may fall behind.",
+                Text(stringResource(R.string.health_inference_note),
                     style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
             }
 
             // ---- storage ----
             val disks = service?.optJSONObject("storage")
-            if (disks != null) HealthCard("Storage") {
-                if (service?.optBoolean("retention_unmet", false) == true) WarningLine("Recordings are being deleted early because the disk is full")
-                listOf("/media/frigate/recordings" to "Recordings", "/media/frigate/clips" to "Clips & snapshots", "/tmp/cache" to "Cache")
+            if (disks != null) HealthCard(stringResource(R.string.health_storage)) {
+                if (service?.optBoolean("retention_unmet", false) == true) WarningLine(stringResource(R.string.health_retention_unmet))
+                listOf("/media/frigate/recordings" to stringResource(R.string.health_recordings), "/media/frigate/clips" to stringResource(R.string.health_clips), "/tmp/cache" to stringResource(R.string.health_cache))
                     .forEach { (path, label) ->
                         val d = disks.optJSONObject(path) ?: return@forEach
                         val total = d.optDouble("total", 0.0); val used = d.optDouble("used", 0.0)
-                        if (total > 0) Meter(label, used / total * 100, "${size(used)} of ${size(total)}")
+                        if (total > 0) Meter(label, used / total * 100, stringResource(R.string.health_used_of, size(used), size(total)))
                     }
                 storage?.let { st ->
                     val rows = st.keys().asSequence().mapNotNull { cam ->
@@ -167,7 +171,7 @@ fun HealthScreen(onYou: () -> Unit, bottomPadding: Dp = 0.dp) {
                     }.filter { it.second > 0 }.sortedByDescending { it.second }.toList()
                     if (rows.isNotEmpty()) {
                         HorizontalDivider(Modifier.padding(vertical = 4.dp), color = cs.outlineVariant.copy(alpha = 0.5f))
-                        Text("Recordings per camera", style = MaterialTheme.typography.labelLarge, color = cs.onSurfaceVariant)
+                        Text(stringResource(R.string.health_per_camera), style = MaterialTheme.typography.labelLarge, color = cs.onSurfaceVariant)
                         rows.forEach { (cam, mb) ->
                             val bw = st.optJSONObject(cam)?.optDouble("bandwidth", Double.NaN) ?: Double.NaN
                             StatRow(cam.replace('_', ' '), size(mb) + if (!bw.isNaN()) " · ${size(bw)}/h" else "")
@@ -178,19 +182,21 @@ fun HealthScreen(onYou: () -> Unit, bottomPadding: Dp = 0.dp) {
 
             // ---- cameras ----
             val cams = s.optJSONObject("cameras")
-            if (cams != null && cams.length() > 0) HealthCard("Cameras") {
+            if (cams != null && cams.length() > 0) HealthCard(stringResource(R.string.tab_cameras)) {
                 cams.keys().forEach { name ->
                     val c = cams.optJSONObject(name) ?: return@forEach
                     val fps = c.optDouble("camera_fps", 0.0)
                     val det = c.optDouble("detection_fps", 0.0)
                     val skipped = c.optDouble("skipped_fps", 0.0)
                     val quality = c.optString("connection_quality", "")
+                    val detectText = stringResource(R.string.health_detect, fmt1(det))
+                    val skippedText = stringResource(R.string.health_skipped_value, fmt1(skipped))
                     StatRow(
                         name.replace('_', ' '),
                         buildList {
                             add("${fmt1(fps)} fps")
-                            add("detect ${fmt1(det)}")
-                            if (skipped > 0) add("skipped ${fmt1(skipped)}")
+                            add(detectText)
+                            if (skipped > 0) add(skippedText)
                             if (quality.isNotBlank()) add(quality)
                         }.joinToString(" · "),
                         warn = fps <= 0.0 || skipped > 0 || quality.equals("poor", true),
@@ -212,8 +218,8 @@ private fun OverviewCard(service: JSONObject?, s: JSONObject) {
             Icon(Icons.Outlined.Memory, null, tint = cs.primary)
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
-                Text("Frigate ${version.substringBefore('-')}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Text("Up ${duration(uptime)}", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                Text(stringResource(R.string.you_frigate_version, version.substringBefore('-')), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.health_uptime, duration(uptime)), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
             }
         }
         if (latest.isNotBlank() && latest != "disabled" && version.isNotBlank() &&
@@ -221,13 +227,13 @@ private fun OverviewCard(service: JSONObject?, s: JSONObject) {
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Outlined.NewReleases, null, tint = cs.tertiary, modifier = Modifier.size(18.dp))
-                Text("  Frigate $latest is available", style = MaterialTheme.typography.bodyMedium, color = cs.tertiary)
+                Text("  " + stringResource(R.string.health_update, latest), style = MaterialTheme.typography.bodyMedium, color = cs.tertiary)
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-            BigStat("Camera fps", fmt1(s.optDouble("camera_fps", 0.0)))
-            BigStat("Detection fps", fmt1(s.optDouble("detection_fps", 0.0)))
-            BigStat("Skipped", fmt1(s.optDouble("skipped_fps", 0.0)))
+            BigStat(stringResource(R.string.health_camera_fps), fmt1(s.optDouble("camera_fps", 0.0)))
+            BigStat(stringResource(R.string.health_detection_fps), fmt1(s.optDouble("detection_fps", 0.0)))
+            BigStat(stringResource(R.string.health_skipped), fmt1(s.optDouble("skipped_fps", 0.0)))
         }
     }
 }
