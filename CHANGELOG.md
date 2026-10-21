@@ -4,6 +4,12 @@ What changed in each FrigateCtrl version. Every release on the [Releases page](h
 
 To publish a new version: bump `versionCode` and `versionName` in `app/build.gradle.kts`, add a section here, and push to `main`. Pushes without a version bump only build; they don't make a release.
 
+## 3.3.3 (2026-10-21)
+
+### Security
+
+- **Sign-in, the lock screen and the PIN screens are never in screenshots, screen recordings or casting**, even with "Hide in screenshots and recent apps" turned off. This covers the server and login screen where you type your password, the lock screen, and choosing, changing or confirming your app PIN. A recording would otherwise show which keys of the PIN pad were pressed.
+
 ## 3.3.2 (2026-10-21)
 
 The app lock and Settings now look and work the same as in every other Ctrl app.

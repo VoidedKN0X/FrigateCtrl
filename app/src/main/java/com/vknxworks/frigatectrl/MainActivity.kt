@@ -89,8 +89,8 @@ class MainActivity : FragmentActivity() {
                     enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
                 }
                 // Keep cameras out of the recent-apps preview, screenshots and recordings (on by default,
-                // independent of the app lock).
-                val secure = App.lock.hideContent
+                // independent of the app lock). Sign-in, the lock screen and PIN screens are always kept out.
+                val secure = App.lock.hideContent || SecureScreens.active > 0
                 LaunchedEffect(secure) {
                     if (secure) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
                     else window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
@@ -98,6 +98,20 @@ class MainActivity : FragmentActivity() {
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { Root(this) }
             }
         }
+    }
+}
+
+/** Screens that must never be captured (sign-in, the lock screen, PIN screens) bump [active] while shown. */
+object SecureScreens {
+    var active by androidx.compose.runtime.mutableIntStateOf(0)
+}
+
+/** Keeps FLAG_SECURE on while the calling screen is showing, whatever the user's setting. */
+@Composable
+fun SecureWindow() {
+    DisposableEffect(Unit) {
+        SecureScreens.active++
+        onDispose { SecureScreens.active-- }
     }
 }
 
