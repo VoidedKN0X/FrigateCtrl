@@ -209,7 +209,10 @@ private fun LiveScreen(
     }
 
     // ---- picture-in-picture ----
-    val enterPip = rememberPipController(settings.autoPip)
+    // Auto picture-in-picture respects "Hide in screenshots" (the live view would float over other apps), and
+    // is off while the app lock locks as soon as you leave (the floating window would only show the lock).
+    val autoPip = settings.autoPip && !App.lock.hideScreenshots && !(App.vault.enabled && App.lock.lockAfterSeconds == 0)
+    val enterPip = rememberPipController(autoPip)
     val inPip = rememberIsInPip()
     if (inPip) {
         // Only the picture in the floating window.

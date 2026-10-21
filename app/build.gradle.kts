@@ -14,8 +14,8 @@ android {
         targetSdk = 35
         // CI passes the run number so every build installs over the previous one.
         // Bump both to publish a new release (see CHANGELOG.md).
-        versionCode = 43
-        versionName = "3.4.2"
+        versionCode = 44
+        versionName = "3.4.3"
         // 64-bit ARM phones only (arm64-v8a), like every Ctrl app.
         ndk { abiFilters += listOf("arm64-v8a") }
     }
@@ -62,6 +62,11 @@ android {
     lint {
         checkReleaseBuilds = false
         abortOnError = false
+    }
+    // No dependency-metadata block in the APK signature: it's encrypted for Google Play only, and F-Droid flags it.
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
     }
 }
 

@@ -178,6 +178,11 @@ class AppLockViewModel : ViewModel() {
     private var exemptTrip = false
 
     fun onBackground() {
+        // Already away (picture-in-picture, then its window was closed): the first time counts.
+        if (backgroundedAt != 0L) {
+            if (enabled && !exemptTrip && settings.lockAfterSeconds == 0) lockNow()
+            return
+        }
         backgroundedAt = SystemClock.elapsedRealtime()
         // The app opened the share sheet or a link itself: that isn't leaving (unless you stay away long).
         exemptTrip = LockTrips.consume()
@@ -216,6 +221,8 @@ class AppLockViewModel : ViewModel() {
         pinError = null
         biometricInvalidated = false
         locked = false
+        // The lock is on but the login was never encrypted with it (the app stopped half-way through turning it on).
+        runCatching { App.prefs.sealIfNeeded() }
         App.api.reload()
     }
 
