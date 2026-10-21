@@ -73,10 +73,8 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         App.init(this)
         enableEdgeToEdge()
-        // Never show a snapshot of the cameras in the recent-apps switcher.
-        setRecentsScreenshotEnabled(false)
         // Applied before the first frame is drawn, not only once Compose has started.
-        if (App.lock.hideContent) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        if (App.lock.hideScreenshots) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         // Remove temporary shared clips left over from an earlier session.
         val appCtx = applicationContext
         Thread { Clips.cleanup(appCtx) }.start()
@@ -88,9 +86,12 @@ class MainActivity : FragmentActivity() {
                     else SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
                     enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
                 }
-                // Keep cameras out of the recent-apps preview, screenshots and recordings (on by default,
-                // independent of the app lock). Sign-in, the lock screen and PIN screens are always kept out.
-                val secure = App.lock.hideContent || SecureScreens.active > 0
+                // "Hide in screenshots" (off by default, independent of the app lock). Sign-in, the lock screen and
+                // PIN screens are always kept out of screenshots.
+                val secure = App.lock.hideScreenshots || SecureScreens.active > 0
+                // "Hide in recent apps", and always with the app lock on: a blank card instead of a snapshot.
+                val blankRecents = App.lock.hideRecents || App.vault.enabled
+                LaunchedEffect(blankRecents) { setRecentsScreenshotEnabled(!blankRecents) }
                 LaunchedEffect(secure) {
                     if (secure) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
                     else window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
