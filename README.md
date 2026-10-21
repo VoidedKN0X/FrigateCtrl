@@ -22,7 +22,7 @@ Part of the [Ctrl series](#the-ctrl-series) by VKNXWorks.
 - **Camera switches**: camera on/off, detection, recording, snapshots, audio detection and notifications
 - **System health**: CPU, GPU, memory, detector speed, camera FPS and disk usage
 - **App lock** with its own PIN and optional fingerprint unlock; your login stays encrypted while the app is locked
-- **Private by default**: cameras are hidden from screenshots, screen recordings and the recent-apps preview (**Hide content in screenshots & recents**, on by default)
+- **Private by default**: cameras are hidden from screenshots, screen recordings and the recent-apps preview (**Hide in screenshots and recent apps**, on by default)
 - **Self-signed certificates** are pinned: you confirm the fingerprint once, and only that certificate is accepted after that
 
 ## Screenshots
@@ -67,6 +67,18 @@ If the Obtainium button doesn't open the app, add `https://github.com/VoidedKN0X
 - **Talk button missing:** it only shows when the camera has a speaker, and go2rtc's WebRTC port (8555) must be reachable from your phone.
 - **Talk connects at home but not away from it:** talk only uses the STUN/TURN servers listed under `go2rtc: webrtc: ice_servers:` in your Frigate config; the app never contacts a public STUN server on its own. Add one there (your own, or a public one if you're happy for it to see your IP address).
 
+## App lock
+
+Turn it on in **Settings → Privacy and security → App lock** (the gear on the Cameras tab). It's off until you turn it on.
+
+- **An app PIN of its own**, at least 6 digits and separate from your phone's. Very obvious PINs, like 111111 or 123456, are refused. The PIN is never stored: it's stretched with 600,000 rounds of PBKDF2 and mixed with a key that never leaves the phone's secure hardware, so a copy of the app's files isn't enough to guess it somewhere else.
+- **Unlock with fingerprint** (optional): strong biometrics only, checked by the phone's secure hardware. Adding a fingerprint to the phone turns it off until you turn it on again. The PIN is still needed after the phone restarts and at least every 72 hours.
+- **Wrong PINs make you wait**: 30 seconds after 5 wrong tries, doubling up to 15 minutes. Restarting the app or the phone, or changing the clock, doesn't end the wait.
+- **Your login stays encrypted while FrigateCtrl is locked**, with a key that only exists in memory while the app is unlocked and is wiped the moment it locks. Nothing of your cameras is shown or streamed while locked.
+- **Lock again**: as soon as you leave the app (the default), after 1, 5 or 15 minutes or 1 hour away, or only when the app restarts. Sharing a clip or opening a link from FrigateCtrl doesn't count as leaving, unless you're away for more than 5 minutes.
+- **Hide in screenshots and recent apps** (on by default, also without the app lock): screenshots, screen recordings and the recent apps view show a blank screen.
+- **Forgot PIN?** on the lock screen logs out and forgets the server, the app lock and anything kept from the server, so you can log in again. Your Frigate server isn't changed.
+
 ## Privacy
 
 **Telemetry-free.** FrigateCtrl has no analytics, crash reporting, usage stats or tracking of any kind. It only talks to the servers you add.
@@ -104,6 +116,7 @@ Native Android apps for self-hosted services and everyday tools, all with the sa
 
 | App | What it's for |
 | --- | --- |
+| [AdCtrl](https://github.com/VoidedKN0X/AdCtrl) | Control your AdGuard Home DNS server |
 | [ArrCtrl](https://github.com/VoidedKN0X/ArrCtrl) | Radarr, Sonarr, Prowlarr, Bazarr, qBittorrent, autobrr and Cleanuparr in one app |
 | [BeamCtrl](https://github.com/VoidedKN0X/BeamCtrl) | TV remote for phones with an IR blaster |
 | [CraftyCtrl](https://github.com/VoidedKN0X/CraftyCtrl) | Manage Minecraft servers on Crafty Controller |
@@ -112,6 +125,7 @@ Native Android apps for self-hosted services and everyday tools, all with the sa
 | **FrigateCtrl** (this app) | Watch and review your Frigate NVR cameras |
 | [ImmichCtrl](https://github.com/VoidedKN0X/ImmichCtrl) | Photos and backup for your Immich server |
 | [JellyCtrl](https://github.com/VoidedKN0X/JellyCtrl) | Movies, shows, music and Live TV from Jellyfin |
+| [MemoCtrl](https://github.com/VoidedKN0X/MemoCtrl) | Notes on your Memos server |
 | [NaviCtrl](https://github.com/VoidedKN0X/NaviCtrl) | Music player for Navidrome servers |
 | [PaperCtrl](https://github.com/VoidedKN0X/PaperCtrl) | Scan and browse documents on Paperless-ngx |
 | [PrintCtrl](https://github.com/VoidedKN0X/PrintCtrl) | Bambu Lab printers through Bambuddy, and Spoolman spools |
