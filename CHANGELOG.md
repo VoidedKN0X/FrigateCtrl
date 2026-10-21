@@ -4,6 +4,12 @@ What changed in each FrigateCtrl version. Every release on the [Releases page](h
 
 To publish a new version: bump `versionCode` and `versionName` in `app/build.gradle.kts`, add a section here, and push to `main`. Pushes without a version bump only build; they don't make a release.
 
+## 3.4.4 (2026-10-21)
+
+### Fixed
+
+- **Fingerprint unlock works again after you leave the app.** Once you'd left FrigateCtrl with the back gesture or by swiping home, the lock screen no longer asked for your fingerprint when you came back, and tapping **Use fingerprint** could do nothing either; only the PIN worked until the app was force-closed. The fingerprint prompt was asked for while FrigateCtrl was still going to the background or coming back on screen, the phone dropped it without answering, and the lock screen never asked again for that lock. Now the prompt only opens once FrigateCtrl is fully back on screen, a prompt that never answered can't block the next one (tapping **Use fingerprint** always opens a fresh one), and the lock screen offers your fingerprint again every time you come back to it, including when you expand the floating live view. The same applies to the prompt for turning on fingerprint unlock in **Settings**.
+
 ## 3.4.3 (2026-10-21)
 
 ### Security
