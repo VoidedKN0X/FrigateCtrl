@@ -38,11 +38,13 @@ class MseWebSocketDataSource(private val client: OkHttpClient) : BaseDataSource(
     private var pos = 0
     private var opened = false
     @Volatile private var failure: IOException? = null
+    /** Set when we close the socket ourselves, so only a close by the server counts as a dropped stream. */
+    @Volatile private var closing = false
 
     override fun open(dataSpec: DataSpec): Long {
         uri = dataSpec.uri
         transferInitializing(dataSpec)
-        queue.clear(); current = null; pos = 0; failure = null
+        queue.clear(); current = null; pos = 0; failure = null; closing = false
 
         val req = Request.Builder().url(dataSpec.uri.toString()).build()
         ws = client.newWebSocket(req, object : WebSocketListener() {
@@ -62,6 +64,15 @@ class MseWebSocketDataSource(private val client: OkHttpClient) : BaseDataSource(
                 }
             }
             override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
+                // The player stopped reading (stalled decoder, or far behind): don't keep piling up video in
+                // memory. Drop the connection instead, so the player reconnects at the live edge.
+                if (queue.size >= MAX_QUEUED) {
+                    if (failure == null) failure = IOException("the live stream fell behind")
+                    queue.clear()
+                    queue.offer(eof)
+                    webSocket.cancel()
+                    return
+                }
                 queue.offer(bytes.toByteArray())
             }
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
@@ -76,13 +87,25 @@ class MseWebSocketDataSource(private val client: OkHttpClient) : BaseDataSource(
                 )
                 queue.offer(eof)
             }
+            override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
+                webSocket.close(1000, null)
+            }
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                // A live stream never ends by itself: a close from go2rtc or a proxy (camera reconnecting,
+                // stream restarted, idle timeout) is a dropped stream, so the player reconnects instead of
+                // stopping on the last frame.
+                if (!closing && failure == null) failure = IOException("the live stream was closed by the server")
                 queue.offer(eof)
             }
         })
         opened = true
         transferStarted(dataSpec)
         return C.LENGTH_UNSET.toLong()
+    }
+
+    private companion object {
+        /** About a minute of video at typical camera bitrates (go2rtc sends one message per fragment). */
+        const val MAX_QUEUED = 600
     }
 
     override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
@@ -107,6 +130,7 @@ class MseWebSocketDataSource(private val client: OkHttpClient) : BaseDataSource(
     override fun getUri(): Uri? = uri
 
     override fun close() {
+        closing = true
         ws?.close(1000, null)
         ws = null
         queue.clear()

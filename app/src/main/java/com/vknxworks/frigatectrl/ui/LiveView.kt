@@ -70,15 +70,28 @@ fun LiveView(
     var attempt by remember(camera, streamName) { mutableIntStateOf(0) }
     var mode by remember(camera, streamName, attempt) { mutableIntStateOf(0) } // 0 video, 1 snapshots
     var notes by remember(camera, streamName, attempt) { mutableStateOf(listOf<String>()) }
-    var rendered by remember(camera, streamName, attempt, mode) { mutableStateOf(false) }
+    // In the background (not in picture-in-picture) the stream is dropped, not just paused: a paused player stops
+    // reading while the camera keeps sending, so coming back would play old video and stay behind. Coming back
+    // starts a fresh connection at the live edge.
+    var background by remember { mutableStateOf(false) }
+    var rendered by remember(camera, streamName, attempt, mode, background) { mutableStateOf(false) }
 
-    val player = remember(camera, streamName, attempt, mode) { if (mode < 1) buildLivePlayer(ctx) else null }
+    val player = remember(camera, streamName, attempt, mode, background) {
+        if (mode < 1 && !background) buildLivePlayer(ctx) else null
+    }
 
     DisposableEffect(player) {
         if (player == null) return@DisposableEffect onDispose {}
         val label = ctx.getString(R.string.video)
         val listener = object : Player.Listener {
             override fun onRenderedFirstFrame() { rendered = true }
+            override fun onPlaybackStateChanged(state: Int) {
+                // A live stream never really ends: if it does, the connection was dropped. Reconnect instead of
+                // staying frozen on the last frame (or move on to snapshots if it never showed a picture).
+                if (state == Player.STATE_ENDED) {
+                    if (rendered) attempt++ else mode++
+                }
+            }
             override fun onPlayerError(error: PlaybackException) {
                 if (rendered) {
                     // Was working and dropped — just reconnect the same way.
@@ -107,9 +120,9 @@ fun LiveView(
 
     LaunchedEffect(player, muted) { player?.volume = if (muted) 0f else 1f }
 
-    // Stop streaming (and sound) while the app is in the background; resume when it returns.
-    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { player?.pause() }
-    LifecycleEventEffect(Lifecycle.Event.ON_START) { player?.play() }
+    // Stop streaming (and sound) while the app is in the background; reconnect at the live edge when it returns.
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { background = true }
+    LifecycleEventEffect(Lifecycle.Event.ON_START) { background = false }
 
     // No picture after a while → try the next method.
     LaunchedEffect(player) {
@@ -121,13 +134,27 @@ fun LiveView(
         }
     }
 
-    // Stay close to the live edge: speed up a little if we've fallen behind.
+    // Stay close to the live edge: speed up a little if we've fallen behind. And if the picture stops moving
+    // without any error (a stalled connection or a stuck hardware decoder, which some phones do), reconnect.
     LaunchedEffect(player, rendered) {
         if (player == null || !rendered) return@LaunchedEffect
+        var lastPos = player.currentPosition
+        var stuckSince = 0L
         while (true) {
             delay(1000)
             val behind = player.bufferedPosition - player.currentPosition
             player.setPlaybackSpeed(if (behind > 1500) 1.15f else 1f)
+            val pos = player.currentPosition
+            if (player.playWhenReady && pos == lastPos) {
+                if (stuckSince == 0L) stuckSince = System.currentTimeMillis()
+                if (System.currentTimeMillis() - stuckSince >= STALL_MS) {
+                    attempt++
+                    return@LaunchedEffect
+                }
+            } else {
+                stuckSince = 0L
+            }
+            lastPos = pos
         }
     }
 
@@ -156,6 +183,9 @@ fun LiveView(
         }
     }
 }
+
+/** How long the live picture may stand still (while it should be playing) before reconnecting. */
+private const val STALL_MS = 8_000L
 
 @OptIn(UnstableApi::class)
 private fun buildLivePlayer(ctx: Context): ExoPlayer {

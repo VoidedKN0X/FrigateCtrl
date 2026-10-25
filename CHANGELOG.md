@@ -4,6 +4,17 @@ What changed in each FrigateCtrl version. Every release on the [Releases page](h
 
 To publish a new version: bump `versionCode` and `versionName` in `app/build.gradle.kts`, add a section here, and push to `main`. Pushes without a version bump only build; they don't make a release.
 
+## 3.7.3 (2026-10-25)
+
+Fixes for a live view that froze, especially on Samsung phones.
+
+### Fixed
+
+- **The live view no longer freezes on the last frame when the stream drops.** When Frigate's go2rtc or your reverse proxy closed the live stream (a camera reconnecting, the stream restarting, a proxy timeout), FrigateCtrl treated it as the end of the video and stayed on the last picture for good. It now reconnects by itself, showing the camera's latest snapshot until the video is back.
+- **A picture that stops moving reconnects by itself.** If the live video stands still for 8 seconds while it should be playing (a stalled connection, or a phone's video decoder getting stuck, which some Samsung phones do), FrigateCtrl now reconnects instead of staying frozen.
+- **Coming back to the app shows live video again, not old video.** Leaving FrigateCtrl only paused the live view while the camera kept sending, so coming back played video from when you left, fell further and further behind, and could look frozen. Leaving the app now closes the live stream, and coming back starts a fresh one at the live edge. Picture-in-picture keeps playing as before.
+- **No more piling up video in memory.** If the player stops reading the live stream for any reason, FrigateCtrl now drops and reconnects the stream instead of storing everything the camera sends.
+
 ## 3.7.2 (2026-10-25)
 
 A cleanup and privacy pass after 3.7.1. Nothing changes in how FrigateCtrl looks or works.
