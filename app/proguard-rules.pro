@@ -1,5 +1,5 @@
 # R8 rules for FrigateCtrl release builds.
-# Libraries in use (OkHttp, Media3, AndroidX, Compose, Haze) ship their own consumer rules.
+# Libraries in use (OkHttp, Media3, AndroidX, Compose) ship their own consumer rules.
 # JSON is parsed by hand with org.json (part of Android), so nothing is (de)serialised by reflection;
 # the rules below are deliberately conservative.
 

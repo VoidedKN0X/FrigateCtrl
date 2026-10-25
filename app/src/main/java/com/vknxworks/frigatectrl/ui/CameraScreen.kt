@@ -103,6 +103,26 @@ import com.vknxworks.frigatectrl.data.FrigateSocket
 import androidx.compose.ui.res.stringResource
 import androidx.annotation.StringRes
 import com.vknxworks.frigatectrl.R
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material3.ripple
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.sp
+import com.vknxworks.frigatectrl.ui.components.CtrlBottomSheet
+import com.vknxworks.frigatectrl.ui.components.CtrlListRow
+import com.vknxworks.frigatectrl.ui.components.CtrlSectionLabel
+import com.vknxworks.frigatectrl.ui.components.CtrlSquareButton
+import com.vknxworks.frigatectrl.ui.components.CtrlStatusDot
+import com.vknxworks.frigatectrl.ui.components.CtrlSubTopBar
+import com.vknxworks.frigatectrl.ui.components.CtrlSwitch
+import com.vknxworks.frigatectrl.ui.theme.CtrlColors
+import com.vknxworks.frigatectrl.ui.theme.CtrlFonts
+import com.vknxworks.frigatectrl.ui.theme.CtrlShape
+import com.vknxworks.frigatectrl.ui.theme.CtrlType
 
 @Composable
 fun CameraScreen(camera: String, onBack: () -> Unit) {
@@ -135,7 +155,6 @@ private fun LiveScreen(
 ) {
     val api = App.api
     val settings = App.settings
-    val cs = MaterialTheme.colorScheme
     val context = LocalContext.current
     val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
 
@@ -262,25 +281,30 @@ private fun LiveScreen(
     val hasPtz = p != null && (p.panTilt || p.zoom || p.focus)
     val hasPresets = p != null && p.presets.isNotEmpty()
 
-    Column(Modifier.fillMaxSize().background(cs.background)) {
+    Column(Modifier.fillMaxSize().background(CtrlColors.Background)) {
         // ---- compact header ----
-        Row(
-            Modifier.fillMaxWidth().statusBarsPadding().padding(start = 4.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
-            Column(Modifier.weight(1f)) {
-                Text(info?.displayName ?: camera, style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold, maxLines = 1)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(6.dp).clip(CircleShape).background(Status.live))
-                    Text(streams.getOrNull(streamIdx)?.takeIf { streams.size > 1 }?.let { stringResource(R.string.live_stream, it.label) } ?: stringResource(R.string.live_plain),
-                        style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant, modifier = Modifier.padding(start = 6.dp))
+        CtrlSubTopBar(
+            title = info?.displayName ?: camera,
+            onBack = onBack,
+            backIcon = Icons.AutoMirrored.Outlined.ArrowBack,
+            backDescription = stringResource(R.string.back),
+            subtitle = {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
+                    CtrlStatusDot(Status.live, size = 6.dp)
+                    Text(
+                        (streams.getOrNull(streamIdx)?.takeIf { streams.size > 1 }?.let { stringResource(R.string.live_stream, it.label) } ?: stringResource(R.string.live_plain)).uppercase(),
+                        style = CtrlType.Label, color = CtrlColors.Accent, modifier = Modifier.padding(start = 6.dp),
+                    )
                 }
-            }
+            },
+        ) {
             if (streams.size > 1) Box {
-                IconButton({ streamMenu = true }) { Icon(Icons.Outlined.HighQuality, stringResource(R.string.stream)) }
-                DropdownMenu(streamMenu, { streamMenu = false }) {
+                CtrlSquareButton(Icons.Outlined.HighQuality, stringResource(R.string.stream), { streamMenu = true })
+                DropdownMenu(
+                    streamMenu, { streamMenu = false },
+                    shape = CtrlShape.Field, containerColor = CtrlColors.Raised,
+                    border = BorderStroke(1.dp, CtrlColors.ControlOutline),
+                ) {
                     streams.forEachIndexed { i, s ->
                         DropdownMenuItem(
                             text = { Text(s.label, fontWeight = if (i == streamIdx) FontWeight.Bold else null) },
@@ -289,13 +313,14 @@ private fun LiveScreen(
                     }
                 }
             }
-            FilledTonalIconButton({ showToggles = true }) { Icon(Icons.Outlined.Tune, stringResource(R.string.camera_settings)) }
+            CtrlSquareButton(Icons.Outlined.Tune, stringResource(R.string.camera_settings), { showToggles = true })
         }
 
         // ---- video ----
         Box(
-            Modifier.padding(horizontal = 12.dp).fillMaxWidth().aspectRatio(16f / 9f)
-                .clip(RoundedCornerShape(28.dp)).background(Color.Black).zoomable(zoom)
+            Modifier.padding(horizontal = 16.dp).fillMaxWidth().aspectRatio(16f / 9f)
+                .clip(CtrlShape.Tile).background(Color.Black)
+                .border(1.dp, CtrlColors.Outline, CtrlShape.Tile).zoomable(zoom)
         ) {
             LiveView(camera, stream, muted, Modifier.fillMaxSize(), zoom = zoom)
             OverlayChip(stringResource(R.string.chip_live), Status.live, Modifier.align(Alignment.TopStart).padding(12.dp), pulse = true)
@@ -313,19 +338,14 @@ private fun LiveScreen(
         Spacer(Modifier.weight(1f))
 
         // ---- bottom control dock: presets above PTZ, History bottom-left, Talk bottom-right ----
-        Surface(
-            shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
-            color = cs.surfaceContainerLow,
-            modifier = Modifier.fillMaxWidth(),
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp).navigationBarsPadding().padding(bottom = 16.dp)
+                .clip(CtrlShape.Hero).background(CtrlColors.Surface).border(1.dp, CtrlColors.Outline, CtrlShape.Hero),
         ) {
-            Column(Modifier.navigationBarsPadding().padding(top = 10.dp, bottom = 12.dp)) {
-                Box(
-                    Modifier.align(Alignment.CenterHorizontally).size(width = 36.dp, height = 4.dp)
-                        .clip(RoundedCornerShape(50)).background(cs.outlineVariant)
-                )
+            Column(Modifier.padding(top = 6.dp, bottom = 14.dp)) {
                 if (hasPresets) {
-                    Text(stringResource(R.string.ptz_presets), style = MaterialTheme.typography.labelLarge, color = cs.onSurfaceVariant,
-                        modifier = Modifier.padding(start = 20.dp, top = 10.dp, bottom = 6.dp))
+                    CtrlSectionLabel(stringResource(R.string.ptz_presets),
+                        Modifier.padding(start = 20.dp, top = 12.dp, bottom = 8.dp))
                     PtzPresets(p!!.presets, send)
                 }
                 if (p != null && hasPtz) {
@@ -348,7 +368,7 @@ private fun LiveScreen(
     }
 
     if (showToggles) {
-        ModalBottomSheet(onDismissRequest = { showToggles = false }) {
+        CtrlBottomSheet(onDismissRequest = { showToggles = false }) {
             CameraTogglesSheet(info, toggles) { t, on ->
                 toggles[t.feature] = on
                 socket.publish("$camera/${t.feature}/set", if (on) "ON" else "OFF")
@@ -379,7 +399,6 @@ private fun CameraTogglesSheet(
     state: Map<String, Boolean>,
     onToggle: (CameraToggle, Boolean) -> Unit,
 ) {
-    val cs = MaterialTheme.colorScheme
     val available = CameraToggle.entries.filter {
         when (it) {
             CameraToggle.Audio -> info?.hasAudioDetection == true
@@ -394,47 +413,46 @@ private fun CameraTogglesSheet(
         )
         Text(
             stringResource(R.string.camera_settings_note),
-            style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant,
-            modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 4.dp, bottom = 8.dp),
+            style = MaterialTheme.typography.bodySmall, color = CtrlColors.Muted,
+            modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 4.dp, bottom = 12.dp),
         )
-        available.forEach { t ->
-            val on = state[t.feature]
-            ListItem(
-                leadingContent = { Icon(t.icon, null) },
-                headlineContent = { Text(stringResource(t.label)) },
-                supportingContent = { Text(stringResource(t.description)) },
-                trailingContent = {
-                    if (on == null) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                    else Switch(on, { onToggle(t, it) })
-                },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            )
+        Column(Modifier.padding(horizontal = 20.dp)) {
+            available.forEach { t ->
+                val on = state[t.feature]
+                CtrlListRow(
+                    title = stringResource(t.label),
+                    subtitle = stringResource(t.description),
+                    showDot = false,
+                    onClick = if (on != null) ({ onToggle(t, !on) }) else null,
+                    leading = { Icon(t.icon, null, Modifier.size(20.dp), tint = if (on == true) CtrlColors.Accent else CtrlColors.Muted) },
+                    trailing = {
+                        if (on == null) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = CtrlColors.Accent)
+                        else CtrlSwitch(on, { onToggle(t, it) })
+                    },
+                )
+            }
         }
     }
 }
 
 @Composable
 private fun TalkButton(state: TalkState, onClick: () -> Unit) {
-    val cs = MaterialTheme.colorScheme
     val active = state == TalkState.Talking
     val connecting = state == TalkState.Connecting
     val source = remember { MutableInteractionSource() }
-    Button(
-        onClick = onClick,
-        interactionSource = source,
-        contentPadding = PaddingValues(start = 12.dp, end = 16.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = if (active) Status.alert else cs.primary,
-            contentColor = if (active) Color.White else cs.onPrimary,
-        ),
-        modifier = Modifier.height(40.dp).pressScale(source),
+    val bg = if (active) CtrlColors.Error else CtrlColors.Accent
+    Row(
+        Modifier.pressScale(source).height(48.dp).clip(CtrlShape.Field).background(bg)
+            .clickable(interactionSource = source, indication = ripple(), role = Role.Button, onClick = onClick)
+            .padding(start = 14.dp, end = 18.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (connecting) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = cs.onPrimary)
-        else Icon(if (active) Icons.Filled.Mic else Icons.Outlined.MicNone, null, Modifier.size(18.dp))
-        Spacer(Modifier.width(6.dp))
+        if (connecting) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = CtrlColors.OnAccent)
+        else Icon(if (active) Icons.Filled.Mic else Icons.Outlined.MicNone, null, Modifier.size(18.dp), tint = CtrlColors.OnAccent)
+        Spacer(Modifier.width(8.dp))
         Text(
             stringResource(when (state) { TalkState.Talking -> R.string.talk_stop; TalkState.Connecting -> R.string.connecting; else -> R.string.talk }),
-            style = MaterialTheme.typography.labelLarge,
+            fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = CtrlColors.OnAccent,
         )
     }
 }
@@ -451,30 +469,35 @@ private fun android.content.Context.findActivity(): android.app.Activity? {
 @Composable
 private fun HistoryButton(alerts: Int?, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val source = remember { MutableInteractionSource() }
-    BadgedBox(
-        badge = { if ((alerts ?: 0) > 0) Badge(containerColor = Status.alert) { Text("${alerts!!.coerceAtMost(99)}") } },
-        modifier = modifier,
+    Row(
+        modifier.pressScale(source).height(48.dp).clip(CtrlShape.Field).background(CtrlColors.Raised)
+            .border(1.dp, CtrlColors.ControlOutline, CtrlShape.Field)
+            .clickable(interactionSource = source, indication = ripple(), role = Role.Button, onClick = onClick)
+            .padding(start = 14.dp, end = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        FilledTonalButton(
-            onClick = onClick,
-            interactionSource = source,
-            contentPadding = PaddingValues(start = 12.dp, end = 16.dp),
-            modifier = Modifier.height(40.dp).pressScale(source),
-        ) {
-            Icon(Icons.Outlined.History, null, Modifier.size(18.dp))
-            Spacer(Modifier.width(6.dp))
-            Text(stringResource(R.string.history), style = MaterialTheme.typography.labelLarge)
+        Icon(Icons.Outlined.History, null, Modifier.size(18.dp), tint = CtrlColors.Text)
+        Spacer(Modifier.width(8.dp))
+        Text(stringResource(R.string.history), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = CtrlColors.Text)
+        if ((alerts ?: 0) > 0) {
+            Spacer(Modifier.width(10.dp))
+            Box(
+                Modifier.clip(RoundedCornerShape(7.dp)).background(CtrlColors.Accent).padding(horizontal = 6.dp, vertical = 2.dp),
+            ) {
+                Text("${alerts!!.coerceAtMost(99)}", color = CtrlColors.OnAccent, fontFamily = CtrlFonts.Mono,
+                    fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+            }
         }
     }
 }
 
+/** Square control drawn over video: dark scrim, light icon, 12 dp corners. */
 @Composable
 fun VideoIconButton(icon: ImageVector, label: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    FilledTonalIconButton(
-        onClick = onClick,
-        modifier = modifier,
-        colors = IconButtonDefaults.filledTonalIconButtonColors(
-            containerColor = Color(0x99000000), contentColor = Color.White,
-        ),
-    ) { Icon(icon, label) }
+    Box(
+        modifier.padding(2.dp).size(40.dp).clip(RoundedCornerShape(12.dp)).background(CtrlColors.VideoScrim)
+            .clickable(role = Role.Button, onClick = onClick)
+            .semantics { contentDescription = label },
+        contentAlignment = Alignment.Center,
+    ) { Icon(icon, null, Modifier.size(20.dp), tint = CtrlColors.Text) }
 }

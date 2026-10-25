@@ -14,8 +14,8 @@ android {
         targetSdk = 35
         // CI passes the run number so every build installs over the previous one.
         // Bump both to publish a new release (see CHANGELOG.md).
-        versionCode = 45
-        versionName = "3.4.4"
+        versionCode = 46
+        versionName = "3.5.0"
         // 64-bit ARM phones only (arm64-v8a), like every Ctrl app.
         ndk { abiFilters += listOf("arm64-v8a") }
     }
@@ -85,10 +85,6 @@ dependencies {
 
     implementation("androidx.biometric:biometric:1.2.0-alpha05")
     implementation("androidx.fragment:fragment-ktx:1.8.6")
-
-    // Backdrop blur for the floating glass tab bar.
-    implementation("dev.chrisbanes.haze:haze:1.5.4")
-    implementation("dev.chrisbanes.haze:haze-materials:1.5.4")
 
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 

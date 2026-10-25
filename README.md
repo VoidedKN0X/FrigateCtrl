@@ -91,7 +91,7 @@ Turn it on under **Settings > Privacy and security > App lock** (tap your profil
 
 - **Servers it talks to:** your own Frigate server, and, for two-way talk, only the STUN/TURN servers listed in your go2rtc config. It never contacts a public STUN server on its own.
 - **Two-way talk:** the built-in web view it runs in has online page checks and usage reports turned off.
-- **Links:** the Support, Report a bug, Source code and Licence rows on the You page (tap your profile picture) open GitHub or gnu.org in your browser, only when you tap them.
+- **Links:** the Support FrigateCtrl button and the Report a bug, Source code and Licence rows on the You page (tap your profile picture) open GitHub or gnu.org in your browser, only when you tap them.
 - Your login is stored encrypted on your phone. **Hide in screenshots** and **Hide in recent apps** (Settings > Privacy and security, both off by default) keep your cameras out of screenshots, screen recordings and the recent-apps preview.
 
 ## Build from source
@@ -114,11 +114,11 @@ Or open the folder in Android Studio and press **Run** with your phone connected
 
 ## Support the project
 
-FrigateCtrl is free and open source. If it's useful to you, tap **Support FrigateCtrl** under **About** on the You page in the app (tap your profile picture at the top right) to sponsor development on [GitHub Sponsors](https://github.com/sponsors/VoidedKN0X). Found a problem or have an idea? Tap **Report a bug** in the same section, or [open an issue](https://github.com/VoidedKN0X/FrigateCtrl/issues). Starring the repo helps too.
+FrigateCtrl is free and open source. If it's useful to you, tap **Support FrigateCtrl** at the bottom of the You page in the app (tap your profile picture at the top right) to sponsor development on [GitHub Sponsors](https://github.com/sponsors/VoidedKN0X). Found a problem or have an idea? Tap **Report a bug** under **About** on the same page, or [open an issue](https://github.com/VoidedKN0X/FrigateCtrl/issues). Starring the repo helps too.
 
 ## The Ctrl series
 
-Native Android apps for self-hosted services and everyday tools, all with the same Material You design.
+Native Android apps for self-hosted services and everyday tools, all with the same dark Ctrl / Signal design.
 
 | App | What it's for |
 | --- | --- |
@@ -142,5 +142,12 @@ Native Android apps for self-hosted services and everyday tools, all with the sa
 ## License
 
 FrigateCtrl is licensed under the [GNU General Public License v3.0](LICENSE). © VKNXWorks
+
+### Fonts
+
+FrigateCtrl bundles two fonts, both under the [SIL Open Font License 1.1](https://openfontlicense.org) (the licence texts are in `app/src/main/assets/licenses/`):
+
+- [Space Grotesk](https://github.com/floriankarsten/space-grotesk) by Florian Karsten and the Space Grotesk Project Authors
+- [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono) by JetBrains and the JetBrains Mono Project Authors
 
 FrigateCtrl is an unofficial app and is not affiliated with the Frigate project.

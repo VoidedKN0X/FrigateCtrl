@@ -1,6 +1,8 @@
 package com.vknxworks.frigatectrl.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -15,7 +17,6 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
@@ -25,25 +26,18 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.ControlCamera
 import androidx.compose.material.icons.outlined.NotificationsActive
-import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material.icons.outlined.VideocamOff
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -70,12 +64,19 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.platform.LocalContext
 import com.vknxworks.frigatectrl.R
+import com.vknxworks.frigatectrl.ui.components.CtrlButton
+import com.vknxworks.frigatectrl.ui.components.CtrlChip
+import com.vknxworks.frigatectrl.ui.components.CtrlHeroCard
+import com.vknxworks.frigatectrl.ui.components.CtrlStatusDot
+import com.vknxworks.frigatectrl.ui.theme.CtrlColors
+import com.vknxworks.frigatectrl.ui.theme.CtrlFonts
+import com.vknxworks.frigatectrl.ui.theme.CtrlShape
+import com.vknxworks.frigatectrl.ui.theme.CtrlType
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CamerasScreen(onOpen: (String) -> Unit, onYou: () -> Unit, bottomPadding: Dp = 0.dp) {
     val settings = App.settings
-    val cs = MaterialTheme.colorScheme
     var cameras by remember { mutableStateOf<List<CameraInfo>?>(null) }
     var groups by remember { mutableStateOf<List<CameraGroup>>(emptyList()) }
     var alerts by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
@@ -109,17 +110,17 @@ fun CamerasScreen(onOpen: (String) -> Unit, onYou: () -> Unit, bottomPadding: Dp
     PullToRefreshBox(
         isRefreshing = refreshing,
         onRefresh = { refreshing = true; reload++ },
-        modifier = Modifier.fillMaxSize().background(cs.background),
+        modifier = Modifier.fillMaxSize().background(CtrlColors.Background),
     ) {
         LazyVerticalGrid(
             columns = if (settings.gridColumns == 0) GridCells.Adaptive(300.dp) else GridCells.Fixed(settings.gridColumns),
             contentPadding = PaddingValues(
                 start = 16.dp, end = 16.dp,
                 top = bars.calculateTopPadding(),
-                bottom = bottomPadding + 24.dp,
+                bottom = bottomPadding + 16.dp,
             ),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
             modifier = Modifier.fillMaxSize(),
         ) {
             // ---- compact header ----
@@ -131,17 +132,37 @@ fun CamerasScreen(onOpen: (String) -> Unit, onYou: () -> Unit, bottomPadding: Dp
                     onYou = onYou,
                 )
             }
+            // The hero: unreviewed alerts from the last 24 hours, the one number that matters most here.
+            if (visible != null) item(span = { GridItemSpan(maxLineSpan) }, key = "hero") {
+                CtrlHeroCard(
+                    label = stringResource(R.string.hero_alerts_label),
+                    trailingLabel = pluralStringResource(R.plurals.cameras_count, visible.size, visible.size),
+                ) {
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        Text(
+                            "%02d".format(totalAlerts.coerceAtMost(99)),
+                            style = CtrlType.HeroNumber, color = CtrlColors.OnAccent,
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            pluralStringResource(R.plurals.hero_alerts_unit, totalAlerts),
+                            fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = CtrlColors.OnAccent,
+                            modifier = Modifier.padding(bottom = 8.dp),
+                        )
+                    }
+                }
+            }
             if (groups.isNotEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }, key = "groups") {
                     Row(
                         Modifier.horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        FilterChip(group == null, { group = null }, label = { Text(stringResource(R.string.filter_all)) })
+                        CtrlChip(stringResource(R.string.filter_all), group == null, { group = null })
                         groups.forEach { g ->
-                            FilterChip(
+                            CtrlChip(
+                                g.name.replace('_', ' ').replaceFirstChar { it.uppercase() },
                                 group == g.name, { group = if (group == g.name) null else g.name },
-                                label = { Text(g.name.replace('_', ' ').replaceFirstChar { it.uppercase() }) },
                             )
                         }
                     }
@@ -153,7 +174,7 @@ fun CamerasScreen(onOpen: (String) -> Unit, onYou: () -> Unit, bottomPadding: Dp
                     EmptyState(stringResource(R.string.cant_reach_frigate), error!!, stringResource(R.string.retry)) { reload++ }
                 }
                 visible == null -> item(span = { GridItemSpan(maxLineSpan) }, key = "loading") {
-                    Box(Modifier.fillMaxWidth().height(320.dp), Alignment.Center) { CircularProgressIndicator() }
+                    Box(Modifier.fillMaxWidth().height(320.dp), Alignment.Center) { CircularProgressIndicator(color = CtrlColors.Accent) }
                 }
                 visible.isEmpty() -> item(span = { GridItemSpan(maxLineSpan) }, key = "empty") {
                     EmptyState(stringResource(R.string.no_cameras), stringResource(R.string.no_cameras_body), null) {}
@@ -171,14 +192,16 @@ fun CamerasScreen(onOpen: (String) -> Unit, onYou: () -> Unit, bottomPadding: Dp
 
 @Composable
 private fun Header(host: String, cameraCount: Int?, alertCount: Int, onYou: () -> Unit) {
-    val cs = MaterialTheme.colorScheme
     // The parent grid already pads 16 dp on each side.
-    TabTitle(stringResource(R.string.tab_cameras), onYou, inset = 16.dp) {
+    TabTitle(
+        stringResource(R.string.tab_cameras), onYou, inset = 16.dp,
+        label = stringResource(if (cameraCount == null) R.string.nvr_connecting else R.string.nvr_online),
+    ) {
         val camsText = cameraCount?.let { pluralStringResource(R.plurals.cameras_count, it, it) }
         val alertsText = if (alertCount > 0) pluralStringResource(R.plurals.new_alerts_count, alertCount, alertCount) else null
         Text(
             listOfNotNull(host, camsText, alertsText).joinToString(stringResource(R.string.list_separator)),
-            style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant,
+            style = CtrlType.Mono, color = CtrlColors.Muted,
             maxLines = 1, overflow = TextOverflow.Ellipsis,
         )
         if (App.prefs.isHttp) NotEncryptedBadge(Modifier.padding(top = 2.dp))
@@ -188,94 +211,97 @@ private fun Header(host: String, cameraCount: Int?, alertCount: Int, onYou: () -
 @Composable
 private fun EmptyState(title: String, body: String, action: String?, onAction: () -> Unit) {
     Column(
-        Modifier.fillMaxWidth().padding(vertical = 64.dp, horizontal = 24.dp),
+        Modifier.fillMaxWidth().padding(vertical = 56.dp, horizontal = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Icon(Icons.Outlined.CloudOff, null, Modifier.size(48.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Icon(Icons.Outlined.CloudOff, null, Modifier.size(40.dp), tint = CtrlColors.Muted)
         Spacer(Modifier.height(16.dp))
         Text(title, style = MaterialTheme.typography.titleLarge)
-        Text(body, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center,
+        Text(body, color = CtrlColors.Muted, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(top = 6.dp))
         if (action != null) {
             Spacer(Modifier.height(20.dp))
-            Button(onAction) { Text(action) }
+            CtrlButton(action, onAction, Modifier.fillMaxWidth())
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CameraCard(cam: CameraInfo, alerts: Int, compact: Boolean, modifier: Modifier, onClick: () -> Unit) {
-    val cs = MaterialTheme.colorScheme
-    // Label colour follows the picture: dark text on bright scenes, white text on dark ones.
-    var bright by remember { mutableStateOf(false) }
-    val textColor = if (bright) Color(0xFF111111) else Color.White
-    val scrim = if (bright) Color(0x99FFFFFF) else Color(0xB3000000)
     val refresh = App.settings.thumbRefreshSec
     val source = remember { MutableInteractionSource() }
+    val shape = CtrlShape.Tile
 
-    Card(
-        onClick = onClick,
-        interactionSource = source,
-        shape = RoundedCornerShape(if (compact) 20.dp else 28.dp),
-        colors = CardDefaults.cardColors(containerColor = cs.surfaceContainerHighest),
-        modifier = modifier.pressScale(source),
+    Box(
+        modifier
+            .pressScale(source)
+            .fillMaxWidth()
+            .aspectRatio(16f / 9f)
+            .clip(shape)
+            .background(CtrlColors.Surface)
+            .border(1.dp, CtrlColors.Outline, shape)
+            .clickable(interactionSource = source, indication = ripple(), onClick = onClick),
     ) {
-        Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f)) {
-            if (cam.enabled) {
-                RemoteImage(
-                    App.api.latestJpg(cam.name, if (compact) 240 else 360), Modifier.fillMaxSize(),
-                    refreshMs = refresh * 1000L,
-                    onBitmap = { bright = bottomBrightness(it) > 0.62f },
-                    placeholder = {
-                        Box(Modifier.fillMaxSize(), Alignment.Center) {
-                            CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
-                        }
-                    },
-                )
-            } else {
-                Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Outlined.VideocamOff, null, tint = cs.onSurfaceVariant)
-                    Text(stringResource(R.string.camera_disabled), color = cs.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
-                }
+        if (cam.enabled) {
+            RemoteImage(
+                App.api.latestJpg(cam.name, if (compact) 240 else 360), Modifier.fillMaxSize(),
+                refreshMs = refresh * 1000L,
+                placeholder = {
+                    Box(Modifier.fillMaxSize(), Alignment.Center) {
+                        CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp, color = CtrlColors.Accent)
+                    }
+                },
+            )
+        } else {
+            Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(Icons.Outlined.VideocamOff, null, Modifier.size(22.dp), tint = CtrlColors.Inactive)
+                Spacer(Modifier.height(6.dp))
+                Text(stringResource(R.string.camera_disabled).uppercase(), style = CtrlType.Label, color = CtrlColors.Inactive)
             }
+        }
 
-            // Top-right badges
-            Row(
-                Modifier.align(Alignment.TopEnd).padding(10.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                if (alerts > 0) Badge(Status.alert, Color.White) {
-                    Icon(Icons.Outlined.NotificationsActive, null, Modifier.size(12.dp), tint = Color.White)
-                    Text(" $alerts", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                }
-                if (cam.hasOnvif) Badge(Color(0x99000000), Color.White) {
-                    Icon(Icons.Outlined.ControlCamera, "PTZ", Modifier.size(12.dp), tint = Color.White)
-                }
+        // Top-right badges
+        Row(
+            Modifier.align(Alignment.TopEnd).padding(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            if (alerts > 0) Badge(CtrlColors.Accent) {
+                Icon(Icons.Outlined.NotificationsActive, null, Modifier.size(12.dp), tint = CtrlColors.OnAccent)
+                Spacer(Modifier.width(4.dp))
+                Text("$alerts", color = CtrlColors.OnAccent, fontFamily = CtrlFonts.Mono, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
             }
+            if (cam.hasOnvif) Badge(CtrlColors.VideoScrim) {
+                Icon(Icons.Outlined.ControlCamera, "PTZ", Modifier.size(12.dp), tint = CtrlColors.Text)
+            }
+        }
 
-            // Name
-            Row(
-                Modifier.align(Alignment.BottomStart).fillMaxWidth()
-                    .background(Brush.verticalGradient(listOf(Color.Transparent, scrim)))
-                    .padding(horizontal = 16.dp, vertical = if (compact) 8.dp else 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(Modifier.size(8.dp).clip(CircleShape).background(if (cam.enabled) Status.recording else Color.Gray))
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    cam.displayName, color = textColor, fontWeight = FontWeight.SemiBold,
-                    fontSize = if (compact) 13.sp else 17.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                )
-            }
+        // Name: mono label on a dark scrim, with the live dot.
+        Row(
+            Modifier.align(Alignment.BottomStart).fillMaxWidth()
+                .background(Brush.verticalGradient(listOf(Color.Transparent, CtrlColors.Background.copy(alpha = 0.85f))))
+                .padding(horizontal = 14.dp, vertical = if (compact) 8.dp else 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            CtrlStatusDot(if (cam.enabled) CtrlColors.Accent else CtrlColors.Inactive)
+            Spacer(Modifier.width(8.dp))
+            Text(
+                cam.displayName.uppercase(), color = CtrlColors.Text,
+                fontFamily = CtrlFonts.Mono, fontWeight = FontWeight.SemiBold, letterSpacing = 1.2.sp,
+                fontSize = if (compact) 11.sp else 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            if (cam.enabled) Text(
+                stringResource(R.string.chip_live), color = CtrlColors.Accent,
+                style = CtrlType.Label, fontSize = if (compact) 10.sp else 11.sp,
+            )
         }
     }
 }
 
 @Composable
-private fun Badge(bg: Color, fg: Color, content: @Composable () -> Unit) {
+private fun Badge(bg: Color, content: @Composable () -> Unit) {
     Row(
-        Modifier.clip(RoundedCornerShape(50)).background(bg).padding(horizontal = 8.dp, vertical = 4.dp),
+        Modifier.clip(CtrlShape.Badge).background(bg).padding(horizontal = 8.dp, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) { content() }
 }

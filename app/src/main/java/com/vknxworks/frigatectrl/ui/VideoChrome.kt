@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,12 +30,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
+import com.vknxworks.frigatectrl.ui.theme.CtrlColors
+import com.vknxworks.frigatectrl.ui.theme.CtrlFonts
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 
 fun nowSec() = System.currentTimeMillis() / 1000.0
 
-/** Pill drawn over video: white text on a dark scrim so it reads on any picture. */
+/** Mono chip drawn over video: light text on a dark scrim so it reads on any picture, with a square dot. */
 @Composable
 fun OverlayChip(
     text: String,
@@ -46,9 +47,9 @@ fun OverlayChip(
     onClick: (() -> Unit)? = null,
 ) {
     Row(
-        modifier.clip(RoundedCornerShape(50)).background(Color(0xB3000000))
+        modifier.clip(RoundedCornerShape(10.dp)).background(CtrlColors.VideoScrim)
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(horizontal = 10.dp, vertical = 5.dp),
+            .padding(horizontal = 10.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (dot != null) {
@@ -56,10 +57,13 @@ fun OverlayChip(
                 val t = rememberInfiniteTransition(label = "pulse")
                 t.animateFloat(1f, 0.25f, infiniteRepeatable(tween(900), RepeatMode.Reverse), label = "a").value
             } else 1f
-            Box(Modifier.size(8.dp).alpha(a).clip(CircleShape).background(dot))
-            Spacer(Modifier.width(6.dp))
+            Box(Modifier.size(8.dp).alpha(a).clip(RoundedCornerShape(2.dp)).background(dot))
+            Spacer(Modifier.width(7.dp))
         }
-        Text(text, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
+        Text(
+            text, color = CtrlColors.Text, fontFamily = CtrlFonts.Mono, fontSize = 11.sp,
+            fontWeight = FontWeight.SemiBold, letterSpacing = 1.2.sp,
+        )
     }
 }
 

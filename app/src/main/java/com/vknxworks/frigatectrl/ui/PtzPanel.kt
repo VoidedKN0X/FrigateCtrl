@@ -59,6 +59,9 @@ import kotlin.math.hypot
 import kotlin.math.roundToInt
 import androidx.compose.ui.res.stringResource
 import com.vknxworks.frigatectrl.R
+import androidx.compose.foundation.border
+import com.vknxworks.frigatectrl.ui.components.CtrlChip
+import com.vknxworks.frigatectrl.ui.theme.CtrlColors
 
 /** Horizontally scrolling preset chips. */
 @Composable
@@ -69,12 +72,7 @@ fun PtzPresets(presets: List<String>, send: (String) -> Unit, modifier: Modifier
         contentPadding = PaddingValues(horizontal = 20.dp),
     ) {
         items(presets) { p ->
-            AssistChip(
-                onClick = { send("preset_$p") },
-                label = { Text(p.replace('_', ' ')) },
-                leadingIcon = { Icon(Icons.Outlined.Bookmark, null, Modifier.size(AssistChipDefaults.IconSize)) },
-                shape = RoundedCornerShape(50),
-            )
+            CtrlChip(p.replace('_', ' '), selected = false, onClick = { send("preset_$p") }, icon = Icons.Outlined.Bookmark)
         }
     }
 }
@@ -96,7 +94,7 @@ fun PtzJoystick(send: (String) -> Unit, modifier: Modifier = Modifier, size: Dp 
     var dir by remember { mutableStateOf<String?>(null) }
 
     Box(
-        modifier.size(size).clip(CircleShape).background(cs.surfaceContainerHigh)
+        modifier.size(size).clip(CircleShape).background(CtrlColors.Raised).border(1.dp, CtrlColors.ControlOutline, CircleShape)
             .pointerInput(Unit) {
                 val center = Offset(this.size.width / 2f, this.size.height / 2f)
                 val dead = travel * 0.28f
@@ -143,7 +141,7 @@ fun PtzJoystick(send: (String) -> Unit, modifier: Modifier = Modifier, size: Dp 
             },
         contentAlignment = Alignment.Center,
     ) {
-        val arrowTint = { d: String -> if (dir == d) cs.primary else cs.onSurfaceVariant.copy(alpha = 0.7f) }
+        val arrowTint = { d: String -> if (dir == d) CtrlColors.Accent else CtrlColors.Muted }
         Icon(Icons.Default.KeyboardArrowUp, stringResource(R.string.ptz_up), Modifier.align(Alignment.TopCenter).padding(top = 6.dp), tint = arrowTint("MOVE_UP"))
         Icon(Icons.Default.KeyboardArrowDown, stringResource(R.string.ptz_down), Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp), tint = arrowTint("MOVE_DOWN"))
         Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, stringResource(R.string.ptz_left), Modifier.align(Alignment.CenterStart).padding(start = 6.dp), tint = arrowTint("MOVE_LEFT"))
@@ -151,8 +149,9 @@ fun PtzJoystick(send: (String) -> Unit, modifier: Modifier = Modifier, size: Dp 
         Box(
             Modifier
                 .offset { IntOffset(thumb.value.x.roundToInt(), thumb.value.y.roundToInt()) }
-                .size(knob).clip(CircleShape)
-                .background(if (dir != null) cs.primary else cs.secondaryContainer)
+                .size(knob).clip(RoundedCornerShape(18.dp))
+                .background(if (dir != null) CtrlColors.Accent else CtrlColors.Surface)
+                .border(1.dp, if (dir != null) CtrlColors.Accent else CtrlColors.ControlOutline, RoundedCornerShape(18.dp))
         )
     }
 }
@@ -175,7 +174,8 @@ fun PtzZoomPill(send: (String) -> Unit, zoom: Boolean, focus: Boolean, modifier:
 @Composable
 private fun Pill(content: @Composable () -> Unit) {
     Column(
-        Modifier.clip(RoundedCornerShape(50)).background(MaterialTheme.colorScheme.surfaceContainerHigh).padding(4.dp),
+        Modifier.clip(RoundedCornerShape(18.dp)).background(CtrlColors.Raised)
+            .border(1.dp, CtrlColors.ControlOutline, RoundedCornerShape(18.dp)).padding(4.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) { content() }
 }
@@ -186,8 +186,8 @@ private fun HoldButton(icon: ImageVector, label: String, command: String, send: 
     val haptics = LocalHapticFeedback.current
     var pressed by remember { mutableStateOf(false) }
     Box(
-        Modifier.size(size).clip(CircleShape)
-            .background(if (pressed) cs.primary else cs.secondaryContainer)
+        Modifier.size(size).clip(RoundedCornerShape(14.dp))
+            .background(if (pressed) CtrlColors.Accent else CtrlColors.Surface)
             .pointerInput(command) {
                 detectTapGestures(onPress = {
                     pressed = true
@@ -201,6 +201,6 @@ private fun HoldButton(icon: ImageVector, label: String, command: String, send: 
             },
         contentAlignment = Alignment.Center,
     ) {
-        Icon(icon, label, tint = if (pressed) cs.onPrimary else cs.onSecondaryContainer)
+        Icon(icon, label, Modifier.size(20.dp), tint = if (pressed) CtrlColors.OnAccent else CtrlColors.Text)
     }
 }
