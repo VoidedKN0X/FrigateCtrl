@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Ctrl / Signal: dark only. The window is the app's background colour from the very first frame. -->
-    <style name="Theme.FrigateCtrl" parent="android:Theme.Material.NoActionBar">
-        <item name="android:windowBackground">#08080A</item>
-        <item name="android:colorBackground">#08080A</item>
-        <item name="android:colorAccent">#B48CFF</item>
+    <!-- Ctrl / Signal Light. Dark mode is in values-night; the app follows the phone's setting. -->
+    <style name="Theme.FrigateCtrl" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">#F5F5F1</item>
+        <item name="android:colorBackground">#F5F5F1</item>
+        <item name="android:colorAccent">#6A3BDB</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="android:windowLightStatusBar">false</item>
-        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
     </style>
 </resources>

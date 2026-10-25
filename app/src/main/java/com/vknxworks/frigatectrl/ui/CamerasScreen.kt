@@ -174,7 +174,7 @@ fun CamerasScreen(onOpen: (String) -> Unit, onYou: () -> Unit, bottomPadding: Dp
                     EmptyState(stringResource(R.string.cant_reach_frigate), error!!, stringResource(R.string.retry)) { reload++ }
                 }
                 visible == null -> item(span = { GridItemSpan(maxLineSpan) }, key = "loading") {
-                    Box(Modifier.fillMaxWidth().height(320.dp), Alignment.Center) { CircularProgressIndicator(color = CtrlColors.Accent) }
+                    Box(Modifier.fillMaxWidth().height(320.dp), Alignment.Center) { CircularProgressIndicator(color = CtrlColors.AccentText) }
                 }
                 visible.isEmpty() -> item(span = { GridItemSpan(maxLineSpan) }, key = "empty") {
                     EmptyState(stringResource(R.string.no_cameras), stringResource(R.string.no_cameras_body), null) {}
@@ -248,7 +248,7 @@ private fun CameraCard(cam: CameraInfo, alerts: Int, compact: Boolean, modifier:
                 refreshMs = refresh * 1000L,
                 placeholder = {
                     Box(Modifier.fillMaxSize(), Alignment.Center) {
-                        CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp, color = CtrlColors.Accent)
+                        CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp, color = CtrlColors.AccentText)
                     }
                 },
             )
@@ -271,21 +271,22 @@ private fun CameraCard(cam: CameraInfo, alerts: Int, compact: Boolean, modifier:
                 Text("$alerts", color = CtrlColors.OnAccent, fontFamily = CtrlFonts.Mono, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
             }
             if (cam.hasOnvif) Badge(CtrlColors.VideoScrim) {
-                Icon(Icons.Outlined.ControlCamera, "PTZ", Modifier.size(12.dp), tint = CtrlColors.Text)
+                Icon(Icons.Outlined.ControlCamera, "PTZ", Modifier.size(12.dp), tint = CtrlColors.OnVideo)
             }
         }
 
         // Name: mono label on a dark scrim, with the live dot.
         Row(
             Modifier.align(Alignment.BottomStart).fillMaxWidth()
-                .background(Brush.verticalGradient(listOf(Color.Transparent, CtrlColors.Background.copy(alpha = 0.85f))))
+                // Camera pictures stay dark-framed in both modes so the label always reads.
+                .background(Brush.verticalGradient(listOf(Color.Transparent, CtrlColors.VideoBackdrop.copy(alpha = 0.85f))))
                 .padding(horizontal = 14.dp, vertical = if (compact) 8.dp else 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            CtrlStatusDot(if (cam.enabled) CtrlColors.Accent else CtrlColors.Inactive)
+            CtrlStatusDot(if (cam.enabled) CtrlColors.Accent else CtrlColors.Dark.inactive)
             Spacer(Modifier.width(8.dp))
             Text(
-                cam.displayName.uppercase(), color = CtrlColors.Text,
+                cam.displayName.uppercase(), color = CtrlColors.OnVideo,
                 fontFamily = CtrlFonts.Mono, fontWeight = FontWeight.SemiBold, letterSpacing = 1.2.sp,
                 fontSize = if (compact) 11.sp else 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),

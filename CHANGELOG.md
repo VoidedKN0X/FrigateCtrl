@@ -4,6 +4,24 @@ What changed in each FrigateCtrl version. Every release on the [Releases page](h
 
 To publish a new version: bump `versionCode` and `versionName` in `app/build.gradle.kts`, add a section here, and push to `main`. Pushes without a version bump only build; they don't make a release.
 
+## 3.6.0 (2026-10-25)
+
+Light mode that follows the device theme: FrigateCtrl is now light when your phone is set to light and dark when it's set to dark, switching by itself as soon as you change it (including on a schedule). There's no setting for it in the app, and wallpaper colours (Material You) still aren't used.
+
+### New
+
+- **Signal Light.** A light version of the Ctrl / Signal look: a warm off-white background (#F5F5F1), white cards with thin light-grey borders, near-black text and grey secondary text. Everything that was dark in 3.5.0 has a light counterpart, on every screen: Cameras, System health, the camera screen around the video, History around the video, the events list, PTZ controls, the camera settings sheet, the You page, Settings, sign-in and server settings, the lock screen and every PIN screen, dialogs, sheets, the date picker and menus.
+- **Follows the phone, nothing to set.** The app uses your phone's dark theme setting. The status and navigation bars follow too: the same colour as the app's background, with dark icons in light mode and light icons in dark mode. The window opens in the right colour from the first frame, so there's no dark flash when the app starts in light mode.
+
+### Changed
+
+- **Accent in light mode.** The violet fill (#B48CFF) is the same in both modes and stays on hero cards, primary buttons such as Connect and Support FrigateCtrl, the selected tab in the bottom bar, switches that are on, filled PIN squares, the play button and the selected chips, always with dark text and icons on it. Violet text and icons on the light background (the slash in FRIGATE/CTRL, "LIVE" and other status words, status dots, selected options, links such as "Mark all", the focused text field border and cursor, the outlined fingerprint key, loading spinners) use a deeper violet (#6A3BDB) so they stay readable on white. In dark mode they keep the lighter violet.
+- **Light-mode details.** Switches that are off are light grey with a grey knob. Progress meters in System health are near-black on a light track (amber from 75 %, red from 90 %, as before). Errors and "Log out" are a deeper red (#D93636). Empty PIN squares have a light-grey outline, and the keypad keys are white with a thin border. The floating bottom bar is white and slightly see-through, with a light border. The timeline colours for motion, detections and recordings are a little darker in light mode so they stand out on the light background.
+
+### Unchanged
+
+- **Video stays dark in both modes.** The live picture, recordings, the scrub preview, picture-in-picture and full-screen or landscape viewing keep their black background, and the chips and buttons drawn over the video (LIVE, PLAYBACK, zoom, Talking, mute, picture-in-picture, full screen, clip, date, events) stay dark with light text so they read on any picture. Camera tiles on the Cameras tab also keep their dark fade behind the camera name, so the name and the LIVE label read the same over any picture.
+
 ## 3.5.0 (2026-10-25)
 
 FrigateCtrl gets the new Ctrl / Signal look that every Ctrl app is moving to: near-black, one violet accent, Space Grotesk for text and JetBrains Mono for numbers and labels. Only the look changes. Every screen, switch, gesture and setting works as before.

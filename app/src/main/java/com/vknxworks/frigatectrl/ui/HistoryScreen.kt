@@ -434,7 +434,7 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit) {
                         tl.spp = (6 * 3600.0 / widthPx).coerceIn(MIN_SPP, MAX_SPP)
                         seekTo(target, play = false)
                     }
-                }) { Text(stringResource(R.string.go), color = CtrlColors.Accent) }
+                }) { Text(stringResource(R.string.go), color = CtrlColors.AccentText) }
             },
             dismissButton = { TextButton({ showDate = false }) { Text(stringResource(R.string.cancel), color = CtrlColors.Text) } },
         ) { DatePicker(dp, colors = DatePickerDefaults.colors(containerColor = CtrlColors.Surface)) }
@@ -607,9 +607,9 @@ private fun EventsList(
             )
         }
         if (unseen > 0) TextButton(onMarkAll) {
-            Icon(Icons.Outlined.DoneAll, null, Modifier.size(18.dp), tint = CtrlColors.Accent)
+            Icon(Icons.Outlined.DoneAll, null, Modifier.size(18.dp), tint = CtrlColors.AccentText)
             Spacer(Modifier.width(6.dp))
-            Text(stringResource(R.string.mark_all), color = CtrlColors.Accent)
+            Text(stringResource(R.string.mark_all), color = CtrlColors.AccentText)
         }
     }
     Row(

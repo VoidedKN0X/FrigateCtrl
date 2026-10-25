@@ -75,12 +75,14 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         App.init(this)
-        // Dark only: dark bars (light icons) over the app's own background, edge to edge.
+        // Follows the phone's dark / light setting (the activity restarts when it changes): transparent bars over
+        // the app's own background, light icons in dark mode and dark icons in light mode, edge to edge.
+        val dark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        CtrlColors.palette = if (dark) CtrlColors.Dark else CtrlColors.Light
         enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
-            navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+            statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
         )
-        window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(0xFF08080A.toInt()))
         // Applied before the first frame is drawn, not only once Compose has started.
         if (App.lock.hideScreenshots) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         // Remove temporary shared clips left over from an earlier session.
@@ -181,7 +183,7 @@ private fun Root(activity: FragmentActivity, lockVm: AppLockViewModel = viewMode
             androidx.compose.material3.Icon(
                 Icons.Outlined.Lock,
                 stringResource(R.string.pip_locked),
-                tint = CtrlColors.Accent,
+                tint = CtrlColors.AccentText,
             )
         }
         return
