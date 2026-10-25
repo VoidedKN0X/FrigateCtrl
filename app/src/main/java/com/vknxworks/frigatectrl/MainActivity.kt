@@ -59,6 +59,7 @@ import com.vknxworks.frigatectrl.ui.lock.PinRequests
 import com.vknxworks.frigatectrl.ui.lock.resetBiometricKey
 import com.vknxworks.frigatectrl.ui.clearImageCache
 import com.vknxworks.frigatectrl.data.Clips
+import com.vknxworks.frigatectrl.data.CrashReport
 import com.vknxworks.frigatectrl.ui.CameraScreen
 import com.vknxworks.frigatectrl.ui.PipState
 import com.vknxworks.frigatectrl.ui.CamerasScreen
@@ -99,9 +100,10 @@ class MainActivity : FragmentActivity() {
         val appCtx = applicationContext
         Thread { Clips.cleanup(appCtx) }.start()
         // Alert notifications: the background check and the registration with ntfy, as they were left.
+        // Never in the way of opening the app: a background-check or ntfy problem only means no alerts for now.
         if (App.prefs.isConfigured) {
-            AlertWorker.schedule(appCtx)
-            Push.start(appCtx, App.notify.enabled && App.notify.push)
+            runCatching { AlertWorker.schedule(appCtx) }
+            runCatching { Push.start(appCtx, App.notify.enabled && App.notify.push) }
         }
         // A tapped alert notification opens that camera's History (after unlocking, if the app is locked).
         DeepLinks.handle(this, intent)
@@ -183,6 +185,8 @@ private fun Root(activity: FragmentActivity, lockVm: AppLockViewModel = viewMode
         // Nothing from the old server stays behind: cached thumbnails and temporary clips.
         clearImageCache()
         val appCtx = activity.applicationContext
+        // A crash report can name the old server in an error message.
+        CrashReport.delete(appCtx)
         Thread { Clips.cleanup(appCtx, all = true) }.start()
         route = "setup"
     }
@@ -207,6 +211,12 @@ private fun Root(activity: FragmentActivity, lockVm: AppLockViewModel = viewMode
     }
 
     // While locked nothing else is composed, so live streams and audio stop too.
+    // Locked as the app closes (Back, or swiped away): the window is going, so nothing new is drawn in it. The
+    // app still starts locked next time.
+    if (lockVm.locked && App.prefs.isConfigured && (activity.isFinishing || activity.isDestroyed)) {
+        Box(Modifier.fillMaxSize().background(CtrlColors.Background))
+        return
+    }
     if (lockVm.locked && App.prefs.isConfigured && inPip) {
         // Locked while floating: no camera, only a lock. Expanding the window shows the lock screen.
         Box(Modifier.fillMaxSize().background(CtrlColors.Background), contentAlignment = Alignment.Center) {

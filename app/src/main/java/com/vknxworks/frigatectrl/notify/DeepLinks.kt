@@ -21,6 +21,11 @@ object DeepLinks {
     private val cameraName = Regex("[A-Za-z0-9_-]{1,64}")
 
     fun handle(context: Context, intent: Intent?) {
+        // Other apps can start the main screen with anything in it: a broken intent just opens the app.
+        runCatching { handleLink(context, intent) }
+    }
+
+    private fun handleLink(context: Context, intent: Intent?) {
         if (intent == null || intent.action != AlertNotifier.ACTION_OPEN_REVIEW) return
         App.init(context)
         val secret = intent.getStringExtra(AlertNotifier.EXTRA_SECRET)

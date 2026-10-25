@@ -38,6 +38,10 @@ object AlertNotifier {
 
     fun createChannels(context: Context) {
         val nm = context.getSystemService(NotificationManager::class.java) ?: return
+        runCatching { createChannels(context, nm) }
+    }
+
+    private fun createChannels(context: Context, nm: NotificationManager) {
         nm.createNotificationChannels(
             listOf(
                 NotificationChannel(CH_ALERTS, context.getString(R.string.ch_alerts), NotificationManager.IMPORTANCE_HIGH).apply {
@@ -139,7 +143,8 @@ object AlertNotifier {
         try {
             NotificationManagerCompat.from(context).notify(r.id, r.id.hashCode(), b.build())
             postSummary(context, settings)
-        } catch (_: SecurityException) {
+        } catch (_: Exception) {
+            // Permission taken away meanwhile, or Android refused the notification (a picture too large to send).
         }
     }
 
@@ -158,16 +163,16 @@ object AlertNotifier {
             .build()
         try {
             NotificationManagerCompat.from(context).notify(SUMMARY_ID, n)
-        } catch (_: SecurityException) {
+        } catch (_: Exception) {
         }
     }
 
     /** Removes the notification of a review item (opened from it, or marked reviewed). */
     fun cancel(context: Context, reviewId: String) {
-        NotificationManagerCompat.from(context).cancel(reviewId, reviewId.hashCode())
+        runCatching { NotificationManagerCompat.from(context).cancel(reviewId, reviewId.hashCode()) }
     }
 
     fun cancelAll(context: Context) {
-        NotificationManagerCompat.from(context).cancelAll()
+        runCatching { NotificationManagerCompat.from(context).cancelAll() }
     }
 }

@@ -268,6 +268,8 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit, startAt
                     Toast.makeText(ctx, ctx.getString(R.string.clip_saved, name), Toast.LENGTH_LONG).show()
                 }
                 clipStart = null
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Toast.makeText(ctx, ctx.getString(R.string.clip_failed, e.message.orEmpty()), Toast.LENGTH_LONG).show()
             } finally { clipBusy = false }
@@ -292,6 +294,8 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit, startAt
                 exportRange = null
                 clipStart = null
                 Toast.makeText(ctx, ctx.getString(R.string.export_started), Toast.LENGTH_LONG).show()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Toast.makeText(ctx, ctx.getString(R.string.export_failed, e.message.orEmpty()), Toast.LENGTH_LONG).show()
             } finally { exportBusy = false }

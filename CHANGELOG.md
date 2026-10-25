@@ -4,6 +4,23 @@ What changed in each FrigateCtrl version. Every release on the [Releases page](h
 
 To publish a new version: bump `versionCode` and `versionName` in `app/build.gradle.kts`, add a section here, and push to `main`. Pushes without a version bump only build; they don't make a release.
 
+## 3.7.1 (2026-10-25)
+
+Fixes for FrigateCtrl stopping with "keeps stopping" when you close or leave the app, and an on-device crash report to help find anything that's left.
+
+### Fixed
+
+- **Closing or leaving the app no longer crashes it.** With the app lock on, leaving FrigateCtrl (Home, Back, swiping it away, or the live view floating as picture-in-picture) locks it and closes its connections to your Frigate server. Closing an encrypted (https) connection was done on the main thread, which Android can refuse with an error that stopped the app. It's now done in the background.
+- **No crash when the app is closed while it locks.** When FrigateCtrl is closed (Back on the first screen, or swiped away from recent apps) at the moment it locks, it no longer tries to draw the lock screen in a window that's going away. It still opens locked next time.
+- **Fingerprint prompt.** If Android refuses to show the fingerprint prompt when you turn fingerprint unlock on (for example while the app is being left), FrigateCtrl says it couldn't set it up instead of stopping.
+- **Background check and notifications can't stop the app.** If Android or WorkManager refuses to schedule the background check, a check fails in an unexpected way, Android rejects a notification, or a notification channel can't be made, FrigateCtrl carries on (the next check tries again) instead of stopping. A test notification that can't be shown just doesn't appear.
+- **Pushes from ntfy and notification taps can't stop the app.** A broken broadcast from ntfy is ignored, and a broken intent that opens FrigateCtrl just opens it as usual.
+- **Leaving a screen while it's busy.** Saving or sharing a clip or export, starting a server export, and the Exports list refresh stop cleanly when you leave the screen or the app locks.
+
+### New
+
+- **Last crash report (on this phone only).** If FrigateCtrl ever stops because of an error, the error is saved on your phone with the time, the FrigateCtrl and Android version and your phone model. **Settings > Troubleshooting > Last crash report** then shows it, with **Copy** (copied as sensitive, so it isn't previewed) and **Delete**. The section only appears when there's a report. Server addresses lose any login and query string, and tokens and passwords are masked. Nothing is ever sent anywhere, and logging out deletes it.
+
 ## 3.7.0 (2026-10-25)
 
 Alert notifications with the snapshot, and Frigate's server-side exports in the app. FrigateCtrl had no notifications or background work before; both are off until you turn them on.

@@ -2,6 +2,7 @@ package com.vknxworks.frigatectrl
 
 import android.content.Context
 import androidx.annotation.StringRes
+import com.vknxworks.frigatectrl.data.CrashReport
 import com.vknxworks.frigatectrl.data.FrigateApi
 import com.vknxworks.frigatectrl.data.LockSettings
 import com.vknxworks.frigatectrl.data.Prefs
@@ -37,6 +38,8 @@ object App {
     @Synchronized
     fun init(ctx: Context) {
         if (::prefs.isInitialized) return
+        // On-device only: the last crash's stack trace for Settings > Troubleshooting. Nothing is sent anywhere.
+        CrashReport.install(ctx)
         appContext = ctx.applicationContext
         vault = LockVault(ctx.applicationContext, "frigatectrl")
         prefs = Prefs(ctx.applicationContext, vault)

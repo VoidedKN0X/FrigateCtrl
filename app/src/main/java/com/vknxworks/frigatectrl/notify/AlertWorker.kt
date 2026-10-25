@@ -28,7 +28,13 @@ class AlertWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
         // A push that arrived while this check was running asks for one more round, so nothing slips between them.
         do {
             AlertCheck.again = false
-            outcome = AlertCheck.run(applicationContext, hint)
+            outcome = try {
+                AlertCheck.run(applicationContext, hint)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                AlertCheck.Outcome.Failed
+            }
             hint = null
         } while (AlertCheck.again && outcome == AlertCheck.Outcome.Done && ++rounds < 3)
         // A push that couldn't reach the server gets one more try a little later; the periodic check just waits.
@@ -46,6 +52,11 @@ class AlertWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
 
         /** Starts, changes or stops the periodic check to match the settings. */
         fun schedule(context: Context) {
+            // WorkManager can refuse (for example too many network callbacks on some phones): alerts then wait.
+            runCatching { scheduleNow(context) }
+        }
+
+        private fun scheduleNow(context: Context) {
             App.init(context)
             val s = App.notify
             val wm = WorkManager.getInstance(context)
@@ -64,6 +75,10 @@ class AlertWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
         fun runNow(context: Context, hint: String? = null) {
             AlertCheck.again = true
             val data = if (hint != null) workDataOf(KEY_ONCE to true, KEY_HINT to hint) else workDataOf(KEY_ONCE to true)
+            runCatching { enqueueOnce(context, data) }
+        }
+
+        private fun enqueueOnce(context: Context, data: androidx.work.Data) {
             WorkManager.getInstance(context).enqueueUniqueWork(
                 ONCE,
                 // Pushes in a burst (several cameras at once) fold into one check that sees them all.

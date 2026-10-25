@@ -85,6 +85,17 @@ import com.vknxworks.frigatectrl.ui.lock.showBiometricPrompt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material.icons.outlined.BugReport
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.unit.sp
+import com.vknxworks.frigatectrl.data.CrashReport
+import com.vknxworks.frigatectrl.ui.components.CtrlAlertDialog
+import com.vknxworks.frigatectrl.ui.theme.CtrlType
 import com.vknxworks.frigatectrl.App
 import com.vknxworks.frigatectrl.R
 import com.vknxworks.frigatectrl.ui.components.CtrlSubTopBar
@@ -102,6 +113,13 @@ fun SettingsScreen(onBack: () -> Unit, onNotifications: () -> Unit = {}) {
     val ctx = LocalContext.current
     val lock = App.lock
     val bioAvailable = remember { biometricAvailable(ctx) }
+    var crash by remember { mutableStateOf(CrashReport.read(ctx)) }
+    val crashTime = remember(crash) {
+        CrashReport.time(ctx).takeIf { it > 0 }?.let {
+            java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT).format(java.util.Date(it))
+        }
+    }
+    var showCrash by remember { mutableStateOf(false) }
 
     // The Appearance group (theme and wallpaper colours) is gone: every Ctrl app is dark only now.
     Column(Modifier.fillMaxSize().background(CtrlColors.Background)) {
@@ -154,9 +172,12 @@ fun SettingsScreen(onBack: () -> Unit, onNotifications: () -> Unit = {}) {
                             // A fresh key each time, bound to the fingerprints enrolled now.
                             val cipher = vault.biometricEnrolCipher()
                             if (cipher == null) Toast.makeText(ctx, R.string.lock_fingerprint_setup_failed, Toast.LENGTH_SHORT).show()
-                            else showBiometricPrompt(act, ctx.getString(R.string.lock_fingerprint_enable_title), cipher, subtitle = ctx.getString(R.string.lock_fingerprint_enable_subtitle)) {
-                                if (!vault.finishBiometricEnrol(it)) Toast.makeText(ctx, R.string.lock_fingerprint_setup_failed, Toast.LENGTH_SHORT).show()
-                            }
+                            // Android can refuse to show the prompt (for example while the app is being left): no crash.
+                            else runCatching {
+                                showBiometricPrompt(act, ctx.getString(R.string.lock_fingerprint_enable_title), cipher, subtitle = ctx.getString(R.string.lock_fingerprint_enable_subtitle)) {
+                                    if (!vault.finishBiometricEnrol(it)) Toast.makeText(ctx, R.string.lock_fingerprint_setup_failed, Toast.LENGTH_SHORT).show()
+                                }
+                            }.onFailure { Toast.makeText(ctx, R.string.lock_fingerprint_setup_failed, Toast.LENGTH_SHORT).show() }
                         } else if (!on) {
                             vault.disableBiometric()
                         }
@@ -235,8 +256,68 @@ fun SettingsScreen(onBack: () -> Unit, onNotifications: () -> Unit = {}) {
                     s.timelineHaptics = it
                 }
             }
+
+            // Only there after FrigateCtrl stopped because of an error: the report stays on this phone.
+            if (crash != null) {
+                Section(stringResource(R.string.group_troubleshooting), footer = stringResource(R.string.crash_footer)) {
+                    GroupRow(
+                        stringResource(R.string.crash_report),
+                        crashTime,
+                        icon = Icons.Outlined.BugReport,
+                        showChevron = true,
+                        onClick = { showCrash = true },
+                    )
+                }
+            }
         }
     }
+
+    val report = crash
+    if (showCrash && report != null) {
+        CrashReportDialog(
+            report,
+            onCopy = { copySensitive(ctx, report); Toast.makeText(ctx, R.string.crash_copied, Toast.LENGTH_SHORT).show() },
+            onDelete = { CrashReport.delete(ctx); crash = null; showCrash = false },
+            onDismiss = { showCrash = false },
+        )
+    }
+}
+
+/** The last crash report in full, to copy into a bug report, or delete. */
+@Composable
+private fun CrashReportDialog(report: String, onCopy: () -> Unit, onDelete: () -> Unit, onDismiss: () -> Unit) {
+    CtrlAlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Outlined.BugReport, null) },
+        title = { Text(stringResource(R.string.crash_report)) },
+        text = {
+            Column {
+                Text(stringResource(R.string.crash_intro), style = MaterialTheme.typography.bodySmall)
+                Spacer(Modifier.height(10.dp))
+                SelectionContainer(
+                    Modifier.heightIn(max = 320.dp).verticalScroll(rememberScrollState())
+                        .horizontalScroll(rememberScrollState()),
+                ) {
+                    Text(report, style = CtrlType.Mono, fontSize = 10.sp, lineHeight = 13.sp, color = CtrlColors.Text, softWrap = false)
+                }
+            }
+        },
+        confirmButton = { TextButton(onCopy) { Text(stringResource(R.string.crash_copy), color = CtrlColors.AccentText) } },
+        dismissButton = {
+            Row {
+                TextButton(onDelete) { Text(stringResource(R.string.crash_delete), color = CtrlColors.Error) }
+                TextButton(onDismiss) { Text(stringResource(R.string.close), color = CtrlColors.Text) }
+            }
+        },
+    )
+}
+
+/** Copied as sensitive, so Android doesn't preview it. */
+private fun copySensitive(ctx: android.content.Context, text: String) {
+    val cm = ctx.getSystemService(android.content.ClipboardManager::class.java) ?: return
+    val clip = android.content.ClipData.newPlainText(ctx.getString(R.string.crash_report), text)
+    clip.description.extras = android.os.PersistableBundle().apply { putBoolean("android.content.extra.IS_SENSITIVE", true) }
+    runCatching { cm.setPrimaryClip(clip) }
 }
 
 // Settings rows look the same as in every Ctrl app (see ui/settings/SettingsKit.kt).

@@ -433,4 +433,12 @@
     <string name="export_delete_title">Delete export?</string>
     <string name="export_delete_body">%1$s is deleted from the Frigate server. Copies you saved to your phone stay.</string>
     <string name="error_admin_needed">Your Frigate user needs the admin role for this</string>
+    <string name="group_troubleshooting">Troubleshooting</string>
+    <string name="crash_report">Last crash report</string>
+    <string name="crash_footer">FrigateCtrl stopped because of an error. The report stays on this phone and is never sent anywhere; copy it into a bug report if you like.</string>
+    <string name="crash_intro">What went wrong, with the time, the app and Android version and your phone model. Server logins and tokens are left out.</string>
+    <string name="crash_copy">Copy</string>
+    <string name="crash_copied">Crash report copied</string>
+    <string name="crash_delete">Delete</string>
+    <string name="close">Close</string>
 </resources>

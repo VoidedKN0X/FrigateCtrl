@@ -140,6 +140,7 @@ Turn it on under **Settings > Privacy and security > App lock** (tap your profil
 - **Push:** only through the ntfy app and your own ntfy server, and only if you turn it on. A push is a wake-up call; nothing in it is shown.
 - **Two-way talk:** the built-in web view it runs in has online page checks and usage reports turned off.
 - **Links:** the Support FrigateCtrl button and the Report a bug, Source code and Licence rows on the You page (tap your profile picture) open GitHub or gnu.org in your browser, only when you tap them.
+- **Crash reports stay on your phone.** If FrigateCtrl stops because of an error, the error is saved on the phone only (no logins or tokens in it) and shows as **Last crash report** in Settings, to copy into a bug report or delete. Nothing is ever sent anywhere.
 - Your login is stored encrypted on your phone. **Hide in screenshots** and **Hide in recent apps** (Settings > Privacy and security, both off by default) keep your cameras out of screenshots, screen recordings and the recent-apps preview.
 
 ## Build from source

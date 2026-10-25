@@ -112,7 +112,15 @@ object Push {
  * Frigate server answers is notified.
  */
 class PushReceiver : BroadcastReceiver() {
+    // A broadcast must never crash FrigateCtrl (it can arrive while the app isn't running at all).
     override fun onReceive(context: Context, intent: Intent) {
+        try {
+            handle(context, intent)
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun handle(context: Context, intent: Intent) {
         val token = intent.getStringExtra(UnifiedPush.EXTRA_TOKEN) ?: return
         if (token != UnifiedPush.token(context)) return
         if (Build.VERSION.SDK_INT >= 34) {
