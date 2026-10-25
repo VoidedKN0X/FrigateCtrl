@@ -1,17 +1,10 @@
 package com.vknxworks.frigatectrl.data
 
 import android.content.Context
-import androidx.annotation.StringRes
-import com.vknxworks.frigatectrl.R
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-
-/** The theme choices every Ctrl app offers. Stored by position, so new ones go at the end. */
-enum class ThemeMode(@StringRes val label: Int) {
-    System(R.string.theme_system), Light(R.string.theme_light), Dark(R.string.theme_dark), Black(R.string.theme_black),
-}
 
 /** User preferences, backed by SharedPreferences and observable from Compose. */
 class Settings(context: Context) {
@@ -26,30 +19,15 @@ class Settings(context: Context) {
             leftover.forEach { editor.remove(it) }
             editor.apply()
         }
-        // Before 3.3.2, pure black was a separate switch: Dark with it on is now the Pure black theme.
-        if (sp.contains("amoled")) {
-            val edit = sp.edit().remove("amoled")
-            if (sp.getBoolean("amoled", false) && sp.getInt("theme", 0) == ThemeMode.Dark.ordinal) edit.putInt("theme", ThemeMode.Black.ordinal)
-            edit.apply()
+        // The in-app theme choices are gone (the app follows the phone's dark / light setting since 3.6.0):
+        // nothing of them stays stored.
+        if (listOf("theme", "dynamic_color", "amoled").any(sp::contains)) {
+            sp.edit().remove("theme").remove("dynamic_color").remove("amoled").apply()
         }
     }
 
     private fun bool(key: String, def: Boolean) = mutableStateOf(sp.getBoolean(key, def))
     private fun int(key: String, def: Int) = mutableIntStateOf(sp.getInt(key, def))
-
-    // Appearance
-    private val _theme = mutableStateOf(ThemeMode.entries[sp.getInt("theme", 0).coerceIn(0, ThemeMode.entries.size - 1)])
-    var theme: ThemeMode
-        get() = _theme.value
-        set(v) { _theme.value = v; sp.edit().putInt("theme", v.ordinal).apply() }
-
-    private val _dynamic = bool("dynamic_color", true)
-    var dynamicColor: Boolean
-        get() = _dynamic.value
-        set(v) { _dynamic.value = v; sp.edit().putBoolean("dynamic_color", v).apply() }
-
-    /** True black backgrounds (the "Pure black" theme). */
-    val pureBlack: Boolean get() = theme == ThemeMode.Black
 
     // Cameras
     /** 0 = automatic, otherwise a fixed number of columns. */

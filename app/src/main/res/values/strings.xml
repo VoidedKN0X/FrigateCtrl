@@ -80,16 +80,8 @@
     <string name="hide_screenshots_subtitle">Screenshots and screen recordings show a blank screen</string>
     <string name="hide_recents">Hide in recent apps</string>
     <string name="hide_recents_subtitle">The recent apps view shows a blank card instead of the app</string>
-    <string name="group_appearance">Appearance</string>
     <string name="group_privacy">Privacy and security</string>
     <string name="theme">Theme</string>
-    <string name="theme_system">Follow system</string>
-    <string name="theme_dark">Dark</string>
-    <string name="theme_light">Light</string>
-    <string name="theme_black">Pure black</string>
-    <string name="dynamic_colour">Use wallpaper colours</string>
-    <string name="dynamic_colour_subtitle">Replaces the default colours with ones from your wallpaper</string>
-    <string name="lock_title">FrigateCtrl is locked</string>
     <string name="lock_fingerprint_title">Unlock FrigateCtrl</string>
     <string name="lock_fingerprint_subtitle">Confirm it\'s you to see your cameras</string>
     <string name="lock_forgot_body">The PIN can\'t be recovered, because your login is encrypted with it. FrigateCtrl will log out and forget the server, the app lock and anything kept from the server. Your Frigate server isn\'t changed.</string>
@@ -327,7 +319,6 @@
     <string name="list_separator">" · "</string>
 
     <!-- Whole sentences instead of joined pieces -->
-    <string name="list_separator_wide">"  ·  "</string>
     <string name="storage_with_rate">%1$s · %2$s/h</string>
     <string name="event_time_duration">%1$s · %2$s</string>
 

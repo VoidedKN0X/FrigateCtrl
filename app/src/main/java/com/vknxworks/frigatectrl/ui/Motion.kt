@@ -9,6 +9,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.lifecycle.Lifecycle
+import kotlinx.coroutines.flow.first
 
 /** Springy shrink while pressed — makes cards and buttons feel physical. */
 @Composable
@@ -20,4 +22,12 @@ fun Modifier.pressScale(source: MutableInteractionSource, pressed: Float = 0.96f
         label = "pressScale",
     )
     return this.graphicsLayer { scaleX = scale; scaleY = scale }
+}
+
+/**
+ * Waits while the app is in the background (stopped), so repeating refreshes don't keep asking the server
+ * while you're not looking. Picture-in-picture counts as on screen.
+ */
+suspend fun Lifecycle.awaitStarted() {
+    currentStateFlow.first { it.isAtLeast(Lifecycle.State.STARTED) }
 }

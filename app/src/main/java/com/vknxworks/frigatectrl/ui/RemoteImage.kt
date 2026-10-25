@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import com.vknxworks.frigatectrl.App
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -51,12 +52,14 @@ fun RemoteImage(
     placeholder: @Composable () -> Unit = {},
 ) {
     var bmp by remember { mutableStateOf<ImageBitmap?>(null) }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(url, refreshMs) {
         if (url == null) return@LaunchedEffect
         if (refreshMs <= 0) {
             loadBitmap(url)?.let { bmp = it; onBitmap?.invoke(it) }
         } else {
             while (true) {
+                lifecycle.awaitStarted()
                 val sep = if (url.contains('?')) '&' else '?'
                 loadBitmap("$url${sep}_=${System.currentTimeMillis()}", useCache = false)?.let { bmp = it; onBitmap?.invoke(it) }
                 delay(refreshMs)

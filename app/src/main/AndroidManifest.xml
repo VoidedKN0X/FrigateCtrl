@@ -80,6 +80,14 @@
         <meta-data
             android:name="android.webkit.WebView.MetricsOptOut"
             android:value="true" />
+        <!-- Debug hooks other apps could send broadcasts to (WorkManager's adb diagnostics and the build tools'
+             profile installer): FrigateCtrl doesn't need them, so they aren't in the app. -->
+        <receiver
+            android:name="androidx.work.impl.diagnostics.DiagnosticsReceiver"
+            tools:node="remove" />
+        <receiver
+            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+            tools:node="remove" />
         <!-- No downloadable emoji font: don't let androidx.emoji2 look one up from a font provider
              at start-up. Emoji are drawn with the phone's own emoji font instead. -->
         <provider

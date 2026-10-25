@@ -182,9 +182,11 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit, startAt
         try { segments = api.recordings(camera, a, b) } catch (_: Exception) {}
         try { reviews = api.reviews(camera, a, b) } catch (_: Exception) {}
     }
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(Unit) {
         while (true) {
             delay(30_000)
+            lifecycle.awaitStarted()
             if (nowSec() - tl.center < 43200) refreshTick++
         }
     }

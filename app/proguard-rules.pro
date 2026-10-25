@@ -13,7 +13,7 @@
 # App data/model classes (built from JSON by hand; kept intact in case anything reflects on them).
 -keep class com.vknxworks.frigatectrl.data.** { *; }
 
-# Keep enum helpers used via entries/valueOf (ThemeMode, TalkState).
+# Keep enum helpers used via entries/valueOf (TalkState and others).
 -keepclassmembers enum * {
     public static **[] values();
     public static ** valueOf(java.lang.String);

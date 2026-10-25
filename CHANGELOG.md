@@ -4,6 +4,23 @@ What changed in each FrigateCtrl version. Every release on the [Releases page](h
 
 To publish a new version: bump `versionCode` and `versionName` in `app/build.gradle.kts`, add a section here, and push to `main`. Pushes without a version bump only build; they don't make a release.
 
+## 3.7.2 (2026-10-25)
+
+A cleanup and privacy pass after 3.7.1. Nothing changes in how FrigateCtrl looks or works.
+
+### Changed
+
+- **Less background traffic.** Camera pictures that refresh by themselves (camera tiles and the live view's snapshot fallback), System health, the Exports list and the History timeline stop asking your Frigate server for updates while FrigateCtrl is in the background, and pick up again as soon as you come back. Picture-in-picture still counts as on screen, so the floating live view keeps updating.
+
+### Security
+
+- **Fewer ways in for other apps.** Two debugging hooks that came with Android libraries (WorkManager's diagnostics receiver and the profile installer's receiver) could be sent broadcasts by other apps. FrigateCtrl doesn't use them, so they're removed from the app.
+
+### Fixed
+
+- **Old theme settings removed.** The theme choices from before 3.6.0 (light, dark, pure black and wallpaper colours) were still kept in FrigateCtrl's settings although nothing used them. They're deleted from your phone the first time 3.7.2 starts.
+- **Internal cleanup:** removed unused code and text left over from the old theme picker, and System health's refresh stops cleanly when you leave it.
+
 ## 3.7.1 (2026-10-25)
 
 Fixes for FrigateCtrl stopping with "keeps stopping" when you close or leave the app, and an on-device crash report to help find anything that's left.
