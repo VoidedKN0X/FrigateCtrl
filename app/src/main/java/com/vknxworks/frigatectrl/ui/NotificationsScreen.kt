@@ -364,7 +364,13 @@ private suspend fun sendTest(ctx: Context, camera: String?) {
         thumbPath = null,
     )
     val pic = camera?.let { c ->
-        App.api.bytes(App.api.latestJpg(c, 720))?.let { android.graphics.BitmapFactory.decodeByteArray(it, 0, it.size) }
+        App.api.bytes(App.api.latestJpg(c, 720))?.let { runCatching { android.graphics.BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() }
     }
-    AlertNotifier.post(ctx, r, App.notify, test = true, picture = pic)
+    try {
+        AlertNotifier.post(ctx, r, App.notify, test = true, picture = pic)
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        throw e
+    } catch (_: Exception) {
+        // A test that can't be shown just doesn't appear.
+    }
 }

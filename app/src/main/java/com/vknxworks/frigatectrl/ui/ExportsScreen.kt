@@ -86,6 +86,7 @@ import com.vknxworks.frigatectrl.ui.components.topDivider
 import com.vknxworks.frigatectrl.ui.theme.CtrlColors
 import com.vknxworks.frigatectrl.ui.theme.CtrlShape
 import com.vknxworks.frigatectrl.ui.theme.CtrlType
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -117,6 +118,8 @@ fun ExportsScreen(onYou: () -> Unit, bottomPadding: Dp = 0.dp) {
         while (true) {
             try {
                 exports = App.api.exports(); error = null
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 error = e.message ?: ctx.getString(R.string.exports_load_failed)
             }
@@ -133,6 +136,8 @@ fun ExportsScreen(onYou: () -> Unit, bottomPadding: Dp = 0.dp) {
             try {
                 if (share) Clips.shareExport(ctx, e)
                 else Toast.makeText(ctx, ctx.getString(R.string.clip_saved, Clips.saveExport(ctx, e)), Toast.LENGTH_LONG).show()
+            } catch (ex: CancellationException) {
+                throw ex
             } catch (ex: Exception) {
                 Toast.makeText(ctx, ctx.getString(R.string.clip_failed, ex.message.orEmpty()), Toast.LENGTH_LONG).show()
             } finally { busyId = null }

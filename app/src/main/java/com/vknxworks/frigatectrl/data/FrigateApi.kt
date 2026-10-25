@@ -133,11 +133,14 @@ class FrigateApi(private val prefs: Prefs) {
      */
     fun forgetSession() {
         token = ""
-        clientCache?.second?.let { c ->
-            c.dispatcher.cancelAll()
-            c.connectionPool.evictAll()
-        }
+        val c = clientCache?.second
         clientCache = null
+        // Off the main thread: closing an encrypted connection sends a last TLS message, which Android refuses
+        // on the main thread (NetworkOnMainThreadException). Locking runs on the main thread as you leave.
+        if (c != null) Thread {
+            runCatching { c.dispatcher.cancelAll() }
+            runCatching { c.connectionPool.evictAll() }
+        }.start()
     }
 
     fun reload() {
