@@ -4,6 +4,37 @@ What changed in each FrigateCtrl version. Every release on the [Releases page](h
 
 To publish a new version: bump `versionCode` and `versionName` in `app/build.gradle.kts`, add a section here, and push to `main`. Pushes without a version bump only build; they don't make a release.
 
+## 3.7.0 (2026-10-25)
+
+Alert notifications with the snapshot, and Frigate's server-side exports in the app. FrigateCtrl had no notifications or background work before; both are off until you turn them on.
+
+### New
+
+- **Alert notifications.** Turn them on under **Settings > Notifications** (behind your profile picture). FrigateCtrl asks Android for permission to show notifications at that moment, and only then. Each new alert gets its own notification with the snapshot of what was seen as a large picture, the objects (person, car, dog, ...), the camera and the time. Tapping it opens FrigateCtrl at that camera's History a few seconds before the alert started (your event pre-roll), and removes the notification. With the app lock on, you unlock first and History opens right after. Several alerts are stacked together in the notification shade.
+- **Background check.** FrigateCtrl asks your Frigate server for new review items every 15 minutes, or every 30 minutes, 1, 2 or 6 hours, only with a network connection. Android can delay it to save battery. Only alerts from the moment you turn notifications on are notified, at most eight per check (newest first), and a check never looks back more than six hours, so turning the phone on after a night off doesn't bring a flood.
+- **Instant alerts with ntfy (optional).** Turn on **Instant alerts with ntfy** and FrigateCtrl registers with the ntfy app and shows its push address, with a copy button. Frigate can't send to ntfy itself, so a Home Assistant automation or an MQTT-to-ntfy bridge forwards Frigate's `frigate/reviews` messages to that address (the README has a short example). A push only wakes FrigateCtrl up: it then asks your Frigate server what's new, right away. A push can carry a review id or Frigate's whole review message, and that review item is fetched even if it isn't in the list yet. Pushes and the background check share one list of what was already notified, so an alert never notifies twice. The page warns when ntfy isn't installed (with a link to get it), when ntfy's server can't be reached, when registration failed (tap to try again), and when ntfy may be stopped in the background by battery saving.
+- **What to notify about.** **Alerts only** (the default) or **Alerts and detections**. A detection that later becomes an alert notifies once more, as an alert.
+- **Per-camera and per-object filters.** Every camera and every object label Frigate has seen has its own switch. Cameras added later notify until you switch them off. An alert notifies if at least one of its objects is switched on.
+- **Quiet hours.** Pick a range (for example 23:00 to 07:00, past midnight works); alerts in it still arrive, but without sound or vibration.
+- **Notification channels per severity.** Alerts (high importance) and detections (normal importance) are separate channels, so you can give them their own sound in Android's settings; **Sound and importance** opens them.
+- **Test notification.** Sends a notification that looks like a real alert, with the latest picture from one of your cameras.
+- **Alerts while locked** (only shown with the app lock on). Off by default, which is the most secure: your login stays encrypted with your app PIN and the background check waits until you unlock, then catches up right away. On: your login is encrypted with the phone's key only, so alerts arrive while FrigateCtrl is locked. Turning the app lock off and on again starts from the secure setting.
+- **Exports tab.** A new tab between Cameras and System health lists the exports on your Frigate server, newest first, with their thumbnail, name, camera and time, and filters by camera. Exports Frigate is still making show "Being made" with a spinner and turn ready by themselves (the list refreshes every 3 seconds while one is in progress, otherwise every 30 seconds).
+- **Export a range on the server.** In a camera's History, mark a range with the scissors as for a clip and tap the new cloud button, or pick **Export on server** in an event's menu. Give it a name if you like and choose real time or a 25× **time-lapse**; Frigate makes the MP4 on the server, where it also shows on Frigate's own Exports page. Errors from Frigate (such as no recordings in that range) are shown as Frigate words them.
+- **Play, save, share, rename and delete exports.** Tap an export to play it full screen with seek controls. Its menu saves it to Movies/FrigateCtrl, shares it through the share sheet (only the temporary copy in FrigateCtrl's own cache is shared, and it's deleted within an hour), renames it, or deletes it from the server after you confirm. Renaming works with Frigate 0.14 and 0.15 (name in the address) and 0.16 (name in the request). Renaming and deleting need an admin Frigate user; FrigateCtrl says so if yours isn't.
+
+### Security
+
+- **Pushes can't make FrigateCtrl show anything.** Every broadcast from ntfy must carry the secret token of FrigateCtrl's registration (and, on Android 14 and newer, a sender that says it's another app is refused). Nothing in a push is shown: at most a review id is taken from it, and only letters, digits, dots, dashes and underscores are passed on to your server.
+- **Notification taps can't be faked.** FrigateCtrl's main screen can be opened by other apps (it's the launcher), so it only opens a camera's History from an intent that carries a random secret kept in FrigateCtrl's own storage. The camera name is checked too.
+- **On the lock screen**, notifications only say "New alert" or "New detection": no camera, objects or picture.
+- **Logging out** turns notifications off, removes the ntfy registration, stops the background check and clears every FrigateCtrl notification.
+
+### Changed
+
+- **Settings** has a new **Notifications** section at the top, showing whether alert notifications are on.
+- **README**: Notifications section with the optional ntfy setup, and the new features and requirements.
+
 ## 3.6.0 (2026-10-25)
 
 Light mode that follows the device theme: FrigateCtrl is now light when your phone is set to light and dark when it's set to dark, switching by itself as soon as you change it (including on a schedule). There's no setting for it in the app, and wallpaper colours (Material You) still aren't used.

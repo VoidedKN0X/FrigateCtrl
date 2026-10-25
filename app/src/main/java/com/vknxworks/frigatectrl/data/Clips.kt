@@ -46,16 +46,34 @@ object Clips {
 
     /** Download [start]..[end] of [camera] into the app's private cache. */
     private suspend fun download(context: Context, camera: String, start: Double, end: Double): File =
+        downloadUrl(context, App.api.clipUrl(camera, start, end), fileName(camera, start))
+
+    /** A server export's file name: its own name when it has one, made safe, else camera and time. */
+    private fun exportFileName(e: ExportItem): String {
+        val base = e.name.replace(Regex("[^A-Za-z0-9 _-]"), "_").trim().replace(' ', '_').take(80)
+        return if (base.isBlank()) fileName(e.camera, e.date) else "$base.mp4"
+    }
+
+    /** Saves a server export to Movies/FrigateCtrl. Returns the display name. */
+    suspend fun saveExport(context: Context, e: ExportItem): String =
+        saveFile(context, downloadUrl(context, App.api.exportVideoUrl(e), exportFileName(e)))
+
+    /** Downloads a server export and opens the Android share sheet. */
+    suspend fun shareExport(context: Context, e: ExportItem) =
+        shareFile(context, downloadUrl(context, App.api.exportVideoUrl(e), exportFileName(e)))
+
+    /** Downloads [url] from the Frigate server into the app's private cache as [name]. */
+    private suspend fun downloadUrl(context: Context, url: String, name: String): File =
         withContext(Dispatchers.IO) {
             val dir = clipDir(context).apply { mkdirs() }
             // Old shared clips are only needed until the receiving app has read them.
             cleanup(context)
-            val out = File(dir, fileName(camera, start))
+            val out = File(dir, name)
             if (out.canonicalFile.parentFile != dir.canonicalFile) throw Exception(App.str(R.string.clip_error_name))
             try {
                 // Frigate stitches the clip together on request, which can take a while for long ranges.
                 val client = App.api.http.newBuilder().readTimeout(5, TimeUnit.MINUTES).build()
-                client.newCall(Request.Builder().url(App.api.clipUrl(camera, start, end)).build()).execute().use { r ->
+                client.newCall(Request.Builder().url(url).build()).execute().use { r ->
                     if (!r.isSuccessful) throw Exception(if (r.code == 404) App.str(R.string.clip_error_no_recordings) else App.str(R.string.error_http, r.code))
                     val body = r.body ?: throw Exception(App.str(R.string.error_empty_response))
                     out.outputStream().use { body.byteStream().copyTo(it) }
@@ -70,8 +88,10 @@ object Clips {
         }
 
     /** Saves the clip to Movies/FrigateCtrl. Returns the display name. */
-    suspend fun save(context: Context, camera: String, start: Double, end: Double): String {
-        val file = download(context, camera, start, end)
+    suspend fun save(context: Context, camera: String, start: Double, end: Double): String =
+        saveFile(context, download(context, camera, start, end))
+
+    private suspend fun saveFile(context: Context, file: File): String {
         return withContext(Dispatchers.IO) {
             val resolver = context.contentResolver
             var uri: android.net.Uri? = null
@@ -102,8 +122,10 @@ object Clips {
     }
 
     /** Downloads the clip and opens the Android share sheet. */
-    suspend fun share(context: Context, camera: String, start: Double, end: Double) {
-        val file = download(context, camera, start, end)
+    suspend fun share(context: Context, camera: String, start: Double, end: Double) =
+        shareFile(context, download(context, camera, start, end))
+
+    private fun shareFile(context: Context, file: File) {
         val uri = FileProvider.getUriForFile(context, context.packageName + ".clips", file)
         val send = Intent(Intent.ACTION_SEND).apply {
             type = "video/mp4"

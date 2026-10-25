@@ -7,6 +7,16 @@
     <!-- Two-way talk only; asked for the first time you tap the talk button. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <!-- Alert notifications; asked for when you turn notifications on. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Push through ntfy (UnifiedPush) only: FrigateCtrl registers with the ntfy app and nothing else. -->
+    <queries>
+        <package android:name="io.heckel.ntfy" />
+        <intent>
+            <action android:name="org.unifiedpush.android.distributor.REGISTER" />
+        </intent>
+    </queries>
 
     <application
         android:allowBackup="false"
@@ -29,6 +39,30 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Wake-up pushes handed over by ntfy. Exported because ntfy is another app; every broadcast must carry
+             the secret token of FrigateCtrl's registration or it's ignored. A push only makes the app ask your
+             own Frigate server for new alerts: nothing in it is shown. -->
+        <receiver
+            android:name=".notify.PushReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="org.unifiedpush.android.connector.MESSAGE" />
+                <action android:name="org.unifiedpush.android.connector.UNREGISTERED" />
+                <action android:name="org.unifiedpush.android.connector.NEW_ENDPOINT" />
+                <action android:name="org.unifiedpush.android.connector.REGISTRATION_FAILED" />
+                <action android:name="org.unifiedpush.android.connector.TEMP_UNAVAILABLE" />
+            </intent-filter>
+        </receiver>
+        <!-- ntfy binds to this for a few seconds before delivering a message, so FrigateCtrl can check at once. -->
+        <service
+            android:name=".notify.RaiseToForegroundService"
+            android:exported="true"
+            tools:ignore="ExportedService">
+            <intent-filter>
+                <action android:name="org.unifiedpush.android.connector.RAISE_TO_FOREGROUND" />
+            </intent-filter>
+        </service>
 
         <provider
             android:name="androidx.core.content.FileProvider"

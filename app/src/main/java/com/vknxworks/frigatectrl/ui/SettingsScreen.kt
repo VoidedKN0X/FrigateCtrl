@@ -79,6 +79,7 @@ import com.vknxworks.frigatectrl.ui.settings.GroupRow
 import com.vknxworks.frigatectrl.ui.settings.GroupSwitch
 import android.widget.Toast
 import androidx.compose.material.icons.outlined.Layers
+import androidx.compose.material.icons.outlined.Notifications
 import com.vknxworks.frigatectrl.data.lock.LockVault
 import com.vknxworks.frigatectrl.ui.lock.showBiometricPrompt
 import kotlinx.coroutines.Dispatchers
@@ -95,7 +96,7 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 /** Settings, opened from the You page (tap your profile picture). Server, log out and About are on the You page. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(onBack: () -> Unit) {
+fun SettingsScreen(onBack: () -> Unit, onNotifications: () -> Unit = {}) {
     val s = App.settings
     val cs = MaterialTheme.colorScheme
     val ctx = LocalContext.current
@@ -114,6 +115,16 @@ fun SettingsScreen(onBack: () -> Unit) {
             Modifier.fillMaxSize().verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp).navigationBarsPadding().padding(bottom = 32.dp),
         ) {
+
+            Section(stringResource(R.string.notifications)) {
+                GroupRow(
+                    stringResource(R.string.notifications),
+                    stringResource(if (App.notify.enabled) R.string.notifications_on_subtitle else R.string.notifications_off_subtitle),
+                    icon = Icons.Outlined.Notifications,
+                    showChevron = true,
+                    onClick = onNotifications,
+                )
+            }
 
             Section(
                 stringResource(R.string.group_privacy),

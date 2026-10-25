@@ -38,9 +38,31 @@ class Prefs(context: Context, private val vault: LockVault) {
 
     /** Null while locked: nothing is saved then (the old value stays). */
     private fun seal(v: String): String? = when {
-        v.isEmpty() || !vault.enabled -> v
+        v.isEmpty() || !sealing -> v
         else -> vault.seal(v)
     }
+
+    /** The login is also encrypted with the app lock's key (the lock is on and alerts while locked are off). */
+    private val sealing: Boolean get() = vault.enabled && !alertsWhileLocked
+
+    /**
+     * "Alerts while locked": with the app lock on, the login stays encrypted with the phone's key only, so the
+     * background check can still sign in while FrigateCtrl is locked. Off (the default) is the most secure: the
+     * login is also encrypted with your PIN and alerts wait until you unlock. Only changed while unlocked.
+     */
+    var alertsWhileLocked: Boolean
+        get() = sp.getBoolean("alerts_while_locked", false)
+        set(v) {
+            if (v == alertsWhileLocked) return
+            val p = password
+            val t = token
+            sp.edit().putBoolean("alerts_while_locked", v).commit()
+            password = p
+            token = t
+        }
+
+    /** The background check can't read the login right now (sealed with the app lock, and locked). */
+    val loginSealedAway: Boolean get() = sealing && !vault.isOpen
 
     /** The app lock was just turned on (unlocked): encrypt the saved login with its key too. */
     fun sealCredentials() {
@@ -55,7 +77,7 @@ class Prefs(context: Context, private val vault: LockVault) {
      * between setting up the lock and encrypting the login), encrypt it now. Values already sealed stay as they are.
      */
     fun sealIfNeeded() {
-        if (!vault.enabled) return
+        if (!sealing) return
         for (key in listOf("password", "token")) {
             val stored = decrypt(sp.getString(key, null))
             if (stored.isEmpty() || LockVault.isSealed(stored)) continue
@@ -68,6 +90,8 @@ class Prefs(context: Context, private val vault: LockVault) {
         val p = password
         val t = token
         disable()
+        // The choice only applies while the lock is on: turning the lock on again starts from the most secure.
+        sp.edit().remove("alerts_while_locked").commit()
         password = p
         token = t
     }
