@@ -19,6 +19,9 @@ Part of the [Ctrl series](#the-ctrl-series) by VKNXWorks.
 - **History** with a precise timeline you can pinch to zoom, showing recordings, motion and alerts
 - **Events list**: swipe to mark reviewed, mark all, filter by unreviewed or alerts
 - **Save or share clips** of any event or time range
+- **Alert notifications** with the snapshot, camera, objects and time; tap one to open that moment in History. A background check every 15 minutes or more, and optional instant push through your own ntfy server
+- **Notification filters**: per camera and per object, alerts only or alerts and detections, quiet hours and a test notification
+- **Server exports**: export a range from the History timeline (real time or 25× time-lapse) on your Frigate server, follow its progress, then play, save, share, rename or delete it from the Exports tab
 - **Camera switches**: camera on/off, detection, recording, snapshots, audio detection and notifications
 - **System health**: CPU, GPU, memory, detector speed, camera FPS and disk usage
 - **App lock** with its own PIN and optional fingerprint unlock; your login stays encrypted while the app is locked
@@ -35,6 +38,8 @@ Coming soon.
 - Frigate 0.14 or newer
 - go2rtc set up in Frigate for live video (it is by default). Without it, you get refreshing snapshots instead.
 - Microphone permission, only if you use two-way talk
+- Notification permission, only if you turn on alert notifications; [ntfy](https://ntfy.sh) only for instant alerts
+- An admin Frigate user to rename or delete exports
 - **Google-free and de-Googled:** no Google Play services, Firebase or other Google services, and the app never contacts Google. It works the same on de-Googled phones (GrapheneOS, CalyxOS, /e/OS, LineageOS without Google apps).
 
 ## Install
@@ -69,6 +74,48 @@ Settings, the server and login, log out and About are behind your profile pictur
 - **Talk button missing:** it only shows when the camera has a speaker, and go2rtc's WebRTC port (8555) must be reachable from your phone.
 - **Talk connects at home but not away from it:** talk only uses the STUN/TURN servers listed under `go2rtc: webrtc: ice_servers:` in your Frigate config; the app never contacts a public STUN server on its own. Add one there (your own, or a public one if you're happy for it to see your IP address).
 
+## Notifications
+
+Turn them on under **Settings > Notifications** (tap your profile picture, then **Settings**). FrigateCtrl asks for permission to show notifications then.
+
+- **Background check:** FrigateCtrl asks your Frigate server for new alerts (and detections, if you choose) every 15, 30 or 60 minutes or less often. Android can delay it to save battery. Only alerts from the moment you turn notifications on are notified.
+- **Each notification** shows the snapshot, the camera, what was seen (person, car, ...) and the time. Tapping it opens that camera's History a few seconds before the alert. On the lock screen only "New alert" shows.
+- **Filters:** switch cameras and objects off, pick alerts only or alerts and detections, and set quiet hours (alerts arrive silently). Alerts and detections have their own channels in Android's settings for sound and importance.
+- **With the app lock on**, alerts wait until you unlock FrigateCtrl, because your login is encrypted with your PIN. Turn on **Alerts while locked** on the same page to keep your login encrypted with the phone's key only, so alerts arrive while the app is locked.
+
+### Instant alerts with ntfy (optional)
+
+Frigate can't send to ntfy itself, so instant alerts need a small forwarder. Without it, everything works through the background check.
+
+1. Install [ntfy](https://f-droid.org/packages/io.heckel.ntfy/) and connect it to your ntfy server.
+2. In **Settings > Notifications**, turn on **Instant alerts with ntfy** and copy the **push address**. Keep it private: anyone who knows it can wake the app up (they can't make it show anything).
+3. Forward Frigate's `frigate/reviews` MQTT messages to that address, for example with a Home Assistant automation:
+
+   ```yaml
+   rest_command:
+     frigatectrl_push:
+       url: "https://ntfy.example.com/upXXXXXXXX?up=1"   # your push address
+       method: POST
+       payload: "{{ review_id }}"
+
+   automation:
+     - alias: FrigateCtrl push
+       triggers:
+         - trigger: mqtt
+           topic: frigate/reviews
+       conditions:
+         - condition: template
+           value_template: "{{ trigger.payload_json.type == 'new' }}"
+       actions:
+         - action: rest_command.frigatectrl_push
+           data:
+             review_id: "{{ trigger.payload_json.after.id }}"
+   ```
+
+   Any MQTT-to-HTTP bridge works too, e.g. `mosquitto_sub -t frigate/reviews | while read -r m; do curl -s -d "$m" "<push address>"; done`.
+
+A push only wakes FrigateCtrl up: it then asks your Frigate server what's new, so the alert, snapshot and filters are always your server's. The body can be empty, a review id, or Frigate's whole review message.
+
 ## App lock
 
 Turn it on under **Settings > Privacy and security > App lock** (tap your profile picture at the top right, then **Settings**). It's off until you turn it on.
@@ -90,6 +137,7 @@ Turn it on under **Settings > Privacy and security > App lock** (tap your profil
 **Telemetry-free.** FrigateCtrl has no analytics, crash reporting, usage stats or tracking of any kind. It only talks to the servers you add.
 
 - **Servers it talks to:** your own Frigate server, and, for two-way talk, only the STUN/TURN servers listed in your go2rtc config. It never contacts a public STUN server on its own.
+- **Push:** only through the ntfy app and your own ntfy server, and only if you turn it on. A push is a wake-up call; nothing in it is shown.
 - **Two-way talk:** the built-in web view it runs in has online page checks and usage reports turned off.
 - **Links:** the Support FrigateCtrl button and the Report a bug, Source code and Licence rows on the You page (tap your profile picture) open GitHub or gnu.org in your browser, only when you tap them.
 - Your login is stored encrypted on your phone. **Hide in screenshots** and **Hide in recent apps** (Settings > Privacy and security, both off by default) keep your cameras out of screenshots, screen recordings and the recent-apps preview.

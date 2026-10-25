@@ -54,9 +54,25 @@ data class ReviewItem(
     val labels: List<String>,
     val thumbPath: String?,
     val reviewed: Boolean = false,
+    /** Tracked-object (event) ids in this review item, newest last; used for its snapshot. */
+    val detections: List<String> = emptyList(),
 ) {
     val isAlert get() = severity == "alert"
 }
+
+/** A server-side export (Frigate's Exports page). */
+data class ExportItem(
+    val id: String,
+    val camera: String,
+    val name: String,
+    /** When the export was made (seconds). */
+    val date: Double,
+    /** Path of the MP4 under Frigate's web root, e.g. /exports/front_ab12cd.mp4. */
+    val videoPath: String,
+    /** Path of the thumbnail under Frigate's web root, if it has one. */
+    val thumbPath: String?,
+    val inProgress: Boolean,
+)
 
 data class PtzInfo(val features: Set<String>, val presets: List<String>) {
     val panTilt get() = "pt" in features
@@ -365,23 +381,139 @@ class FrigateApi(private val prefs: Prefs) {
         val arr = JSONArray(
             getString("/api/review?cameras=$camera&after=${after.toLong()}&before=${before.toLong() + 1}&limit=500")
         )
+        return (0 until arr.length()).map { i -> parseReview(arr.getJSONObject(i)) }.sortedBy { it.start }
+    }
+
+    /**
+     * Unreviewed review items (alerts and detections) of every camera that were going on after [after],
+     * newest first. Used by the notification check.
+     */
+    suspend fun unreviewedSince(after: Double, limit: Int = 50): List<ReviewItem> {
+        val arr = JSONArray(getString("/api/review?after=${after.toLong()}&reviewed=0&limit=$limit"))
+        return (0 until arr.length()).map { i -> parseReview(arr.getJSONObject(i)) }.sortedByDescending { it.start }
+    }
+
+    /** One review item by id, or null if Frigate doesn't know it. */
+    suspend fun review(id: String): ReviewItem? = try {
+        parseReview(JSONObject(getString("/api/review/" + java.net.URLEncoder.encode(id, "UTF-8"))))
+    } catch (_: Exception) { null }
+
+    private fun parseReview(o: JSONObject): ReviewItem {
+        val data = o.optJSONObject("data")
+        fun strings(key: String): List<String> {
+            val a = data?.optJSONArray(key) ?: return emptyList()
+            return (0 until a.length()).map { a.optString(it) }.filter { it.isNotBlank() }
+        }
+        // Objects can carry a sub label suffix such as "person-verified"; audio labels are listed separately.
+        val labels = (strings("objects").map { it.substringBefore('-') } + strings("audio")).distinct()
+        return ReviewItem(
+            id = o.optString("id"),
+            camera = o.optString("camera"),
+            start = o.optDouble("start_time", 0.0),
+            end = if (o.isNull("end_time")) null else o.optDouble("end_time"),
+            severity = o.optString("severity"),
+            labels = labels,
+            thumbPath = o.optString("thumb_path").takeIf { it.isNotBlank() }?.let(::webPath),
+            reviewed = o.optBoolean("has_been_reviewed", false),
+            detections = strings("detections"),
+        )
+    }
+
+    /** Frigate stores media paths as /media/frigate/...; the web server serves them from its root. */
+    private fun webPath(p: String): String = if (p.startsWith("/media/frigate")) p.removePrefix("/media/frigate") else p
+
+    /** Every object label Frigate has seen (person, car, ...), for the notification filters. */
+    suspend fun labels(): List<String> = try {
+        val arr = JSONArray(getString("/api/labels"))
+        (0 until arr.length()).map { arr.optString(it) }.filter { it.isNotBlank() }.distinct().sorted()
+    } catch (_: Exception) { emptyList() }
+
+    /** Snapshot of a tracked object (works while it's still being tracked too). */
+    fun eventSnapshotUrl(eventId: String, height: Int) =
+        url("/api/events/${java.net.URLEncoder.encode(eventId, "UTF-8")}/snapshot.jpg?h=$height&height=$height")
+
+    // ---------- exports ----------
+
+    /** Server-side exports, newest first. */
+    suspend fun exports(): List<ExportItem> {
+        val arr = JSONArray(getString("/api/exports"))
         return (0 until arr.length()).map { i ->
             val o = arr.getJSONObject(i)
-            val data = o.optJSONObject("data")
-            val objs = data?.optJSONArray("objects")
-            val labels = (0 until (objs?.length() ?: 0)).map { objs!!.getString(it).substringBefore('-') }.distinct()
-            ReviewItem(
+            ExportItem(
                 id = o.optString("id"),
                 camera = o.optString("camera"),
-                start = o.getDouble("start_time"),
-                end = if (o.isNull("end_time")) null else o.optDouble("end_time"),
-                severity = o.optString("severity"),
-                labels = labels,
-                thumbPath = o.optString("thumb_path").takeIf { it.isNotBlank() }
-                    ?.let { p -> if (p.startsWith("/media/frigate")) p.removePrefix("/media/frigate") else p },
-                reviewed = o.optBoolean("has_been_reviewed", false),
+                name = o.optString("name"),
+                date = o.optDouble("date", 0.0).let { if (it.isNaN()) 0.0 else it },
+                videoPath = webPath(o.optString("video_path")),
+                thumbPath = o.optString("thumb_path").takeIf { it.isNotBlank() }?.let(::webPath),
+                inProgress = o.optBoolean("in_progress", false),
             )
-        }.sortedBy { it.start }
+        }.sortedByDescending { it.date }
+    }
+
+    /**
+     * Asks Frigate to export [start]..[end] of [camera] as an MP4 on the server. [timelapse] makes a 25×
+     * time-lapse instead of real time. Returns the new export's id when Frigate says it.
+     */
+    suspend fun startExport(camera: String, start: Double, end: Double, name: String, timelapse: Boolean): String? =
+        withContext(Dispatchers.IO) {
+            val body = JSONObject().put("playback", if (timelapse) "timelapse_25x" else "realtime")
+            if (name.isNotBlank()) body.put("name", name.take(256))
+            val path = "/api/export/${enc(camera)}/start/${start.toLong()}/end/${kotlin.math.ceil(end).toLong()}"
+            val req = Request.Builder().url(url(path)).post(body.toString().toRequestBody(JSON)).build()
+            val text = call(req)
+            runCatching { JSONObject(text).optString("export_id").takeIf { it.isNotBlank() } }.getOrNull()
+        }
+
+    /**
+     * Renames an export. Frigate 0.16 takes PATCH /api/export/<id>/rename with the name in the body; 0.14
+     * and 0.15 take the name in the path (PATCH /api/export/<id>/<name>). The older form is tried first: on
+     * 0.16 that path doesn't exist, so it can never rename an export to "rename" by mistake.
+     */
+    suspend fun renameExport(id: String, name: String) = withContext(Dispatchers.IO) {
+        val clean = name.trim().take(256)
+        require(clean.isNotEmpty())
+        // A slash would end the path segment in the old form; it isn't allowed in a name there.
+        val legacy = Request.Builder().url(url("/api/export/${enc(id)}/${enc(clean.replace('/', '-'))}"))
+            .patch(ByteArray(0).toRequestBody(null)).build()
+        val oldForm = http.newCall(legacy).execute().use { r ->
+            if (r.isSuccessful) true
+            else if (r.code in setOf(404, 405, 422)) false
+            else throw Exception(serverMessage(r))
+        }
+        if (oldForm) return@withContext
+        val body = JSONObject().put("name", clean).toString()
+        call(Request.Builder().url(url("/api/export/${enc(id)}/rename")).patch(body.toRequestBody(JSON)).build())
+        Unit
+    }
+
+    suspend fun deleteExport(id: String) = withContext(Dispatchers.IO) {
+        call(Request.Builder().url(url("/api/export/${enc(id)}")).delete().build())
+        Unit
+    }
+
+    fun exportVideoUrl(e: ExportItem) = url(e.videoPath)
+
+    private fun enc(s: String) = java.net.URLEncoder.encode(s, "UTF-8").replace("+", "%20")
+
+    /** Runs [req]; on failure throws with Frigate's own message ("No recordings found for time range"). */
+    private fun call(req: Request): String = try {
+        http.newCall(req).execute().use { r ->
+            if (r.code == 401) throw AuthException(App.str(R.string.error_session_expired))
+            if (!r.isSuccessful) throw Exception(serverMessage(r))
+            r.body?.string().orEmpty()
+        }
+    } catch (e: IOException) {
+        throw Tls.pinMismatchMessage(e)?.let { Exception(it, e) } ?: e
+    }
+
+    private fun serverMessage(r: Response): String {
+        val text = runCatching { r.body?.string() }.getOrNull().orEmpty()
+        val msg = runCatching { JSONObject(text).optString("message") }.getOrNull()
+            ?.replace(Regex("[\\p{Cntrl}]+"), " ")?.trim()?.take(200)
+        return if (!msg.isNullOrBlank()) msg
+        else if (r.code == 403) App.str(R.string.error_admin_needed)
+        else App.str(R.string.error_http, r.code)
     }
 
     /** Mark review items reviewed (or not) for the logged-in user. */
@@ -449,5 +581,6 @@ class FrigateApi(private val prefs: Prefs) {
         const val MAX_REDIRECTS = 5
         val REDIRECT_CODES = setOf(301, 302, 303, 307, 308)
         const val DEFAULT_ICE = "[]"
+        val JSON = "application/json".toMediaType()
     }
 }

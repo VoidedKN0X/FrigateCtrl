@@ -16,6 +16,11 @@ import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.MarkEmailUnread
 import androidx.compose.material.icons.outlined.DoneAll
 import androidx.compose.material.icons.outlined.ContentCut
+import androidx.compose.material.icons.outlined.CloudUpload
+import androidx.compose.material3.OutlinedTextField
+import com.vknxworks.frigatectrl.ui.components.CtrlAlertDialog
+import com.vknxworks.frigatectrl.ui.components.CtrlSwitch
+import com.vknxworks.frigatectrl.ui.components.ctrlFieldColors
 import kotlinx.coroutines.launch
 import com.vknxworks.frigatectrl.data.Clips
 import android.widget.Toast
@@ -143,7 +148,7 @@ import com.vknxworks.frigatectrl.ui.theme.CtrlType
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit) {
+fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit, startAt: Double? = null) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val api = App.api
@@ -152,8 +157,10 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit) {
     val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     val widthPx = with(LocalDensity.current) { LocalConfiguration.current.screenWidthDp.dp.toPx() }
 
+    // From a notification: a few seconds before the alert started (the event pre-roll); otherwise a minute ago.
+    val firstTime = remember { startAt?.let { (it - settings.eventPreroll).coerceAtMost(nowSec() - 15) } ?: (nowSec() - 60) }
     val tl = remember {
-        TimelineState(nowSec() - 60, initialSpp = (settings.timelineMinutes * 60.0 / widthPx).coerceIn(MIN_SPP, MAX_SPP))
+        TimelineState(firstTime, initialSpp = (settings.timelineMinutes * 60.0 / widthPx).coerceIn(MIN_SPP, MAX_SPP))
     }
     val playback = remember(camera) { Playback(ctx, camera, scope) }
     DisposableEffect(playback) { onDispose { playback.release() } }
@@ -161,7 +168,7 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit) {
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) { playback.pause() }
 
     // Start a minute back from now (recordings are written in short segments, so "now" isn't on disk yet).
-    LaunchedEffect(playback) { playback.seek(nowSec() - 60, play = true) }
+    LaunchedEffect(playback) { playback.seek(firstTime, play = true) }
     ImmersiveMode(landscape)
 
     // ---- timeline data, loaded in 24 h chunks around the playhead ----
@@ -267,6 +274,30 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit) {
         }
     }
 
+    // ---- server-side export of the selected range (Frigate's Exports page) ----
+    var exportRange by remember { mutableStateOf<Pair<Double, Double>?>(null) }
+    var exportBusy by remember { mutableStateOf(false) }
+    fun askExport(start: Double, end: Double) {
+        val a = minOf(start, end); val b = maxOf(start, end)
+        if (b - a < 1) { Toast.makeText(ctx, ctx.getString(R.string.clip_move_playhead), Toast.LENGTH_SHORT).show(); return }
+        exportRange = a to b
+    }
+    fun runExport(name: String, timelapse: Boolean) {
+        val (a, b) = exportRange ?: return
+        if (exportBusy) return
+        exportBusy = true
+        scope.launch {
+            try {
+                api.startExport(camera, a, b, name, timelapse)
+                exportRange = null
+                clipStart = null
+                Toast.makeText(ctx, ctx.getString(R.string.export_started), Toast.LENGTH_LONG).show()
+            } catch (e: Exception) {
+                Toast.makeText(ctx, ctx.getString(R.string.export_failed, e.message.orEmpty()), Toast.LENGTH_LONG).show()
+            } finally { exportBusy = false }
+        }
+    }
+
     // ---- reviewed state ----
     fun markReviewed(ids: List<String>, reviewed: Boolean) {
         if (ids.isEmpty()) return
@@ -307,6 +338,7 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit) {
                 onCancel = { clipStart = null },
                 onSave = { runClip(start, tl.center, share = false) },
                 onShare = { runClip(start, tl.center, share = true) },
+                onExport = { askExport(start, tl.center) },
             )
         }
         TimeReadout(
@@ -406,8 +438,19 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit) {
                 onClip = { r, share ->
                     runClip(r.start - settings.eventPreroll, (r.end ?: nowSec()) + 2, share)
                 },
+                onExport = { r ->
+                    showEvents = false
+                    askExport(r.start - settings.eventPreroll, (r.end ?: nowSec()) + 2)
+                },
             )
         }
+    }
+    exportRange?.let { (a, b) ->
+        ExportDialog(
+            camera = info?.displayName ?: camera, start = a, end = b, busy = exportBusy,
+            onDismiss = { if (!exportBusy) exportRange = null },
+            onExport = ::runExport,
+        )
     }
     if (showDate) {
         val todayEnd = System.currentTimeMillis()
@@ -585,6 +628,7 @@ private fun EventsList(
     onReviewed: (ReviewItem, Boolean) -> Unit,
     onMarkAll: () -> Unit,
     onClip: (ReviewItem, share: Boolean) -> Unit,
+    onExport: (ReviewItem) -> Unit,
 ) {
     val st = Status
     val fmt = remember { SimpleDateFormat("EEE HH:mm:ss", Locale.getDefault()) }
@@ -717,6 +761,11 @@ private fun EventsList(
                                 leadingIcon = { Icon(Icons.Outlined.Share, null) },
                                 onClick = { menu = false; onClip(r, true) },
                             )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.export_on_server)) },
+                                leadingIcon = { Icon(Icons.Outlined.CloudUpload, null) },
+                                onClick = { menu = false; onExport(r) },
+                            )
                         }
                     }
                 }
@@ -734,6 +783,7 @@ private fun ClipBar(
     onCancel: () -> Unit,
     onSave: () -> Unit,
     onShare: () -> Unit,
+    onExport: () -> Unit,
 ) {
     val fmt = remember { SimpleDateFormat("HH:mm:ss", Locale.getDefault()) }
     val a = minOf(start, end); val b = maxOf(start, end)
@@ -756,6 +806,7 @@ private fun ClipBar(
             else {
                 IconButton(onSave) { Icon(Icons.Outlined.Download, stringResource(R.string.save_to_gallery)) }
                 IconButton(onShare) { Icon(Icons.Outlined.Share, stringResource(R.string.share)) }
+                IconButton(onExport) { Icon(Icons.Outlined.CloudUpload, stringResource(R.string.export_on_server)) }
             }
             IconButton(onCancel) { Icon(Icons.Outlined.Close, stringResource(R.string.clip_cancel)) }
         }
@@ -771,4 +822,59 @@ private fun ScrubPreview(url: String, modifier: Modifier) {
         loadBitmap(url)?.let { bmp = it }
     }
     bmp?.let { Image(it, null, modifier.background(Color.Black), contentScale = ContentScale.Fit) }
+}
+
+/** Name and speed of a new server export of [start]..[end]. */
+@Composable
+private fun ExportDialog(
+    camera: String,
+    start: Double,
+    end: Double,
+    busy: Boolean,
+    onDismiss: () -> Unit,
+    onExport: (name: String, timelapse: Boolean) -> Unit,
+) {
+    val fmt = remember { SimpleDateFormat("d MMM HH:mm:ss", Locale.getDefault()) }
+    var name by rememberSaveable { mutableStateOf("") }
+    var timelapse by rememberSaveable { mutableStateOf(false) }
+    val len = (end - start).toLong()
+    CtrlAlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Outlined.CloudUpload, null) },
+        title = { Text(stringResource(R.string.export_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(stringResource(R.string.export_intro))
+                Text(
+                    stringResource(
+                        R.string.export_range, camera, fmt.format(Date((start * 1000).toLong())),
+                        fmt.format(Date((end * 1000).toLong())), len / 60, len % 60,
+                    ),
+                    style = CtrlType.Mono, color = CtrlColors.Text,
+                )
+                OutlinedTextField(
+                    value = name, onValueChange = { name = it.take(100) },
+                    label = { Text(stringResource(R.string.export_name)) },
+                    placeholder = { Text(stringResource(R.string.export_name_hint)) },
+                    singleLine = true, shape = CtrlShape.Field, colors = ctrlFieldColors(),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(stringResource(R.string.export_timelapse), color = CtrlColors.Text)
+                        Text(stringResource(R.string.export_timelapse_subtitle), style = MaterialTheme.typography.bodySmall)
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    CtrlSwitch(timelapse, { timelapse = it })
+                }
+            }
+        },
+        confirmButton = {
+            TextButton({ onExport(name.trim(), timelapse) }, enabled = !busy) {
+                if (busy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = CtrlColors.AccentText)
+                else Text(stringResource(R.string.export_start), color = CtrlColors.AccentText)
+            }
+        },
+        dismissButton = { TextButton(onDismiss, enabled = !busy) { Text(stringResource(R.string.cancel), color = CtrlColors.Text) } },
+    )
 }

@@ -1,5 +1,6 @@
 package com.vknxworks.frigatectrl
 
+import android.content.Intent
 import android.content.res.Configuration
 import android.graphics.Color
 import android.os.Bundle
@@ -69,6 +70,15 @@ import com.vknxworks.frigatectrl.ui.YouScreen
 import com.vknxworks.frigatectrl.ui.ConnectionSecurityCheck
 import com.vknxworks.frigatectrl.ui.needsConnectionCheck
 import androidx.compose.ui.res.stringResource
+import androidx.compose.material.icons.outlined.VideoLibrary
+import com.vknxworks.frigatectrl.notify.AlertNotifier
+import com.vknxworks.frigatectrl.notify.AlertWorker
+import com.vknxworks.frigatectrl.notify.DeepLinks
+import com.vknxworks.frigatectrl.notify.Push
+import com.vknxworks.frigatectrl.ui.ExportPlayer
+import com.vknxworks.frigatectrl.ui.ExportPlayerScreen
+import com.vknxworks.frigatectrl.ui.ExportsScreen
+import com.vknxworks.frigatectrl.ui.NotificationsScreen
 
 // FragmentActivity (a ComponentActivity) is required by the fingerprint prompt.
 class MainActivity : FragmentActivity() {
@@ -88,6 +98,13 @@ class MainActivity : FragmentActivity() {
         // Remove temporary shared clips left over from an earlier session.
         val appCtx = applicationContext
         Thread { Clips.cleanup(appCtx) }.start()
+        // Alert notifications: the background check and the registration with ntfy, as they were left.
+        if (App.prefs.isConfigured) {
+            AlertWorker.schedule(appCtx)
+            Push.start(appCtx, App.notify.enabled && App.notify.push)
+        }
+        // A tapped alert notification opens that camera's History (after unlocking, if the app is locked).
+        DeepLinks.handle(this, intent)
         setContent {
             FrigateTheme {
                 // "Hide in screenshots" (off by default, independent of the app lock). Sign-in, the lock screen and
@@ -103,6 +120,12 @@ class MainActivity : FragmentActivity() {
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { Root(this) }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        DeepLinks.handle(this, intent)
     }
 
     private val lockVm: AppLockViewModel get() = ViewModelProvider(this)[AppLockViewModel::class.java]
@@ -150,6 +173,13 @@ private fun Root(activity: FragmentActivity, lockVm: AppLockViewModel = viewMode
         resetBiometricKey()
         App.prefs.clear()
         App.api.reload()
+        // Alerts were about this server: notifications off, ntfy registration and shown alerts gone.
+        val ctx = activity.applicationContext
+        Push.unregister(ctx)
+        App.notify.clear()
+        AlertWorker.schedule(ctx)
+        AlertNotifier.cancelAll(ctx)
+        ExportPlayer.current = null
         // Nothing from the old server stays behind: cached thumbnails and temporary clips.
         clearImageCache()
         val appCtx = activity.applicationContext
@@ -205,6 +235,20 @@ private fun Root(activity: FragmentActivity, lockVm: AppLockViewModel = viewMode
         return
     }
 
+    // Only reached while unlocked: a tapped notification opens its camera's History at the alert.
+    val link = DeepLinks.pending
+    LaunchedEffect(link) {
+        if (link != null && App.prefs.isConfigured) {
+            ExportPlayer.current = null
+            route = "review:${link.camera}:${link.time}"
+            DeepLinks.pending = null
+        }
+    }
+    // With the login sealed by the app lock, background checks wait while locked: catch up after unlocking.
+    LaunchedEffect(Unit) {
+        if (App.notify.enabled && App.vault.enabled && !App.prefs.alertsWhileLocked) AlertWorker.runNow(activity.applicationContext)
+    }
+
     // After updating from a version that trusted any certificate (or used http without asking),
     // confirm the server's security once before anything is sent to it.
     if (!securityChecked && route != "setup" && route != "setup-edit" && needsConnectionCheck()) {
@@ -212,6 +256,14 @@ private fun Root(activity: FragmentActivity, lockVm: AppLockViewModel = viewMode
             onDone = { securityChecked = true },
             onServerSettings = { securityChecked = true; route = "setup-edit" },
         )
+        return
+    }
+
+    // A server export playing full screen, in place of the tabs (they come back as they were).
+    ExportPlayer.current?.let { e ->
+        BackHandler { ExportPlayer.current = null }
+        ExportPlayerScreen(e, onClose = { ExportPlayer.current = null })
+        PinRequests.request?.let { PinRequestScreen(it) }
         return
     }
 
@@ -252,11 +304,23 @@ private fun Root(activity: FragmentActivity, lockVm: AppLockViewModel = viewMode
             }
             r == "settings" -> {
                 BackHandler { route = "you" }
-                SettingsScreen(onBack = { route = "you" })
+                SettingsScreen(onBack = { route = "you" }, onNotifications = { route = "notifications" })
+            }
+            r == "notifications" -> {
+                BackHandler { route = "settings" }
+                NotificationsScreen(onBack = { route = "settings" })
             }
             r.startsWith("camera:") -> {
                 BackHandler { route = "cameras" }
                 CameraScreen(camera = r.removePrefix("camera:"), onBack = { route = "cameras" })
+            }
+            r.startsWith("review:") -> {
+                // review:<camera>:<start time>, from a notification: History at that alert.
+                val rest = r.removePrefix("review:")
+                val cam = rest.substringBeforeLast(':')
+                val at = rest.substringAfterLast(':').toDoubleOrNull()
+                BackHandler { route = "cameras" }
+                CameraScreen(camera = cam, onBack = { route = "cameras" }, historyAt = at)
             }
         }
     }
@@ -267,20 +331,23 @@ private fun Root(activity: FragmentActivity, lockVm: AppLockViewModel = viewMode
 private fun depth(route: String): Int = when {
     route == "setup" -> 0
     route == "cameras" -> 1
-    route == "you" || route.startsWith("camera:") -> 2
+    route == "you" || route.startsWith("camera:") || route.startsWith("review:") -> 2
+    route == "notifications" -> 4
     else -> 3 // "settings" and "setup-edit", both opened from You
 }
 
-/** Dashboard: Cameras and System health as bottom tabs. */
+/** Dashboard: Cameras, Exports and System health as bottom tabs. */
 @Composable
 private fun HomeScreen(tab: Int, onTab: (Int) -> Unit, onOpen: (String) -> Unit, onYou: () -> Unit) {
-    // Back on the Health tab returns to Cameras first.
+    // Back on the Exports or Health tab returns to Cameras first.
     if (tab != 0) BackHandler { onTab(0) }
     val camerasLabel = stringResource(R.string.tab_cameras)
     val healthLabel = stringResource(R.string.tab_health)
-    val tabs = remember(camerasLabel, healthLabel) {
+    val exportsLabel = stringResource(R.string.tab_exports)
+    val tabs = remember(camerasLabel, healthLabel, exportsLabel) {
         listOf(
             CtrlTab(camerasLabel, Icons.Outlined.Videocam),
+            CtrlTab(exportsLabel, Icons.Outlined.VideoLibrary),
             CtrlTab(healthLabel, Icons.Outlined.MonitorHeart),
         )
     }
@@ -297,6 +364,7 @@ private fun HomeScreen(tab: Int, onTab: (Int) -> Unit, onOpen: (String) -> Unit,
             ) { t ->
                 when (t) {
                     0 -> CamerasScreen(onOpen = onOpen, onYou = onYou, bottomPadding = contentBottom)
+                    1 -> ExportsScreen(onYou = onYou, bottomPadding = contentBottom)
                     else -> HealthScreen(onYou = onYou, bottomPadding = contentBottom)
                 }
             }

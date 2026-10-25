@@ -14,8 +14,8 @@ android {
         targetSdk = 35
         // CI passes the run number so every build installs over the previous one.
         // Bump both to publish a new release (see CHANGELOG.md).
-        versionCode = 47
-        versionName = "3.6.0"
+        versionCode = 48
+        versionName = "3.7.0"
         // 64-bit ARM phones only (arm64-v8a), like every Ctrl app.
         ndk { abiFilters += listOf("arm64-v8a") }
     }
@@ -87,6 +87,9 @@ dependencies {
     implementation("androidx.fragment:fragment-ktx:1.8.6")
 
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
+    // Background check for new alerts (the fallback when no push from ntfy arrives).
+    implementation("androidx.work:work-runtime-ktx:2.10.2")
 
     val media3 = "1.6.1"
     implementation("androidx.media3:media3-exoplayer:$media3")

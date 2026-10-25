@@ -125,7 +125,7 @@ import com.vknxworks.frigatectrl.ui.theme.CtrlShape
 import com.vknxworks.frigatectrl.ui.theme.CtrlType
 
 @Composable
-fun CameraScreen(camera: String, onBack: () -> Unit) {
+fun CameraScreen(camera: String, onBack: () -> Unit, historyAt: Double? = null) {
     val api = App.api
     var info by remember { mutableStateOf<CameraInfo?>(null) }
     var ptz by remember { mutableStateOf<PtzInfo?>(null) }
@@ -133,12 +133,13 @@ fun CameraScreen(camera: String, onBack: () -> Unit) {
         info = try { api.cameras().firstOrNull { it.name == camera } } catch (_: Exception) { null }
         if (info?.hasOnvif == true) ptz = api.ptzInfo(camera)
     }
-    var showHistory by rememberSaveable { mutableStateOf(false) }
+    // Opened from an alert notification: straight into History at that alert.
+    var showHistory by rememberSaveable { mutableStateOf(historyAt != null) }
     KeepScreenOn(App.settings.keepScreenOn)
 
     if (showHistory) {
         BackHandler { showHistory = false }
-        HistoryScreen(camera, info, onBack = { showHistory = false })
+        HistoryScreen(camera, info, onBack = { showHistory = false }, startAt = historyAt)
     } else {
         LiveScreen(camera, info, ptz, onBack = onBack, onHistory = { showHistory = true })
     }
