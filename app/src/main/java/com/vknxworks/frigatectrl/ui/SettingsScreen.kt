@@ -94,6 +94,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.unit.sp
 import com.vknxworks.frigatectrl.data.CrashReport
+import com.vknxworks.frigatectrl.data.LiveReport
 import com.vknxworks.frigatectrl.ui.components.CtrlAlertDialog
 import com.vknxworks.frigatectrl.ui.theme.CtrlType
 import com.vknxworks.frigatectrl.App
@@ -120,6 +121,13 @@ fun SettingsScreen(onBack: () -> Unit, onNotifications: () -> Unit = {}) {
         }
     }
     var showCrash by remember { mutableStateOf(false) }
+    var liveReport by remember { mutableStateOf(LiveReport.read(ctx)) }
+    val liveReportTime = remember(liveReport) {
+        LiveReport.time(ctx).takeIf { it > 0 }?.let {
+            java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT).format(java.util.Date(it))
+        }
+    }
+    var showLiveReport by remember { mutableStateOf(false) }
 
     // The Appearance group (theme and wallpaper colours) is gone: every Ctrl app is dark only now.
     Column(Modifier.fillMaxSize().background(CtrlColors.Background)) {
@@ -257,16 +265,30 @@ fun SettingsScreen(onBack: () -> Unit, onNotifications: () -> Unit = {}) {
                 }
             }
 
-            // Only there after FrigateCtrl stopped because of an error: the report stays on this phone.
-            if (crash != null) {
-                Section(stringResource(R.string.group_troubleshooting), footer = stringResource(R.string.crash_footer)) {
-                    GroupRow(
-                        stringResource(R.string.crash_report),
-                        crashTime,
-                        icon = Icons.Outlined.BugReport,
-                        showChevron = true,
-                        onClick = { showCrash = true },
-                    )
+            // Only there after FrigateCtrl stopped because of an error, or after a live view: reports stay on this phone.
+            if (crash != null || liveReport != null) {
+                Section(
+                    stringResource(R.string.group_troubleshooting),
+                    footer = stringResource(if (crash != null) R.string.crash_footer else R.string.live_report_footer),
+                ) {
+                    if (crash != null) {
+                        GroupRow(
+                            stringResource(R.string.crash_report),
+                            crashTime,
+                            icon = Icons.Outlined.BugReport,
+                            showChevron = true,
+                            onClick = { showCrash = true },
+                        )
+                    }
+                    if (liveReport != null) {
+                        GroupRow(
+                            stringResource(R.string.live_report),
+                            liveReportTime,
+                            icon = Icons.Outlined.BugReport,
+                            showChevron = true,
+                            onClick = { showLiveReport = true },
+                        )
+                    }
                 }
             }
         }
@@ -281,18 +303,36 @@ fun SettingsScreen(onBack: () -> Unit, onNotifications: () -> Unit = {}) {
             onDismiss = { showCrash = false },
         )
     }
+    val live = liveReport
+    if (showLiveReport && live != null) {
+        CrashReportDialog(
+            live,
+            onCopy = { copySensitive(ctx, live, R.string.live_report); Toast.makeText(ctx, R.string.live_report_copied, Toast.LENGTH_SHORT).show() },
+            onDelete = { LiveReport.delete(ctx); liveReport = null; showLiveReport = false },
+            onDismiss = { showLiveReport = false },
+            title = R.string.live_report,
+            intro = R.string.live_report_intro,
+        )
+    }
 }
 
 /** The last crash report in full, to copy into a bug report, or delete. */
 @Composable
-private fun CrashReportDialog(report: String, onCopy: () -> Unit, onDelete: () -> Unit, onDismiss: () -> Unit) {
+private fun CrashReportDialog(
+    report: String,
+    onCopy: () -> Unit,
+    onDelete: () -> Unit,
+    onDismiss: () -> Unit,
+    title: Int = R.string.crash_report,
+    intro: Int = R.string.crash_intro,
+) {
     CtrlAlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(Icons.Outlined.BugReport, null) },
-        title = { Text(stringResource(R.string.crash_report)) },
+        title = { Text(stringResource(title)) },
         text = {
             Column {
-                Text(stringResource(R.string.crash_intro), style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(intro), style = MaterialTheme.typography.bodySmall)
                 Spacer(Modifier.height(10.dp))
                 SelectionContainer(
                     Modifier.heightIn(max = 320.dp).verticalScroll(rememberScrollState())
@@ -313,9 +353,9 @@ private fun CrashReportDialog(report: String, onCopy: () -> Unit, onDelete: () -
 }
 
 /** Copied as sensitive, so Android doesn't preview it. */
-private fun copySensitive(ctx: android.content.Context, text: String) {
+private fun copySensitive(ctx: android.content.Context, text: String, label: Int = R.string.crash_report) {
     val cm = ctx.getSystemService(android.content.ClipboardManager::class.java) ?: return
-    val clip = android.content.ClipData.newPlainText(ctx.getString(R.string.crash_report), text)
+    val clip = android.content.ClipData.newPlainText(ctx.getString(label), text)
     clip.description.extras = android.os.PersistableBundle().apply { putBoolean("android.content.extra.IS_SENSITIVE", true) }
     runCatching { cm.setPrimaryClip(clip) }
 }

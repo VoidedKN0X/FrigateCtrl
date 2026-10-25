@@ -431,5 +431,10 @@
     <string name="crash_copy">Copy</string>
     <string name="crash_copied">Crash report copied</string>
     <string name="crash_delete">Delete</string>
+    <string name="live_report">Last live view report</string>
+    <string name="live_report_intro">How the last live view went on this phone: the decoders and video and audio formats used, dropped frames and every reconnect with its reason. Your server address is left out.</string>
+    <string name="live_report_copied">Live view report copied</string>
+    <string name="live_report_footer">Reports stay on this phone and are never sent anywhere; copy one into a bug report if you like.</string>
+    <string name="live_sound_off_freezes">Sound off: video kept freezing with sound on this phone</string>
     <string name="close">Close</string>
 </resources>
