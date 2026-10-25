@@ -87,7 +87,7 @@ fun CertTrustDialog(cert: CertInfo, changed: Boolean, intro: String? = null, onT
                 )
             }
         },
-        confirmButton = { TextButton(onTrust) { Text(stringResource(R.string.cert_trust), color = CtrlColors.Accent) } },
+        confirmButton = { TextButton(onTrust) { Text(stringResource(R.string.cert_trust), color = CtrlColors.AccentText) } },
         dismissButton = { TextButton(onCancel) { Text(stringResource(R.string.cancel), color = CtrlColors.Text) } },
     )
 }
@@ -194,10 +194,10 @@ private fun CertPinCheck(host: String, onDone: () -> Unit, onServerSettings: () 
                 icon = { Icon(Icons.Outlined.VerifiedUser, null) },
                 title = { Text(stringResource(R.string.cert_check_failed_title)) },
                 text = { Text(stringResource(R.string.cert_check_failed_body, host, err)) },
-                confirmButton = { TextButton({ attempt++ }) { Text(stringResource(R.string.retry), color = CtrlColors.Accent) } },
+                confirmButton = { TextButton({ attempt++ }) { Text(stringResource(R.string.retry), color = CtrlColors.AccentText) } },
                 dismissButton = { TextButton(onServerSettings) { Text(stringResource(R.string.server_settings), color = CtrlColors.Text) } },
             )
-            else -> CircularProgressIndicator(color = CtrlColors.Accent)
+            else -> CircularProgressIndicator(color = CtrlColors.AccentText)
         }
     }
 }

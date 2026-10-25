@@ -61,7 +61,7 @@ fun OverlayChip(
             Spacer(Modifier.width(7.dp))
         }
         Text(
-            text, color = CtrlColors.Text, fontFamily = CtrlFonts.Mono, fontSize = 11.sp,
+            text, color = CtrlColors.OnVideo, fontFamily = CtrlFonts.Mono, fontSize = 11.sp,
             fontWeight = FontWeight.SemiBold, letterSpacing = 1.2.sp,
         )
     }

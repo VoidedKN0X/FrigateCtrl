@@ -141,7 +141,7 @@ fun PtzJoystick(send: (String) -> Unit, modifier: Modifier = Modifier, size: Dp 
             },
         contentAlignment = Alignment.Center,
     ) {
-        val arrowTint = { d: String -> if (dir == d) CtrlColors.Accent else CtrlColors.Muted }
+        val arrowTint = { d: String -> if (dir == d) CtrlColors.AccentText else CtrlColors.Muted }
         Icon(Icons.Default.KeyboardArrowUp, stringResource(R.string.ptz_up), Modifier.align(Alignment.TopCenter).padding(top = 6.dp), tint = arrowTint("MOVE_UP"))
         Icon(Icons.Default.KeyboardArrowDown, stringResource(R.string.ptz_down), Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp), tint = arrowTint("MOVE_DOWN"))
         Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, stringResource(R.string.ptz_left), Modifier.align(Alignment.CenterStart).padding(start = 6.dp), tint = arrowTint("MOVE_LEFT"))

@@ -290,10 +290,10 @@ private fun LiveScreen(
             backDescription = stringResource(R.string.back),
             subtitle = {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
-                    CtrlStatusDot(Status.live, size = 6.dp)
+                    CtrlStatusDot(CtrlColors.AccentText, size = 6.dp)
                     Text(
                         (streams.getOrNull(streamIdx)?.takeIf { streams.size > 1 }?.let { stringResource(R.string.live_stream, it.label) } ?: stringResource(R.string.live_plain)).uppercase(),
-                        style = CtrlType.Label, color = CtrlColors.Accent, modifier = Modifier.padding(start = 6.dp),
+                        style = CtrlType.Label, color = CtrlColors.AccentText, modifier = Modifier.padding(start = 6.dp),
                     )
                 }
             },
@@ -424,9 +424,9 @@ private fun CameraTogglesSheet(
                     subtitle = stringResource(t.description),
                     showDot = false,
                     onClick = if (on != null) ({ onToggle(t, !on) }) else null,
-                    leading = { Icon(t.icon, null, Modifier.size(20.dp), tint = if (on == true) CtrlColors.Accent else CtrlColors.Muted) },
+                    leading = { Icon(t.icon, null, Modifier.size(20.dp), tint = if (on == true) CtrlColors.AccentText else CtrlColors.Muted) },
                     trailing = {
-                        if (on == null) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = CtrlColors.Accent)
+                        if (on == null) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = CtrlColors.AccentText)
                         else CtrlSwitch(on, { onToggle(t, it) })
                     },
                 )
@@ -441,18 +441,19 @@ private fun TalkButton(state: TalkState, onClick: () -> Unit) {
     val connecting = state == TalkState.Connecting
     val source = remember { MutableInteractionSource() }
     val bg = if (active) CtrlColors.Error else CtrlColors.Accent
+    val fg = if (active) CtrlColors.OnError else CtrlColors.OnAccent
     Row(
         Modifier.pressScale(source).height(48.dp).clip(CtrlShape.Field).background(bg)
             .clickable(interactionSource = source, indication = ripple(), role = Role.Button, onClick = onClick)
             .padding(start = 14.dp, end = 18.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (connecting) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = CtrlColors.OnAccent)
-        else Icon(if (active) Icons.Filled.Mic else Icons.Outlined.MicNone, null, Modifier.size(18.dp), tint = CtrlColors.OnAccent)
+        if (connecting) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = fg)
+        else Icon(if (active) Icons.Filled.Mic else Icons.Outlined.MicNone, null, Modifier.size(18.dp), tint = fg)
         Spacer(Modifier.width(8.dp))
         Text(
             stringResource(when (state) { TalkState.Talking -> R.string.talk_stop; TalkState.Connecting -> R.string.connecting; else -> R.string.talk }),
-            fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = CtrlColors.OnAccent,
+            fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = fg,
         )
     }
 }
@@ -499,5 +500,5 @@ fun VideoIconButton(icon: ImageVector, label: String, modifier: Modifier = Modif
             .clickable(role = Role.Button, onClick = onClick)
             .semantics { contentDescription = label },
         contentAlignment = Alignment.Center,
-    ) { Icon(icon, null, Modifier.size(20.dp), tint = CtrlColors.Text) }
+    ) { Icon(icon, null, Modifier.size(20.dp), tint = CtrlColors.OnVideo) }
 }

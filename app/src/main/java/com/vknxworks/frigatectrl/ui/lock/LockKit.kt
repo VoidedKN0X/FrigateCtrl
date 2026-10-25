@@ -119,9 +119,9 @@ fun LockBadge() {
 fun LockScreenButtons(showFingerprint: Boolean, onFingerprint: () -> Unit, onForgot: () -> Unit) {
     if (showFingerprint) {
         TextButton(onClick = onFingerprint) {
-            Icon(Icons.Outlined.Fingerprint, null, tint = CtrlColors.Accent)
+            Icon(Icons.Outlined.Fingerprint, null, tint = CtrlColors.AccentText)
             Spacer(Modifier.size(8.dp))
-            Text(stringResource(R.string.lock_use_fingerprint), color = CtrlColors.Accent)
+            Text(stringResource(R.string.lock_use_fingerprint), color = CtrlColors.AccentText)
         }
     }
     TextButton(onClick = onForgot) { Text(stringResource(R.string.lock_forgot), color = CtrlColors.Muted) }
@@ -319,7 +319,7 @@ fun PinPadScreen(
                     )
                     Spacer(Modifier.height(28.dp))
                     Box(Modifier.height(20.dp).offset { IntOffset(shake.roundToInt(), 0) }, contentAlignment = Alignment.Center) {
-                        if (checking) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = CtrlColors.Accent)
+                        if (checking) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = CtrlColors.AccentText)
                         else Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                             repeat(maxOf(pin.length, minDots)) { i ->
                                 val shape = RoundedCornerShape(5.dp)
@@ -398,11 +398,11 @@ private fun DigitKey(label: String, enabled: Boolean, modifier: Modifier, onClic
 @Composable
 private fun FingerprintKey(enabled: Boolean, modifier: Modifier, onClick: () -> Unit) {
     Box(
-        modifier.height(68.dp).clip(KeyShape).border(1.dp, CtrlColors.Accent, KeyShape)
+        modifier.height(68.dp).clip(KeyShape).border(1.dp, CtrlColors.AccentText, KeyShape)
             .clickable(enabled = enabled, role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(Icons.Outlined.Fingerprint, stringResource(R.string.lock_use_fingerprint), Modifier.size(26.dp), tint = CtrlColors.Accent)
+        Icon(Icons.Outlined.Fingerprint, stringResource(R.string.lock_use_fingerprint), Modifier.size(26.dp), tint = CtrlColors.AccentText)
     }
 }
 

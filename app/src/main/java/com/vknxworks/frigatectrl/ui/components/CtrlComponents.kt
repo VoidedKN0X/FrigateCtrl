@@ -95,7 +95,7 @@ fun CtrlWordmark(name: String, modifier: Modifier = Modifier) {
     Text(
         buildAnnotatedString {
             append(name.uppercase())
-            withStyle(SpanStyle(color = CtrlColors.Accent)) { append("/") }
+            withStyle(SpanStyle(color = CtrlColors.AccentText)) { append("/") }
             append("CTRL")
         },
         style = CtrlType.Wordmark,
@@ -294,7 +294,7 @@ fun CtrlListRow(
     meta: String? = null,
     subtitle: String? = null,
     status: String? = null,
-    statusColor: Color = CtrlColors.Accent,
+    statusColor: Color = CtrlColors.AccentText,
     showDot: Boolean = status != null,
     divider: Boolean = true,
     onClick: (() -> Unit)? = null,
@@ -336,7 +336,7 @@ fun CtrlSwitch(
 ) {
     val knobX by animateDpAsState(if (checked) 20.dp else 0.dp, label = "knob")
     val track by animateColorAsState(if (checked) CtrlColors.Accent else CtrlColors.SwitchTrackOff, label = "track")
-    val knob by animateColorAsState(if (checked) CtrlColors.OnAccent else CtrlColors.Inactive, label = "knobColor")
+    val knob by animateColorAsState(if (checked) CtrlColors.OnAccent else CtrlColors.SwitchKnobOff, label = "knobColor")
     Box(
         modifier
             .size(width = 52.dp, height = 32.dp)
@@ -440,7 +440,7 @@ fun CtrlChip(
 
 /** 6 dp progress bar: white fill (accent for the primary metric) on a dark track. */
 @Composable
-fun CtrlProgress(fraction: Float, modifier: Modifier = Modifier, color: Color = CtrlColors.Text) {
+fun CtrlProgress(fraction: Float, modifier: Modifier = Modifier, color: Color = CtrlColors.ProgressFill) {
     Box(modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(CtrlColors.ProgressTrack)) {
         Box(Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f)).fillMaxHeight().background(color))
     }
@@ -526,7 +526,7 @@ fun CtrlAlertDialog(
         text = text,
         shape = CtrlShape.Hero,
         containerColor = CtrlColors.Surface,
-        iconContentColor = CtrlColors.Accent,
+        iconContentColor = CtrlColors.AccentText,
         titleContentColor = CtrlColors.Text,
         textContentColor = CtrlColors.Muted,
         tonalElevation = 0.dp,
@@ -554,12 +554,12 @@ fun ctrlFieldColors(): TextFieldColors = OutlinedTextFieldDefaults.colors(
     focusedContainerColor = CtrlColors.Surface,
     unfocusedContainerColor = CtrlColors.Surface,
     disabledContainerColor = CtrlColors.Surface,
-    focusedBorderColor = CtrlColors.Accent,
+    focusedBorderColor = CtrlColors.AccentText,
     unfocusedBorderColor = CtrlColors.ControlOutline,
-    cursorColor = CtrlColors.Accent,
-    focusedLabelColor = CtrlColors.Accent,
+    cursorColor = CtrlColors.AccentText,
+    focusedLabelColor = CtrlColors.AccentText,
     unfocusedLabelColor = CtrlColors.Muted,
-    focusedLeadingIconColor = CtrlColors.Accent,
+    focusedLeadingIconColor = CtrlColors.AccentText,
     unfocusedLeadingIconColor = CtrlColors.Muted,
     focusedTrailingIconColor = CtrlColors.Text,
     unfocusedTrailingIconColor = CtrlColors.Muted,

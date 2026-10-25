@@ -97,7 +97,7 @@ fun HealthScreen(onYou: () -> Unit, bottomPadding: Dp = 0.dp) {
         val s = stats
         if (s == null) {
             Box(Modifier.fillMaxSize().padding(bottom = bottomPadding), Alignment.Center) {
-                if (error != null) Text(error!!, color = CtrlColors.Error) else CircularProgressIndicator(color = CtrlColors.Accent)
+                if (error != null) Text(error!!, color = CtrlColors.Error) else CircularProgressIndicator(color = CtrlColors.AccentText)
             }
             return@Column
         }
@@ -249,7 +249,7 @@ private fun StatRow(label: String, value: String, warn: Boolean = false) {
         Text(label.replaceFirstChar { it.uppercase() }, fontSize = 15.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
         Text(value, style = CtrlType.Mono, color = if (warn) Status.detection else CtrlColors.Muted)
         Spacer(Modifier.width(10.dp))
-        CtrlStatusDot(if (warn) Status.detection else CtrlColors.Accent)
+        CtrlStatusDot(if (warn) Status.detection else CtrlColors.AccentText)
     }
 }
 
@@ -260,7 +260,7 @@ private fun Meter(label: String, percent: Double?, detail: String? = null) {
     val color: Color = when {
         p >= 90 -> Status.alert
         p >= 75 -> Status.detection
-        else -> CtrlColors.Text
+        else -> CtrlColors.ProgressFill
     }
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
