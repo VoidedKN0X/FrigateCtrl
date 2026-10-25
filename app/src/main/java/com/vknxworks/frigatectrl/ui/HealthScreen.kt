@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vknxworks.frigatectrl.App
 import kotlinx.coroutines.delay
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import org.json.JSONObject
 import java.util.Locale
 import androidx.compose.ui.res.stringResource
@@ -60,12 +61,16 @@ fun HealthScreen(onYou: () -> Unit, bottomPadding: Dp = 0.dp) {
     var error by remember { mutableStateOf<String?>(null) }
     val ctx = LocalContext.current
 
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(Unit) {
         var n = 0
         while (true) {
+            lifecycle.awaitStarted()
             try {
                 stats = App.api.stats(); error = null
                 if (n++ % 6 == 0) storage = App.api.recordingStorage() // slower to compute; every 30 s
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) { error = e.message ?: ctx.getString(R.string.stats_load_failed) }
             delay(5000)
         }

@@ -114,8 +114,10 @@ fun ExportsScreen(onYou: () -> Unit, bottomPadding: Dp = 0.dp) {
     var deleting by remember { mutableStateOf<ExportItem?>(null) }
     var busyId by remember { mutableStateOf<String?>(null) }
 
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(reload) {
         while (true) {
+            lifecycle.awaitStarted()
             try {
                 exports = App.api.exports(); error = null
             } catch (e: CancellationException) {
