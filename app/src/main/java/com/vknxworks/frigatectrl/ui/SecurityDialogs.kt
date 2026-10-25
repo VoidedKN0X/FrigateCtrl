@@ -41,6 +41,11 @@ import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import androidx.compose.ui.res.stringResource
 import com.vknxworks.frigatectrl.R
+import androidx.compose.ui.unit.sp
+import com.vknxworks.frigatectrl.ui.components.CtrlAlertDialog
+import com.vknxworks.frigatectrl.ui.theme.CtrlColors
+import com.vknxworks.frigatectrl.ui.theme.CtrlFonts
+import com.vknxworks.frigatectrl.ui.theme.CtrlType
 
 /** What the user is asked to trust: the server's certificate as fetched (nothing was sent to it). */
 data class CertInfo(val host: String, val subject: String, val fingerprint: String)
@@ -56,7 +61,7 @@ suspend fun fetchCertInfo(baseUrl: String): CertInfo = withContext(Dispatchers.I
 @Composable
 fun CertTrustDialog(cert: CertInfo, changed: Boolean, intro: String? = null, onTrust: () -> Unit, onCancel: () -> Unit) {
     val cs = MaterialTheme.colorScheme
-    AlertDialog(
+    CtrlAlertDialog(
         onDismissRequest = onCancel,
         icon = { Icon(Icons.Outlined.VerifiedUser, null) },
         title = { Text(stringResource(if (changed) R.string.cert_changed_title else R.string.cert_trust_title)) },
@@ -70,8 +75,8 @@ fun CertTrustDialog(cert: CertInfo, changed: Boolean, intro: String? = null, onT
                 Text(stringResource(R.string.cert_check_fingerprint, cert.host))
                 Text(
                     cert.fingerprint,
-                    fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(cs.surfaceContainerHighest).padding(10.dp),
+                    fontFamily = CtrlFonts.Mono, style = MaterialTheme.typography.bodySmall, color = CtrlColors.Text,
+                    modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(CtrlColors.Raised).padding(10.dp),
                 )
                 if (cert.subject.isNotBlank()) Text(
                     stringResource(R.string.cert_issued_to, cert.subject), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant,
@@ -82,15 +87,15 @@ fun CertTrustDialog(cert: CertInfo, changed: Boolean, intro: String? = null, onT
                 )
             }
         },
-        confirmButton = { TextButton(onTrust) { Text(stringResource(R.string.cert_trust)) } },
-        dismissButton = { TextButton(onCancel) { Text(stringResource(R.string.cancel)) } },
+        confirmButton = { TextButton(onTrust) { Text(stringResource(R.string.cert_trust), color = CtrlColors.Accent) } },
+        dismissButton = { TextButton(onCancel) { Text(stringResource(R.string.cancel), color = CtrlColors.Text) } },
     )
 }
 
 /** Explicit confirmation before using a plain-http (unencrypted) server. */
 @Composable
 fun HttpWarningDialog(host: String, intro: String? = null, onConfirm: () -> Unit, onCancel: () -> Unit) {
-    AlertDialog(
+    CtrlAlertDialog(
         onDismissRequest = onCancel,
         icon = { Icon(Icons.Outlined.NoEncryption, null, tint = MaterialTheme.colorScheme.error) },
         title = { Text(stringResource(R.string.http_warning_title)) },
@@ -100,8 +105,8 @@ fun HttpWarningDialog(host: String, intro: String? = null, onConfirm: () -> Unit
                 Text(stringResource(R.string.http_warning_body, host))
             }
         },
-        confirmButton = { TextButton(onConfirm) { Text(stringResource(R.string.http_warning_confirm)) } },
-        dismissButton = { TextButton(onCancel) { Text(stringResource(R.string.cancel)) } },
+        confirmButton = { TextButton(onConfirm) { Text(stringResource(R.string.http_warning_confirm), color = CtrlColors.Error) } },
+        dismissButton = { TextButton(onCancel) { Text(stringResource(R.string.cancel), color = CtrlColors.Text) } },
     )
 }
 
@@ -110,14 +115,14 @@ fun HttpWarningDialog(host: String, intro: String? = null, onConfirm: () -> Unit
 fun NotEncryptedBadge(modifier: Modifier = Modifier) {
     val cs = MaterialTheme.colorScheme
     Row(
-        modifier.clip(RoundedCornerShape(6.dp)).background(cs.errorContainer).padding(horizontal = 6.dp, vertical = 2.dp),
+        modifier.clip(RoundedCornerShape(9.dp)).background(CtrlColors.ErrorContainer).padding(horizontal = 8.dp, vertical = 3.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(Icons.Outlined.LockOpen, null, tint = cs.onErrorContainer, modifier = Modifier.size(12.dp))
+        Icon(Icons.Outlined.LockOpen, null, tint = CtrlColors.Error, modifier = Modifier.size(12.dp))
         Spacer(Modifier.width(4.dp))
         Text(
-            stringResource(R.string.server_not_encrypted), color = cs.onErrorContainer,
-            style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Medium,
+            stringResource(R.string.server_not_encrypted).uppercase(), color = CtrlColors.Error,
+            style = CtrlType.Label, fontSize = 10.sp,
         )
     }
 }
@@ -184,15 +189,15 @@ private fun CertPinCheck(host: String, onDone: () -> Unit, onServerSettings: () 
                 },
                 onCancel = onServerSettings,
             )
-            err != null -> AlertDialog(
+            err != null -> CtrlAlertDialog(
                 onDismissRequest = onServerSettings,
                 icon = { Icon(Icons.Outlined.VerifiedUser, null) },
                 title = { Text(stringResource(R.string.cert_check_failed_title)) },
                 text = { Text(stringResource(R.string.cert_check_failed_body, host, err)) },
-                confirmButton = { TextButton({ attempt++ }) { Text(stringResource(R.string.retry)) } },
-                dismissButton = { TextButton(onServerSettings) { Text(stringResource(R.string.server_settings)) } },
+                confirmButton = { TextButton({ attempt++ }) { Text(stringResource(R.string.retry), color = CtrlColors.Accent) } },
+                dismissButton = { TextButton(onServerSettings) { Text(stringResource(R.string.server_settings), color = CtrlColors.Text) } },
             )
-            else -> CircularProgressIndicator()
+            else -> CircularProgressIndicator(color = CtrlColors.Accent)
         }
     }
 }

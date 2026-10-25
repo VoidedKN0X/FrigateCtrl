@@ -94,10 +94,10 @@ fun Timeline(
     val measurer = rememberTextMeasurer()
     val cs = MaterialTheme.colorScheme
     val st = Status
-    val cBg = cs.surfaceContainer
+    val cBg = com.vknxworks.frigatectrl.ui.theme.CtrlColors.Background
     val cFuture = cs.surfaceContainerLowest.copy(alpha = 0.85f)
     val cMuted = cs.onSurfaceVariant
-    val cLine = cs.outlineVariant
+    val cLine = com.vknxworks.frigatectrl.ui.theme.CtrlColors.ControlOutline
     val cHead = cs.onSurface
     val cSel = cs.primary
     val hapticsOn by rememberUpdatedState(hapticTicks)
@@ -110,8 +110,8 @@ fun Timeline(
     val fmtSec = remember { SimpleDateFormat("HH:mm:ss", Locale.getDefault()) }
     val fmtMin = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
     val fmtDay = remember { SimpleDateFormat("EEE d", Locale.getDefault()) }
-    val labelStyle = remember(cMuted) { TextStyle(color = cMuted, fontSize = 10.sp) }
-    val dayStyle = remember(cHead) { TextStyle(color = cHead, fontSize = 10.sp, fontWeight = FontWeight.SemiBold) }
+    val labelStyle = remember(cMuted) { TextStyle(color = cMuted, fontSize = 10.sp, fontFamily = com.vknxworks.frigatectrl.ui.theme.CtrlFonts.Mono) }
+    val dayStyle = remember(cHead) { TextStyle(color = cHead, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, fontFamily = com.vknxworks.frigatectrl.ui.theme.CtrlFonts.Mono) }
 
     val gestures = Modifier.pointerInput(Unit) {
         val decay = splineBasedDecay<Float>(this)

@@ -68,13 +68,23 @@ import javax.net.ssl.SSLPeerUnverifiedException
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
 import com.vknxworks.frigatectrl.R
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.unit.sp
+import com.vknxworks.frigatectrl.ui.components.CtrlButton
+import com.vknxworks.frigatectrl.ui.components.CtrlCard
+import com.vknxworks.frigatectrl.ui.components.CtrlSectionLabel
+import com.vknxworks.frigatectrl.ui.components.CtrlSwitch
+import com.vknxworks.frigatectrl.ui.components.CtrlWordmark
+import com.vknxworks.frigatectrl.ui.components.ctrlFieldColors
+import com.vknxworks.frigatectrl.ui.theme.CtrlColors
+import com.vknxworks.frigatectrl.ui.theme.CtrlShape
 
 @Composable
 fun SetupScreen(editing: Boolean, onDone: () -> Unit, onCancel: (() -> Unit)?) {
     // The password is typed here: never in screenshots, recordings or casting.
     com.vknxworks.frigatectrl.SecureWindow()
     val prefs = App.prefs
-    val cs = MaterialTheme.colorScheme
     var url by remember { mutableStateOf(if (editing) prefs.baseUrl else "") }
     var user by remember { mutableStateOf(if (editing) prefs.username else "") }
     // The saved password is never put back into the field (where it could be revealed); leaving
@@ -212,41 +222,41 @@ fun SetupScreen(editing: Boolean, onDone: () -> Unit, onCancel: (() -> Unit)?) {
         )
     }
 
-    Box(Modifier.fillMaxSize().background(cs.background), contentAlignment = Alignment.TopCenter) {
+    Box(Modifier.fillMaxSize().background(CtrlColors.Background), contentAlignment = Alignment.TopCenter) {
         Column(
             Modifier.widthIn(max = 520.dp).fillMaxSize().safeDrawingPadding().imePadding()
                 .verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Spacer(Modifier.height(24.dp))
+            CtrlWordmark("Frigate", Modifier.fillMaxWidth().padding(bottom = 28.dp))
             Box(
-                Modifier.size(84.dp).clip(CircleShape).background(cs.primaryContainer),
+                Modifier.align(Alignment.Start).size(72.dp).clip(RoundedCornerShape(24.dp)).background(CtrlColors.Accent),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.Outlined.Videocam, null, tint = cs.onPrimaryContainer, modifier = Modifier.size(42.dp))
+                Icon(Icons.Outlined.Videocam, null, tint = CtrlColors.OnAccent, modifier = Modifier.size(32.dp))
             }
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(22.dp))
+            CtrlSectionLabel(stringResource(R.string.setup_label), Modifier.fillMaxWidth())
             Text(
                 stringResource(if (editing) R.string.server_settings else R.string.setup_welcome),
-                style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold,
-                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.headlineLarge,
+                modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
             )
             Text(
                 stringResource(R.string.setup_intro),
-                color = cs.onSurfaceVariant, style = MaterialTheme.typography.bodyLarge,
-                textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp, bottom = 28.dp),
+                color = CtrlColors.Muted, style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 24.dp),
             )
 
-            Card(
-                colors = CardDefaults.cardColors(containerColor = cs.surfaceContainerLow),
-                shape = MaterialTheme.shapes.large,
-            ) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            CtrlCard(padding = 16.dp, spacing = 12.dp) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
                         url, { url = it }, label = { Text(stringResource(R.string.setup_url)) }, singleLine = true,
                         placeholder = { Text("https://192.168.1.20:8971") },
                         leadingIcon = { Icon(Icons.Outlined.Dns, null) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next),
+                        shape = CtrlShape.Field,
+                        colors = ctrlFieldColors(),
                         modifier = Modifier.fillMaxWidth(),
                     )
                     OutlinedTextField(
@@ -254,6 +264,8 @@ fun SetupScreen(editing: Boolean, onDone: () -> Unit, onCancel: (() -> Unit)?) {
                         leadingIcon = { Icon(Icons.Outlined.Person, null) },
                         supportingText = { Text(stringResource(R.string.setup_username_hint)) },
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                        shape = CtrlShape.Field,
+                        colors = ctrlFieldColors(),
                         modifier = Modifier.fillMaxWidth(),
                     )
                     OutlinedTextField(
@@ -269,41 +281,43 @@ fun SetupScreen(editing: Boolean, onDone: () -> Unit, onCancel: (() -> Unit)?) {
                                     stringResource(if (showPass) R.string.hide_password else R.string.show_password))
                             }
                         },
+                        shape = CtrlShape.Field,
+                        colors = ctrlFieldColors(),
                         modifier = Modifier.fillMaxWidth(),
                     )
                     if (url.trim().startsWith("http://", ignoreCase = true)) NotEncryptedBadge()
-                    ListItem(
-                        headlineContent = { Text(stringResource(R.string.setup_self_signed)) },
-                        supportingContent = { Text(stringResource(R.string.setup_self_signed_subtitle)) },
-                        trailingContent = { Switch(insecure, { insecure = it }) },
-                        colors = ListItemDefaults.colors(containerColor = cs.surfaceContainerLow),
-                    )
-                }
-            }
-
-            error?.let {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = cs.errorContainer, contentColor = cs.onErrorContainer),
-                    modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
-                ) {
-                    Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Outlined.ErrorOutline, null)
+                    Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(stringResource(R.string.setup_self_signed), fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                            Text(stringResource(R.string.setup_self_signed_subtitle), style = MaterialTheme.typography.bodySmall, color = CtrlColors.Muted)
+                        }
                         Spacer(Modifier.width(12.dp))
-                        Text(it, style = MaterialTheme.typography.bodyMedium)
+                        CtrlSwitch(insecure, { insecure = it })
                     }
                 }
             }
 
+            error?.let {
+                Row(
+                    Modifier.fillMaxWidth().padding(top = 16.dp).clip(CtrlShape.Field).background(CtrlColors.ErrorContainer)
+                        .border(1.dp, CtrlColors.Error.copy(alpha = 0.4f), CtrlShape.Field).padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(Icons.Outlined.ErrorOutline, null, tint = CtrlColors.Error)
+                    Spacer(Modifier.width(12.dp))
+                    Text(it, style = MaterialTheme.typography.bodyMedium, color = CtrlColors.Error)
+                }
+            }
+
             Spacer(Modifier.height(20.dp))
-            Button(
+            CtrlButton(
+                stringResource(if (editing) R.string.setup_save_reconnect else R.string.setup_connect),
                 onClick = { connect() },
                 enabled = !busy && url.isNotBlank(),
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-            ) {
-                if (busy) CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp, color = cs.onPrimary)
-                else Text(stringResource(if (editing) R.string.setup_save_reconnect else R.string.setup_connect), style = MaterialTheme.typography.titleMedium)
-            }
-            if (onCancel != null) TextButton(onCancel, Modifier.fillMaxWidth().padding(top = 4.dp)) { Text(stringResource(R.string.cancel)) }
+                loading = busy,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            if (onCancel != null) TextButton(onCancel, Modifier.fillMaxWidth().padding(top = 4.dp)) { Text(stringResource(R.string.cancel), color = CtrlColors.Muted) }
         }
     }
 }

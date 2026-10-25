@@ -5,37 +5,36 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.Logout
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.BugReport
-import androidx.compose.material.icons.filled.Code
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Gavel
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.BugReport
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.Dns
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.Gavel
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -43,24 +42,29 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.unit.Dp
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.vknxworks.frigatectrl.App
 import com.vknxworks.frigatectrl.BuildConfig
 import com.vknxworks.frigatectrl.R
+import com.vknxworks.frigatectrl.ui.components.CtrlAlertDialog
+import com.vknxworks.frigatectrl.ui.components.CtrlAvatar
+import com.vknxworks.frigatectrl.ui.components.CtrlButton
+import com.vknxworks.frigatectrl.ui.components.CtrlSectionLabel
+import com.vknxworks.frigatectrl.ui.components.CtrlSquareButton
+import com.vknxworks.frigatectrl.ui.components.CtrlWordmark
 import com.vknxworks.frigatectrl.ui.settings.Group
 import com.vknxworks.frigatectrl.ui.settings.GroupRow
+import com.vknxworks.frigatectrl.ui.theme.CtrlColors
+import com.vknxworks.frigatectrl.ui.theme.CtrlType
 
 private const val SPONSOR_URL = "https://github.com/sponsors/VoidedKN0X"
 private const val REPO_URL = "https://github.com/VoidedKN0X/FrigateCtrl"
@@ -71,32 +75,24 @@ private const val LICENCE_URL = "https://www.gnu.org/licenses/gpl-3.0.html"
 private fun loginInitial(): String? = App.prefs.username.trim().take(1).uppercase().ifEmpty { null }
 
 /**
- * The round profile picture at the top right of the Cameras and Health tabs. Tapping it opens the You
+ * The profile picture at the top right of the Cameras and Health tabs. Tapping it opens the You
  * page, the only way into Settings (like every Ctrl app). Shows the first letter of your Frigate login,
- * or the series' placeholder avatar when Frigate doesn't ask for one.
+ * or a person icon when Frigate doesn't ask for one, with the accent badge while a server is set up.
  */
 @Composable
 fun ProfileButton(onClick: () -> Unit) {
-    val cs = MaterialTheme.colorScheme
-    val label = stringResource(R.string.account_and_settings)
-    val initial = loginInitial()
-    IconButton(onClick = onClick, modifier = Modifier.semantics { contentDescription = label }) {
-        Box(
-            Modifier.size(34.dp).clip(CircleShape).background(cs.primary.copy(alpha = 0.18f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            if (initial == null) {
-                Icon(Icons.Filled.AccountCircle, null, tint = cs.primary)
-            } else {
-                Text(initial, style = MaterialTheme.typography.titleMedium, color = cs.primary)
-            }
-        }
-    }
+    CtrlAvatar(
+        initial = loginInitial(),
+        contentDescription = stringResource(R.string.account_and_settings),
+        onClick = onClick,
+        connected = App.prefs.isConfigured,
+    )
 }
 
 /**
- * Big left-aligned title for the main tabs with the profile picture at the end, as in every Ctrl app.
- * [subtitle] is the short status line under the title; [inset] is horizontal padding the parent already adds.
+ * Header of the main tabs: the FRIGATE/CTRL wordmark and the profile picture, then the big tab title
+ * with a mono label above it. [subtitle] is the short status line under the title; [inset] is
+ * horizontal padding the parent already adds.
  */
 @Composable
 fun TabTitle(
@@ -104,18 +100,22 @@ fun TabTitle(
     onYou: () -> Unit,
     modifier: Modifier = Modifier,
     inset: Dp = 0.dp,
+    label: String? = null,
     subtitle: (@Composable ColumnScope.() -> Unit)? = null,
 ) {
+    val side = (20.dp - inset).coerceAtLeast(0.dp)
     Column(modifier.fillMaxWidth()) {
         Row(
-            Modifier.fillMaxWidth().padding(start = 20.dp - inset, end = (8.dp - inset).coerceAtLeast(0.dp), top = 12.dp, bottom = 8.dp),
+            Modifier.fillMaxWidth().padding(start = side, end = side, top = 10.dp, bottom = 18.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(title, style = MaterialTheme.typography.headlineLarge, modifier = Modifier.weight(1f))
+            CtrlWordmark("Frigate", Modifier.weight(1f))
             ProfileButton(onYou)
         }
-        if (subtitle != null) {
-            Column(Modifier.padding(start = 20.dp - inset, end = (20.dp - inset).coerceAtLeast(0.dp), bottom = 8.dp), content = subtitle)
+        Column(Modifier.padding(start = side, end = side, bottom = 14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            if (label != null) CtrlSectionLabel(label)
+            Text(title, style = MaterialTheme.typography.headlineLarge, color = CtrlColors.Text)
+            subtitle?.invoke(this)
         }
     }
 }
@@ -124,12 +124,9 @@ fun TabTitle(
  * The You page, opened from the profile picture: who you're signed in as on which Frigate server, the
  * server and login, the way into Settings, logging out, and the About section every Ctrl app ends with.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun YouScreen(onBack: () -> Unit, onSettings: () -> Unit, onServer: () -> Unit, onLogout: () -> Unit) {
-    val cs = MaterialTheme.colorScheme
     val ctx = LocalContext.current
-    val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     var confirmLogout by remember { mutableStateOf(false) }
     var frigateVersion by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) { frigateVersion = runCatching { App.api.version() }.getOrNull() }
@@ -137,51 +134,57 @@ fun YouScreen(onBack: () -> Unit, onSettings: () -> Unit, onServer: () -> Unit, 
     val host = prefs.baseUrl.removePrefix("https://").removePrefix("http://").trimEnd('/')
     val username = prefs.username.trim().ifEmpty { null }
 
-    Scaffold(
-        modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
-        topBar = {
-            LargeTopAppBar(
-                title = { Text(stringResource(R.string.you_title), fontWeight = FontWeight.SemiBold) },
-                navigationIcon = { IconButton(onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) } },
-                scrollBehavior = scroll,
-            )
-        },
-    ) { pad ->
-        Column(Modifier.fillMaxSize().padding(pad).verticalScroll(rememberScrollState()).padding(bottom = 32.dp)) {
-            // Account card: the series' big profile picture, who you are and where.
-            Column(
-                Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
+    Column(Modifier.fillMaxSize().background(CtrlColors.Background)) {
+        // Close button, centred mono label, as in every Ctrl app's profile page.
+        Row(
+            Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 20.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            CtrlSquareButton(Icons.Outlined.Close, stringResource(R.string.back), onBack)
+            Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                CtrlSectionLabel(stringResource(R.string.you_title))
+            }
+            Spacer(Modifier.width(44.dp))
+        }
+        Column(
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(bottom = 24.dp),
+        ) {
+            // Account: the accent profile picture, who you are and where.
+            Row(
+                Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(
-                    Modifier.size(96.dp).clip(CircleShape).background(cs.primary.copy(alpha = 0.18f)),
+                    Modifier.size(68.dp).clip(RoundedCornerShape(22.dp)).background(CtrlColors.Accent),
                     contentAlignment = Alignment.Center,
                 ) {
                     val initial = loginInitial()
                     if (initial == null) {
-                        Icon(Icons.Filled.AccountCircle, null, Modifier.size(56.dp), tint = cs.primary)
+                        Icon(Icons.Outlined.Person, null, Modifier.size(32.dp), tint = CtrlColors.OnAccent)
                     } else {
-                        Text(initial, style = MaterialTheme.typography.displaySmall, color = cs.primary)
+                        Text(initial, fontSize = 26.sp, fontWeight = FontWeight.Bold, color = CtrlColors.OnAccent)
                     }
                 }
-                Spacer(Modifier.height(14.dp))
-                Text(
-                    username ?: host.ifBlank { stringResource(R.string.you_not_set) },
-                    style = MaterialTheme.typography.headlineMedium,
-                    textAlign = TextAlign.Center,
-                )
-                Text(
-                    listOfNotNull(
-                        if (username != null) host.ifBlank { null } else stringResource(R.string.you_no_login),
-                        frigateVersion?.let { stringResource(R.string.you_frigate_version, it) },
-                    ).joinToString(stringResource(R.string.list_separator_wide)),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = cs.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                )
+                Spacer(Modifier.width(16.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        username ?: host.ifBlank { stringResource(R.string.you_not_set) },
+                        style = MaterialTheme.typography.headlineSmall,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        listOfNotNull(
+                            if (username != null) host.ifBlank { null } else stringResource(R.string.you_no_login),
+                            frigateVersion?.let { stringResource(R.string.you_frigate_version, it) },
+                        ).joinToString(stringResource(R.string.list_separator)),
+                        style = CtrlType.Mono,
+                        color = CtrlColors.Muted,
+                        maxLines = 2, overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
 
-            Group(stringResource(R.string.you_server_group), gutter = 16.dp) {
+            Group(stringResource(R.string.you_server_group), gutter = 20.dp) {
                 GroupRow(
                     stringResource(R.string.server_and_login),
                     prefs.baseUrl.ifBlank { stringResource(R.string.you_not_set) } +
@@ -197,47 +200,68 @@ fun YouScreen(onBack: () -> Unit, onSettings: () -> Unit, onServer: () -> Unit, 
                 )
             }
 
-            Group(gutter = 16.dp) {
+            Group(stringResource(R.string.group_app), gutter = 20.dp) {
                 GroupRow(
                     stringResource(R.string.settings),
                     stringResource(R.string.settings_subtitle),
-                    icon = Icons.Filled.Settings,
+                    icon = Icons.Outlined.Tune,
                     showChevron = true,
                     onClick = onSettings,
                 )
                 GroupRow(
                     stringResource(R.string.log_out),
                     icon = Icons.AutoMirrored.Outlined.Logout,
-                    iconTint = cs.error,
-                    titleColor = cs.error,
+                    iconTint = CtrlColors.Error,
+                    titleColor = CtrlColors.Error,
                     onClick = { confirmLogout = true },
                 )
             }
 
-            Group(stringResource(R.string.group_about), gutter = 16.dp) {
-                GroupRow(stringResource(R.string.support_title), stringResource(R.string.support_subtitle), Icons.Filled.Favorite, showChevron = true, onClick = { openLink(ctx, SPONSOR_URL) })
-                GroupRow(stringResource(R.string.bugs_title), stringResource(R.string.bugs_subtitle), Icons.Filled.BugReport, showChevron = true, onClick = { openLink(ctx, ISSUES_URL) })
-                GroupRow(stringResource(R.string.source_title), stringResource(R.string.source_subtitle), Icons.Filled.Code, showChevron = true, onClick = { openLink(ctx, REPO_URL) })
-                GroupRow(stringResource(R.string.licence_title), stringResource(R.string.licence_subtitle), Icons.Filled.Gavel, showChevron = true, onClick = { openLink(ctx, LICENCE_URL) })
+            Group(stringResource(R.string.group_about), gutter = 20.dp) {
+                GroupRow(stringResource(R.string.bugs_title), stringResource(R.string.bugs_subtitle), Icons.Outlined.BugReport, showChevron = true, onClick = { openLink(ctx, ISSUES_URL) })
+                GroupRow(stringResource(R.string.source_title), stringResource(R.string.source_subtitle), Icons.Outlined.Code, showChevron = true, onClick = { openLink(ctx, REPO_URL) })
+                GroupRow(stringResource(R.string.licence_title), stringResource(R.string.licence_subtitle), Icons.Outlined.Gavel, showChevron = true, onClick = { openLink(ctx, LICENCE_URL) })
             }
+
+            // Support, accent-filled at the bottom like every Ctrl app's profile page.
+            CtrlButton(
+                stringResource(R.string.support_title),
+                onClick = { openLink(ctx, SPONSOR_URL) },
+                icon = Icons.Outlined.FavoriteBorder,
+                modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 18.dp),
+            )
             Text(
-                stringResource(R.string.about_footer, BuildConfig.VERSION_NAME),
+                stringResource(R.string.support_subtitle),
                 style = MaterialTheme.typography.bodySmall,
-                color = cs.onSurfaceVariant,
+                color = CtrlColors.Muted,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp),
+            )
+            Text(
+                stringResource(R.string.about_footer, BuildConfig.VERSION_NAME).uppercase(),
+                style = CtrlType.Label, letterSpacing = 1.4.sp,
+                color = CtrlColors.Muted,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+            )
+            Text(
+                stringResource(R.string.series_footer),
+                style = CtrlType.Label, letterSpacing = 1.4.sp,
+                color = CtrlColors.Muted,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
             )
         }
     }
 
     if (confirmLogout) {
-        AlertDialog(
+        CtrlAlertDialog(
             onDismissRequest = { confirmLogout = false },
             icon = { Icon(Icons.AutoMirrored.Outlined.Logout, null) },
             title = { Text(stringResource(R.string.log_out_title)) },
             text = { Text(stringResource(R.string.log_out_body)) },
-            confirmButton = { TextButton({ confirmLogout = false; onLogout() }) { Text(stringResource(R.string.log_out)) } },
-            dismissButton = { TextButton({ confirmLogout = false }) { Text(stringResource(R.string.cancel)) } },
+            confirmButton = { TextButton({ confirmLogout = false; onLogout() }) { Text(stringResource(R.string.log_out), color = CtrlColors.Error) } },
+            dismissButton = { TextButton({ confirmLogout = false }) { Text(stringResource(R.string.cancel), color = CtrlColors.Text) } },
         )
     }
 }

@@ -407,7 +407,7 @@ fun LockScreen(vm: AppLockViewModel, onForgot: () -> Unit) {
     }
 
     PinPadScreen(
-        title = stringResource(R.string.lock_title),
+        title = stringResource(R.string.lock_locked),
         message = when {
             vm.lockoutRemaining > 0 -> lockoutText(vm.lockoutRemaining)
             vm.pinError != null -> stringResource(vm.pinError!!)
@@ -434,7 +434,9 @@ fun LockScreen(vm: AppLockViewModel, onForgot: () -> Unit) {
         onConfirm = { if (pin.length >= minLen) vm.submitPin(pin, wrong) },
         showConfirm = pin.length >= minLen && pin.length != savedLength,
         minDots = if (vm.vault.enabled) PIN_MIN else maxOf(minLen, savedLength),
-        bottom = { LockScreenButtons(showFingerprint = canBio, onFingerprint = askBiometric, onForgot = { confirmForgot = true }) },
+        // The fingerprint is a key on the pad now; "Forgot PIN?" stays under it.
+        onFingerprint = if (canBio) askBiometric else null,
+        bottom = { LockScreenButtons(showFingerprint = false, onFingerprint = askBiometric, onForgot = { confirmForgot = true }) },
     )
     if (confirmForgot) {
         ForgotPinDialog(

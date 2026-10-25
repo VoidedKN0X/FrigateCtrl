@@ -4,6 +4,37 @@ What changed in each FrigateCtrl version. Every release on the [Releases page](h
 
 To publish a new version: bump `versionCode` and `versionName` in `app/build.gradle.kts`, add a section here, and push to `main`. Pushes without a version bump only build; they don't make a release.
 
+## 3.5.0 (2026-10-25)
+
+FrigateCtrl gets the new Ctrl / Signal look that every Ctrl app is moving to: near-black, one violet accent, Space Grotesk for text and JetBrains Mono for numbers and labels. Only the look changes. Every screen, switch, gesture and setting works as before.
+
+### Changed
+
+- **New dark-only theme.** Near-black background (#08080A), dark grey cards (#141417) with thin borders, light text and a single violet accent (#B48CFF) for everything that's on, live or selected. The status and navigation bars use the same background, edge to edge, with light icons.
+- **New fonts, built in.** All text is in Space Grotesk; times, counts, addresses, readouts and section labels are in JetBrains Mono. Both fonts are included in the app (nothing is downloaded, no Google font service), under the SIL Open Font License 1.1. The licence texts are in the app and credited in the README.
+- **New top bar on Cameras and System health.** The FRIGATE/CTRL wordmark (with a violet slash) on the left, your profile picture on the right as a rounded square with your initial and a small violet badge while you're connected. Tapping it opens the You page as before. Under it, a small mono label ("NVR · ONLINE", "FRIGATE · LIVE") and the big tab title.
+- **Alerts hero card on Cameras.** A violet card at the top shows the number of new alerts from the last 24 hours in big type, with the number of cameras beside it. These are the same counts that were on the line under the title, which is still there.
+- **Camera tiles.** Rounded 18 dp tiles with a thin border. Each camera's name is now an upper-case mono label at the bottom with a square live dot (violet when the camera is on, grey when it's off) and a violet "LIVE". Alert and PTZ badges are small rounded squares. The label always sits on a dark fade now, instead of switching to dark text over bright pictures.
+- **Group filters, event filters and PTZ presets** are rounded-rectangle chips, violet when selected.
+- **Floating bottom bar.** The frosted-glass pill is replaced by a solid floating bar with a thin border. The selected tab is a violet block with its icon and name, the other tab is an icon only. Lists leave room for it at the bottom.
+- **System health.** A violet hero card shows detection fps in big type with the Frigate version, uptime and the update notice. Camera fps and skipped fps sit in two cards below it. Every section (System, Detectors, Storage, Cameras) is a bordered card with a mono label. Meters are thin 6 dp bars (white, amber at 75 %, red at 90 %), and detector and camera rows end in a mono value and a square status dot.
+- **Live view.** The camera screen has a square back button, the camera name, and a violet mono "LIVE" line under it. The stream picker and camera settings are square buttons. The video has 18 dp corners and a border. The LIVE, PLAYBACK, zoom and "Talking" chips are mono labels with square dots, and the buttons over the video are dark rounded squares. The PTZ joystick, zoom and focus controls, presets, History button (with the alert count in a violet badge) and Talk button sit in one bordered card at the bottom.
+- **Camera settings sheet** (detection, recording, snapshots and the rest) uses the new rows and switches, with each switch's icon turning violet while it's on.
+- **History.** Square buttons at the top for clips, date and events (with the number of unreviewed events on the events button). The time readout is in larger mono type with the date as a mono label, and the timeline's hour labels are mono too. Readout, timeline and playback controls sit in one bordered card at the bottom. The play button is a violet rounded square, the speed button is violet, and the step buttons are dark rounded rectangles in mono. The legend uses square dots and mono labels.
+- **Events list.** Plain rows with thin dividers: the thumbnail, the labels, the time and length in mono, and an "ALERT" or "DETECTION" tag with a square dot (grey once reviewed). Swiping right to mark reviewed shows a violet strip.
+- **New lock screen.** A violet rounded-square lock badge, "VKNXWORKS · CTRL", and "Locked" in big type. The PIN is shown as small squares (violet when filled), and the keypad has three columns of rounded keys in mono. Fingerprint unlock is now a violet-outlined key at the bottom left of the keypad (when fingerprint unlock is on and allowed), and delete is an icon at the bottom right. While the PIN can be confirmed by hand, the bottom-left key becomes a violet confirm key. Choosing, changing and turning off the PIN use the same pad. How the lock works hasn't changed.
+- **New You page.** A close button with a "YOU" label, a violet rounded-square profile picture with your username and, in mono, your server address and Frigate version. Then the Server, App (Settings and Log out) and About sections as bordered cards with mono labels and thin dividers. **Support FrigateCtrl** is now a violet button at the bottom, followed by the version and "GOOGLE-FREE · TELEMETRY-FREE · ARM64".
+- **Settings.** A square back button and title instead of the large collapsing bar. Sections have mono labels and sit in bordered cards with thin dividers between rows. The current choice of a setting (grid columns, refresh, lock timing and so on) is shown in mono on the right, and the choice sheet lists options as plain rows.
+- **New switches everywhere.** Rounded-rectangle switches (violet with a dark knob when on, grey when off) in Settings, the camera settings sheet and sign-in. Screen readers still announce them as switches.
+- **Sign-in and server settings.** The wordmark, a violet camera badge, a mono label and a big title. The fields have rounded borders that turn violet while you type, the self-signed certificate switch uses the new switch, and Connect is a large violet button. Errors show in a red-tinted box.
+- **Dialogs and sheets** (log out, forgot PIN, certificate and http warnings, the date picker, the events and choice sheets) use the dark card colour with 26 dp corners and a thin border. Certificate fingerprints are shown in mono.
+- **Picture-in-picture while locked** shows a violet lock on the app's background instead of a white lock on black.
+
+### Removed
+
+- **Theme and wallpaper colours.** The Appearance section in Settings (Follow system / Dark / Light / Pure black, and Use wallpaper colours) is gone, because FrigateCtrl is dark only now, like every Ctrl app. The light theme and Material You wallpaper colours aren't used any more, whatever you had chosen before.
+- **The frosted-glass blur** behind the bottom bar, and the library that drew it (Haze). The app is a little smaller as a result.
+
 ## 3.4.4 (2026-10-21)
 
 ### Fixed

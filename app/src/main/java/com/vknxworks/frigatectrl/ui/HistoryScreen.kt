@@ -122,6 +122,24 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.annotation.StringRes
 import com.vknxworks.frigatectrl.R
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DatePickerDefaults
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.ui.text.style.TextOverflow
+import com.vknxworks.frigatectrl.ui.components.CtrlBottomSheet
+import com.vknxworks.frigatectrl.ui.components.CtrlChip
+import com.vknxworks.frigatectrl.ui.components.CtrlSquareButton
+import com.vknxworks.frigatectrl.ui.components.CtrlStatusDot
+import com.vknxworks.frigatectrl.ui.components.CtrlSubTopBar
+import com.vknxworks.frigatectrl.ui.components.topDivider
+import com.vknxworks.frigatectrl.ui.theme.CtrlColors
+import com.vknxworks.frigatectrl.ui.theme.CtrlFonts
+import com.vknxworks.frigatectrl.ui.theme.CtrlShape
+import com.vknxworks.frigatectrl.ui.theme.CtrlType
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -273,7 +291,7 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit) {
             }
             OverlayChip(
                 if (playback.speed == 1f) stringResource(R.string.chip_playback) else stringResource(R.string.chip_playback_speed, speedLabel(playback.speed)),
-                cs.primary, Modifier.align(Alignment.TopStart).padding(10.dp),
+                CtrlColors.Accent, Modifier.align(Alignment.TopStart).padding(10.dp),
             )
             if (zoom.zoomed) OverlayChip(
                 stringResource(R.string.zoom_reset, "%.1f".format(zoom.scale)), null,
@@ -297,8 +315,9 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit) {
             onZoomOut = { tl.spp = (tl.spp * 2).coerceIn(MIN_SPP, MAX_SPP) },
         )
         Surface(
-            shape = RoundedCornerShape(20.dp),
-            color = cs.surfaceContainer,
+            shape = CtrlShape.Field,
+            color = CtrlColors.Background,
+            border = BorderStroke(1.dp, CtrlColors.Outline),
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         ) {
             Timeline(
@@ -320,7 +339,7 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit) {
     }
 
     if (landscape) {
-        Column(Modifier.fillMaxSize().background(cs.background)) {
+        Column(Modifier.fillMaxSize().background(CtrlColors.Background)) {
             Box(Modifier.fillMaxWidth().weight(1f)) {
                 video(Modifier.fillMaxSize())
                 Row(Modifier.align(Alignment.TopEnd).padding(6.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -333,57 +352,48 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit) {
             Column(Modifier.navigationBarsPadding()) { controls() }
         }
     } else {
-        Column(Modifier.fillMaxSize().background(cs.background)) {
+        Column(Modifier.fillMaxSize().background(CtrlColors.Background)) {
             // ---- compact header ----
-            Row(
-                Modifier.fillMaxWidth().statusBarsPadding().padding(start = 4.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
+            CtrlSubTopBar(
+                title = info?.displayName ?: camera,
+                onBack = onBack,
+                backIcon = Icons.AutoMirrored.Outlined.ArrowBack,
+                backDescription = stringResource(R.string.back_to_live),
+                subtitle = {
+                    Text(stringResource(R.string.history).uppercase(), style = CtrlType.Label, color = CtrlColors.Muted,
+                        modifier = Modifier.padding(top = 2.dp))
+                },
             ) {
-                IconButton(onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back_to_live)) }
-                Column(Modifier.weight(1f)) {
-                    Text(info?.displayName ?: camera, style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold, maxLines = 1)
-                    Text(stringResource(R.string.history), style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
-                }
-                IconButton({ clipStart = if (clipStart == null) tl.center else null }) {
-                    Icon(Icons.Outlined.ContentCut, stringResource(R.string.make_clip), tint = if (clipStart != null) cs.primary else cs.onSurfaceVariant)
-                }
-                FilledTonalIconButton({ showDate = true }) { Icon(Icons.Outlined.CalendarMonth, stringResource(R.string.pick_date)) }
-                Spacer(Modifier.width(6.dp))
-                FilledTonalIconButton({ showEvents = true }) {
-                    BadgedBox(badge = {
-                        val unseen = reviews.count { !it.reviewed }
-                        if (unseen > 0) Badge { Text("${unseen.coerceAtMost(99)}") }
-                    }) {
-                        Icon(Icons.AutoMirrored.Outlined.List, stringResource(R.string.events))
-                    }
-                }
+                CtrlSquareButton(
+                    Icons.Outlined.ContentCut, stringResource(R.string.make_clip),
+                    { clipStart = if (clipStart == null) tl.center else null },
+                    accent = clipStart != null,
+                )
+                CtrlSquareButton(Icons.Outlined.CalendarMonth, stringResource(R.string.pick_date), { showDate = true })
+                CtrlSquareButton(
+                    Icons.AutoMirrored.Outlined.List, stringResource(R.string.events), { showEvents = true },
+                    badge = reviews.count { !it.reviewed },
+                )
             }
             video(
-                Modifier.padding(horizontal = 12.dp).fillMaxWidth().aspectRatio(16f / 9f)
-                    .clip(RoundedCornerShape(28.dp))
+                Modifier.padding(horizontal = 16.dp).fillMaxWidth().aspectRatio(16f / 9f)
+                    .clip(CtrlShape.Tile).border(1.dp, CtrlColors.Outline, CtrlShape.Tile)
             )
             Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState())) { Legend() }
 
             // ---- bottom dock: readout, timeline, transport ----
-            Surface(
-                shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
-                color = cs.surfaceContainerLow,
-                modifier = Modifier.fillMaxWidth(),
+            Column(
+                Modifier.fillMaxWidth().padding(horizontal = 12.dp).navigationBarsPadding().padding(bottom = 12.dp)
+                    .clip(CtrlShape.Hero).background(CtrlColors.Surface).border(1.dp, CtrlColors.Outline, CtrlShape.Hero)
+                    .padding(top = 6.dp, bottom = 4.dp),
             ) {
-                Column(Modifier.navigationBarsPadding().padding(top = 10.dp, bottom = 4.dp)) {
-                    Box(
-                        Modifier.align(Alignment.CenterHorizontally).size(width = 36.dp, height = 4.dp)
-                            .clip(RoundedCornerShape(50)).background(cs.outlineVariant)
-                    )
-                    controls()
-                }
+                controls()
             }
         }
     }
 
     if (showEvents) {
-        ModalBottomSheet(onDismissRequest = { showEvents = false }) {
+        CtrlBottomSheet(onDismissRequest = { showEvents = false }) {
             EventsList(
                 items = reviews.asReversed(),
                 onPick = { r ->
@@ -409,6 +419,8 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit) {
         )
         DatePickerDialog(
             onDismissRequest = { showDate = false },
+            shape = CtrlShape.Hero,
+            colors = DatePickerDefaults.colors(containerColor = CtrlColors.Surface),
             confirmButton = {
                 TextButton({
                     showDate = false
@@ -422,10 +434,10 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit) {
                         tl.spp = (6 * 3600.0 / widthPx).coerceIn(MIN_SPP, MAX_SPP)
                         seekTo(target, play = false)
                     }
-                }) { Text(stringResource(R.string.go)) }
+                }) { Text(stringResource(R.string.go), color = CtrlColors.Accent) }
             },
-            dismissButton = { TextButton({ showDate = false }) { Text(stringResource(R.string.cancel)) } },
-        ) { DatePicker(dp) }
+            dismissButton = { TextButton({ showDate = false }) { Text(stringResource(R.string.cancel), color = CtrlColors.Text) } },
+        ) { DatePicker(dp, colors = DatePickerDefaults.colors(containerColor = CtrlColors.Surface)) }
     }
 }
 
@@ -433,7 +445,6 @@ private fun speedLabel(s: Float) = if (s < 1f) "${s}×" else "${s.toInt()}×"
 
 @Composable
 private fun TimeReadout(t: Double, spp: Double, widthPx: Float, onZoomIn: () -> Unit, onZoomOut: () -> Unit) {
-    val cs = MaterialTheme.colorScheme
     val fmtDate = remember { SimpleDateFormat("EEEE d MMMM", Locale.getDefault()) }
     val fmtTime = remember { SimpleDateFormat("HH:mm:ss", Locale.getDefault()) }
     val d = Date((t * 1000).toLong())
@@ -443,18 +454,18 @@ private fun TimeReadout(t: Double, spp: Double, widthPx: Float, onZoomIn: () -> 
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text(fmtDate.format(d), color = cs.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
+            Text(fmtDate.format(d).uppercase(), color = CtrlColors.Muted, style = CtrlType.Label)
             Row(verticalAlignment = Alignment.Bottom) {
-                Text(fmtTime.format(d), fontFamily = FontFamily.Monospace, fontSize = 26.sp, fontWeight = FontWeight.Medium)
-                Text(".$tenths", fontFamily = FontFamily.Monospace, fontSize = 18.sp, color = cs.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 2.dp))
+                Text(fmtTime.format(d), fontFamily = CtrlFonts.Mono, fontSize = 30.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.5).sp)
+                Text(".$tenths", fontFamily = CtrlFonts.Mono, fontSize = 18.sp, color = CtrlColors.Muted,
+                    modifier = Modifier.padding(bottom = 3.dp))
             }
         }
-        Surface(shape = RoundedCornerShape(50), color = cs.surfaceContainerHigh) {
+        Surface(shape = CtrlShape.Control, color = CtrlColors.Raised, border = BorderStroke(1.dp, CtrlColors.ControlOutline)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onZoomOut) { Icon(Icons.Outlined.ZoomOut, stringResource(R.string.zoom_timeline_out)) }
-                Text(zoomLabel(spp * widthPx), style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
-                IconButton(onZoomIn) { Icon(Icons.Outlined.ZoomIn, stringResource(R.string.zoom_timeline_in)) }
+                IconButton(onZoomOut) { Icon(Icons.Outlined.ZoomOut, stringResource(R.string.zoom_timeline_out), Modifier.size(20.dp)) }
+                Text(zoomLabel(spp * widthPx), style = CtrlType.Mono, color = CtrlColors.Muted)
+                IconButton(onZoomIn) { Icon(Icons.Outlined.ZoomIn, stringResource(R.string.zoom_timeline_in), Modifier.size(20.dp)) }
             }
         }
     }
@@ -484,9 +495,12 @@ private fun Transport(
             IconButton({ onEvent(false) }) { Icon(Icons.Outlined.SkipPrevious, stringResource(R.string.previous_event)) }
             StepButton("−10s") { onStep(-10.0) }
             StepButton("−1s") { onStep(-1.0) }
-            FilledIconButton(onPlay, Modifier.size(60.dp)) {
+            FilledIconButton(
+                onPlay, Modifier.size(64.dp), shape = RoundedCornerShape(22.dp),
+                colors = IconButtonDefaults.filledIconButtonColors(containerColor = CtrlColors.Accent, contentColor = CtrlColors.OnAccent),
+            ) {
                 Icon(if (playing) Icons.Default.Pause else Icons.Default.PlayArrow, stringResource(if (playing) R.string.pause else R.string.play),
-                    modifier = Modifier.size(32.dp))
+                    modifier = Modifier.size(30.dp))
             }
             StepButton("+1s") { onStep(1.0) }
             StepButton("+10s") { onStep(10.0) }
@@ -499,8 +513,12 @@ private fun Transport(
         ) {
             StepButton("−30s", outlined = true) { onStep(-30.0) }
             StepButton("−0.1s", outlined = true) { onStep(-0.1) }
-            FilledTonalButton(onSpeed, contentPadding = PaddingValues(horizontal = 14.dp)) {
-                Text(speedLabel(speed), fontWeight = FontWeight.Bold)
+            FilledTonalButton(
+                onSpeed, contentPadding = PaddingValues(horizontal = 14.dp), shape = CtrlShape.Control,
+                colors = ButtonDefaults.filledTonalButtonColors(containerColor = CtrlColors.Accent, contentColor = CtrlColors.OnAccent),
+                modifier = Modifier.height(36.dp),
+            ) {
+                Text(speedLabel(speed), fontFamily = CtrlFonts.Mono, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
             }
             StepButton("+0.1s", outlined = true) { onStep(0.1) }
             StepButton("+30s", outlined = true) { onStep(30.0) }
@@ -512,19 +530,25 @@ private fun Transport(
 private fun StepButton(label: String, outlined: Boolean = false, onClick: () -> Unit) {
     val pad = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
     if (outlined) {
-        OutlinedButton(onClick, contentPadding = pad, modifier = Modifier.height(36.dp)) {
-            Text(label, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+        OutlinedButton(
+            onClick, contentPadding = pad, modifier = Modifier.height(36.dp), shape = CtrlShape.Control,
+            border = BorderStroke(1.dp, CtrlColors.ControlOutline),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = CtrlColors.Muted),
+        ) {
+            Text(label, fontSize = 12.sp, fontFamily = CtrlFonts.Mono)
         }
     } else {
-        FilledTonalButton(onClick, contentPadding = pad, modifier = Modifier.height(40.dp)) {
-            Text(label, fontSize = 13.sp, fontFamily = FontFamily.Monospace)
+        FilledTonalButton(
+            onClick, contentPadding = pad, modifier = Modifier.height(40.dp), shape = CtrlShape.Control,
+            colors = ButtonDefaults.filledTonalButtonColors(containerColor = CtrlColors.Raised, contentColor = CtrlColors.Text),
+        ) {
+            Text(label, fontSize = 13.sp, fontFamily = CtrlFonts.Mono, fontWeight = FontWeight.Medium)
         }
     }
 }
 
 @Composable
 private fun Legend() {
-    val cs = MaterialTheme.colorScheme
     val st = Status
     Row(
         Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
@@ -537,7 +561,7 @@ private fun Legend() {
     }
     Text(
         stringResource(R.string.timeline_help),
-        color = cs.onSurfaceVariant, style = MaterialTheme.typography.bodySmall,
+        color = CtrlColors.Muted, style = MaterialTheme.typography.bodySmall,
         modifier = Modifier.padding(horizontal = 20.dp),
     )
 }
@@ -545,9 +569,9 @@ private fun Legend() {
 @Composable
 private fun LegendDot(c: Color, label: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(10.dp).clip(RoundedCornerShape(3.dp)).background(c))
-        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp,
-            modifier = Modifier.padding(start = 5.dp))
+        Box(Modifier.size(8.dp).clip(RoundedCornerShape(2.dp)).background(c))
+        Text(label.uppercase(), color = CtrlColors.Muted, style = CtrlType.Label,
+            modifier = Modifier.padding(start = 6.dp))
     }
 }
 
@@ -562,7 +586,6 @@ private fun EventsList(
     onMarkAll: () -> Unit,
     onClip: (ReviewItem, share: Boolean) -> Unit,
 ) {
-    val cs = MaterialTheme.colorScheme
     val st = Status
     val fmt = remember { SimpleDateFormat("EEE HH:mm:ss", Locale.getDefault()) }
     var filter by rememberSaveable { mutableStateOf(EventFilter.All) }
@@ -577,16 +600,16 @@ private fun EventsList(
 
     Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            Text(stringResource(R.string.events), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.events), style = MaterialTheme.typography.titleLarge)
             Text(
                 if (unseen > 0) pluralStringResource(R.plurals.events_unreviewed, unseen, unseen) else stringResource(R.string.events_all_caught_up),
-                style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant,
+                style = MaterialTheme.typography.bodySmall, color = CtrlColors.Muted,
             )
         }
         if (unseen > 0) TextButton(onMarkAll) {
-            Icon(Icons.Outlined.DoneAll, null, Modifier.size(18.dp))
+            Icon(Icons.Outlined.DoneAll, null, Modifier.size(18.dp), tint = CtrlColors.Accent)
             Spacer(Modifier.width(6.dp))
-            Text(stringResource(R.string.mark_all))
+            Text(stringResource(R.string.mark_all), color = CtrlColors.Accent)
         }
     }
     Row(
@@ -594,13 +617,13 @@ private fun EventsList(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         EventFilter.entries.forEach { f ->
-            FilterChip(filter == f, { filter = f }, label = { Text(stringResource(f.label)) })
+            CtrlChip(stringResource(f.label), filter == f, { filter = f })
         }
     }
     if (shown.isEmpty()) {
         Text(
             stringResource(if (filter == EventFilter.Unreviewed) R.string.events_none_unreviewed else R.string.events_none),
-            color = cs.onSurfaceVariant, modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp),
+            color = CtrlColors.Muted, modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp),
         )
         return
     }
@@ -617,74 +640,86 @@ private fun EventsList(
                 enableDismissFromEndToStart = false,
                 backgroundContent = {
                     Row(
-                        Modifier.fillMaxSize().background(cs.primaryContainer).padding(horizontal = 24.dp),
+                        Modifier.fillMaxSize().background(CtrlColors.Accent).padding(horizontal = 24.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(
                             if (r.reviewed) Icons.Outlined.MarkEmailUnread else Icons.Outlined.DoneAll, null,
-                            tint = cs.onPrimaryContainer,
+                            tint = CtrlColors.OnAccent,
                         )
                         Spacer(Modifier.width(10.dp))
-                        Text(stringResource(if (r.reviewed) R.string.mark_unreviewed else R.string.mark_reviewed), color = cs.onPrimaryContainer)
+                        Text(stringResource(if (r.reviewed) R.string.mark_unreviewed else R.string.mark_reviewed), color = CtrlColors.OnAccent, fontWeight = FontWeight.SemiBold)
                     }
                 },
                 modifier = Modifier.animateItem(),
             ) {
                 var menu by remember { mutableStateOf(false) }
-                ListItem(
-                    modifier = Modifier.clickable { onPick(r) },
-                    colors = ListItemDefaults.colors(containerColor = cs.surfaceContainerLow),
-                    leadingContent = {
-                        Box(
-                            Modifier.width(112.dp).aspectRatio(16f / 9f).clip(MaterialTheme.shapes.small)
-                                .background(cs.surfaceContainerHighest)
-                        ) {
-                            r.thumbPath?.let {
-                                RemoteImage(
-                                    App.api.url(it),
-                                    Modifier.fillMaxSize().graphicsLayer { alpha = if (r.reviewed) 0.6f else 1f },
-                                )
-                            }
-                        }
-                    },
-                    headlineContent = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(Modifier.size(8.dp).clip(CircleShape).background(if (r.isAlert) st.alert else st.detection))
-                            Spacer(Modifier.width(6.dp))
-                            Text(
-                                r.labels.joinToString(", ").ifBlank { r.severity }.replaceFirstChar { it.uppercase() },
-                                fontWeight = if (r.reviewed) FontWeight.Normal else FontWeight.Bold,
-                                color = if (r.reviewed) cs.onSurfaceVariant else cs.onSurface,
+                val dur = r.end?.let { "${(it - r.start).toInt()} s" } ?: stringResource(R.string.event_ongoing)
+                val dotColor = if (r.isAlert) st.alert else st.detection
+                Row(
+                    Modifier.fillMaxWidth().background(CtrlColors.Surface).padding(horizontal = 16.dp)
+                        .topDivider().clickable { onPick(r) }.heightIn(min = 72.dp).padding(vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        Modifier.width(104.dp).aspectRatio(16f / 9f).clip(RoundedCornerShape(12.dp))
+                            .background(CtrlColors.Raised)
+                    ) {
+                        r.thumbPath?.let {
+                            RemoteImage(
+                                App.api.url(it),
+                                Modifier.fillMaxSize().graphicsLayer { alpha = if (r.reviewed) 0.5f else 1f },
                             )
                         }
-                    },
-                    supportingContent = {
-                        val dur = r.end?.let { "${(it - r.start).toInt()} s" } ?: stringResource(R.string.event_ongoing)
-                        Text(stringResource(R.string.event_time_duration, fmt.format(Date((r.start * 1000).toLong())), dur))
-                    },
-                    trailingContent = {
-                        Box {
-                            IconButton({ menu = true }) { Icon(Icons.Outlined.MoreVert, stringResource(R.string.more)) }
-                            DropdownMenu(menu, { menu = false }) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(if (r.reviewed) R.string.mark_unreviewed else R.string.mark_reviewed)) },
-                                    leadingIcon = { Icon(if (r.reviewed) Icons.Outlined.MarkEmailUnread else Icons.Outlined.DoneAll, null) },
-                                    onClick = { menu = false; onReviewed(r, !r.reviewed) },
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.clip_save)) },
-                                    leadingIcon = { Icon(Icons.Outlined.Download, null) },
-                                    onClick = { menu = false; onClip(r, false) },
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.clip_share)) },
-                                    leadingIcon = { Icon(Icons.Outlined.Share, null) },
-                                    onClick = { menu = false; onClip(r, true) },
-                                )
-                            }
+                    }
+                    Spacer(Modifier.width(14.dp))
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Text(
+                            r.labels.joinToString(", ").ifBlank { r.severity }.replaceFirstChar { it.uppercase() },
+                            fontSize = 16.sp,
+                            fontWeight = if (r.reviewed) FontWeight.Normal else FontWeight.Medium,
+                            color = if (r.reviewed) CtrlColors.Muted else CtrlColors.Text,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            stringResource(R.string.event_time_duration, fmt.format(Date((r.start * 1000).toLong())), dur),
+                            style = CtrlType.Mono, fontSize = 11.sp, color = CtrlColors.Muted, maxLines = 1,
+                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CtrlStatusDot(if (r.reviewed) CtrlColors.Inactive else dotColor)
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                (if (r.isAlert) stringResource(R.string.legend_alert) else stringResource(R.string.legend_detection)).uppercase(),
+                                style = CtrlType.Label, fontSize = 10.sp,
+                                color = if (r.reviewed) CtrlColors.Inactive else dotColor,
+                            )
                         }
-                    },
-                )
+                    }
+                    Box {
+                        IconButton({ menu = true }) { Icon(Icons.Outlined.MoreVert, stringResource(R.string.more), tint = CtrlColors.Muted) }
+                        DropdownMenu(
+                            menu, { menu = false },
+                            shape = CtrlShape.Field, containerColor = CtrlColors.Raised,
+                            border = BorderStroke(1.dp, CtrlColors.ControlOutline),
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(if (r.reviewed) R.string.mark_unreviewed else R.string.mark_reviewed)) },
+                                leadingIcon = { Icon(if (r.reviewed) Icons.Outlined.MarkEmailUnread else Icons.Outlined.DoneAll, null) },
+                                onClick = { menu = false; onReviewed(r, !r.reviewed) },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.clip_save)) },
+                                leadingIcon = { Icon(Icons.Outlined.Download, null) },
+                                onClick = { menu = false; onClip(r, false) },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.clip_share)) },
+                                leadingIcon = { Icon(Icons.Outlined.Share, null) },
+                                onClick = { menu = false; onClip(r, true) },
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -700,14 +735,13 @@ private fun ClipBar(
     onSave: () -> Unit,
     onShare: () -> Unit,
 ) {
-    val cs = MaterialTheme.colorScheme
     val fmt = remember { SimpleDateFormat("HH:mm:ss", Locale.getDefault()) }
     val a = minOf(start, end); val b = maxOf(start, end)
     val len = (b - a).toInt()
     Surface(
-        shape = RoundedCornerShape(20.dp),
-        color = cs.primaryContainer,
-        contentColor = cs.onPrimaryContainer,
+        shape = CtrlShape.Field,
+        color = CtrlColors.Accent,
+        contentColor = CtrlColors.OnAccent,
         modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 8.dp),
     ) {
         Row(Modifier.padding(start = 16.dp, end = 4.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -715,10 +749,10 @@ private fun ClipBar(
                 Text(stringResource(R.string.clip_length, len / 60, len % 60), fontWeight = FontWeight.Bold)
                 Text(
                     if (len < 1) stringResource(R.string.clip_scrub_to_end) else "${fmt.format(Date((a * 1000).toLong()))} → ${fmt.format(Date((b * 1000).toLong()))}",
-                    style = MaterialTheme.typography.bodySmall,
+                    style = CtrlType.Mono,
                 )
             }
-            if (busy) CircularProgressIndicator(Modifier.size(22.dp).padding(end = 8.dp), strokeWidth = 2.dp)
+            if (busy) CircularProgressIndicator(Modifier.size(22.dp).padding(end = 8.dp), strokeWidth = 2.dp, color = CtrlColors.OnAccent)
             else {
                 IconButton(onSave) { Icon(Icons.Outlined.Download, stringResource(R.string.save_to_gallery)) }
                 IconButton(onShare) { Icon(Icons.Outlined.Share, stringResource(R.string.share)) }

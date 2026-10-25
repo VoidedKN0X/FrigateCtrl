@@ -24,16 +24,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
-import com.vknxworks.frigatectrl.ui.GlassTab
-import com.vknxworks.frigatectrl.ui.GlassTabBar
-import com.vknxworks.frigatectrl.ui.GlassTabBarHeight
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.hazeSource
+import com.vknxworks.frigatectrl.ui.components.CtrlBottomBar
+import com.vknxworks.frigatectrl.ui.components.CtrlBottomBarHeight
+import com.vknxworks.frigatectrl.ui.components.CtrlBottomBarMargin
+import com.vknxworks.frigatectrl.ui.components.CtrlTab
+import com.vknxworks.frigatectrl.ui.theme.CtrlColors
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.MonitorHeart
-import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.MonitorHeart
 import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material3.MaterialTheme
@@ -70,7 +68,6 @@ import com.vknxworks.frigatectrl.ui.SetupScreen
 import com.vknxworks.frigatectrl.ui.YouScreen
 import com.vknxworks.frigatectrl.ui.ConnectionSecurityCheck
 import com.vknxworks.frigatectrl.ui.needsConnectionCheck
-import com.vknxworks.frigatectrl.ui.isAppInDarkTheme
 import androidx.compose.ui.res.stringResource
 
 // FragmentActivity (a ComponentActivity) is required by the fingerprint prompt.
@@ -78,7 +75,12 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         App.init(this)
-        enableEdgeToEdge()
+        // Dark only: dark bars (light icons) over the app's own background, edge to edge.
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+        )
+        window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(0xFF08080A.toInt()))
         // Applied before the first frame is drawn, not only once Compose has started.
         if (App.lock.hideScreenshots) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         // Remove temporary shared clips left over from an earlier session.
@@ -86,12 +88,6 @@ class MainActivity : FragmentActivity() {
         Thread { Clips.cleanup(appCtx) }.start()
         setContent {
             FrigateTheme {
-                val dark = isAppInDarkTheme()
-                LaunchedEffect(dark) {
-                    val style = if (dark) SystemBarStyle.dark(Color.TRANSPARENT)
-                    else SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
-                    enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
-                }
                 // "Hide in screenshots" (off by default, independent of the app lock). Sign-in, the lock screen and
                 // PIN screens are always kept out of screenshots.
                 val secure = App.lock.hideScreenshots || SecureScreens.active > 0
@@ -181,11 +177,11 @@ private fun Root(activity: FragmentActivity, lockVm: AppLockViewModel = viewMode
     // While locked nothing else is composed, so live streams and audio stop too.
     if (lockVm.locked && App.prefs.isConfigured && inPip) {
         // Locked while floating: no camera, only a lock. Expanding the window shows the lock screen.
-        Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Black), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxSize().background(CtrlColors.Background), contentAlignment = Alignment.Center) {
             androidx.compose.material3.Icon(
-                Icons.Filled.Lock,
+                Icons.Outlined.Lock,
                 stringResource(R.string.pip_locked),
-                tint = androidx.compose.ui.graphics.Color.White,
+                tint = CtrlColors.Accent,
             )
         }
         return
@@ -278,21 +274,20 @@ private fun depth(route: String): Int = when {
 private fun HomeScreen(tab: Int, onTab: (Int) -> Unit, onOpen: (String) -> Unit, onYou: () -> Unit) {
     // Back on the Health tab returns to Cameras first.
     if (tab != 0) BackHandler { onTab(0) }
-    val haze = remember { HazeState() }
     val camerasLabel = stringResource(R.string.tab_cameras)
     val healthLabel = stringResource(R.string.tab_health)
     val tabs = remember(camerasLabel, healthLabel) {
         listOf(
-            GlassTab(camerasLabel, Icons.Outlined.Videocam, Icons.Filled.Videocam),
-            GlassTab(healthLabel, Icons.Outlined.MonitorHeart, Icons.Filled.MonitorHeart),
+            CtrlTab(camerasLabel, Icons.Outlined.Videocam),
+            CtrlTab(healthLabel, Icons.Outlined.MonitorHeart),
         )
     }
     val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     // Lists scroll underneath the floating bar, so they only need room to clear it at the end.
-    val contentBottom = navBottom + GlassTabBarHeight + 24.dp
+    val contentBottom = navBottom + CtrlBottomBarMargin + CtrlBottomBarHeight + 8.dp
 
-    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        Box(Modifier.fillMaxSize().hazeSource(haze)) {
+    Box(Modifier.fillMaxSize().background(CtrlColors.Background)) {
+        Box(Modifier.fillMaxSize()) {
             AnimatedContent(
                 targetState = tab,
                 transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) },
@@ -304,12 +299,11 @@ private fun HomeScreen(tab: Int, onTab: (Int) -> Unit, onOpen: (String) -> Unit,
                 }
             }
         }
-        GlassTabBar(
+        CtrlBottomBar(
             tabs = tabs,
             selected = tab,
             onSelect = onTab,
-            hazeState = haze,
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = navBottom + 12.dp),
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = navBottom + CtrlBottomBarMargin),
         )
     }
 }

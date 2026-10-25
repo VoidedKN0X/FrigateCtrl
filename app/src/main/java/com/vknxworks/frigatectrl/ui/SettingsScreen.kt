@@ -86,7 +86,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.vknxworks.frigatectrl.App
 import com.vknxworks.frigatectrl.R
-import com.vknxworks.frigatectrl.data.ThemeMode
+import com.vknxworks.frigatectrl.ui.components.CtrlSubTopBar
+import com.vknxworks.frigatectrl.ui.theme.CtrlColors
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 
 /** Settings, opened from the You page (tap your profile picture). Server, log out and About are on the You page. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -95,34 +99,21 @@ fun SettingsScreen(onBack: () -> Unit) {
     val s = App.settings
     val cs = MaterialTheme.colorScheme
     val ctx = LocalContext.current
-    val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val lock = App.lock
     val bioAvailable = remember { biometricAvailable(ctx) }
 
-    Scaffold(
-        modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
-        topBar = {
-            LargeTopAppBar(
-                title = { Text(stringResource(R.string.settings), fontWeight = FontWeight.SemiBold) },
-                navigationIcon = { IconButton(onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) } },
-                scrollBehavior = scroll,
-            )
-        },
-    ) { pad ->
+    // The Appearance group (theme and wallpaper colours) is gone: every Ctrl app is dark only now.
+    Column(Modifier.fillMaxSize().background(CtrlColors.Background)) {
+        CtrlSubTopBar(
+            title = stringResource(R.string.settings),
+            onBack = onBack,
+            backIcon = Icons.AutoMirrored.Outlined.ArrowBack,
+            backDescription = stringResource(R.string.back),
+        )
         Column(
-            Modifier.fillMaxSize().padding(pad).verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp).padding(bottom = 32.dp),
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp).navigationBarsPadding().padding(bottom = 32.dp),
         ) {
-            Section(stringResource(R.string.group_appearance)) {
-                Choice(
-                    Icons.Outlined.DarkMode, stringResource(R.string.theme),
-                    THEMES.map { stringResource(it.label) },
-                    THEMES.indexOf(s.theme).coerceAtLeast(0),
-                ) { s.theme = THEMES[it] }
-                Toggle(
-                    Icons.Outlined.Palette, stringResource(R.string.dynamic_colour), stringResource(R.string.dynamic_colour_subtitle), s.dynamicColor,
-                ) { s.dynamicColor = it }
-            }
 
             Section(
                 stringResource(R.string.group_privacy),
@@ -236,9 +227,6 @@ fun SettingsScreen(onBack: () -> Unit) {
         }
     }
 }
-
-/** In the same order as every Ctrl app. */
-private val THEMES = listOf(ThemeMode.System, ThemeMode.Dark, ThemeMode.Light, ThemeMode.Black)
 
 // Settings rows look the same as in every Ctrl app (see ui/settings/SettingsKit.kt).
 
