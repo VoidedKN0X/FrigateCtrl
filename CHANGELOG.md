@@ -4,6 +4,22 @@ What changed in each FrigateCtrl version. Every release on the [Releases page](h
 
 To publish a new version: bump `versionCode` and `versionName` in `app/build.gradle.kts`, add a section here, and push to `main`. Pushes without a version bump only build; they don't make a release.
 
+## 3.7.4 (2026-10-25)
+
+More fixes for a live view that froze on some phones (Samsung in particular) while working fine on others, and an on-device report to find out why if it still happens.
+
+### Fixed
+
+- **A frozen picture is noticed even while the sound keeps playing.** On some phones the video decoder gets stuck while the camera's sound carries on, so the live view looked frozen but FrigateCtrl thought it was still playing. It now watches for new video frames: if none is shown for 5 seconds while the live view should be playing, it reconnects. The check from 3.7.3 (the video standing still for 8 seconds) stays as well.
+- **Steadier playback when catching up with the live edge.** When the live view falls behind it plays slightly faster (1.15×) to catch up. It used to switch between normal and faster speed as often as every second, which some phones' sound output handles badly. It now only speeds up when it's more than 2 seconds behind and goes back to normal once it's less than 0.7 seconds behind.
+- **Muted live view plays without sound at all.** With the live view muted, FrigateCtrl now turns the camera's sound off completely instead of only setting the volume to zero, so the phone doesn't decode sound nobody hears and the video no longer depends on the sound output. Unmuting reconnects with sound, starting at the live edge.
+- **Sound turns itself off when it keeps freezing the video.** If the picture freezes twice on the same camera, FrigateCtrl reconnects that camera without sound until you leave the screen, and shows a short note: "Sound off: video kept freezing with sound on this phone" (tap it to hide it).
+- **Another video decoder is tried when the first one fails.** If the phone's preferred video decoder can't start with the camera's stream, the live view now falls back to another decoder on the phone instead of giving up.
+
+### New
+
+- **Last live view report (on this phone only).** After a live view, **Settings > Troubleshooting > Last live view report** shows how it went: your phone model, the Android and FrigateCtrl version, the video and audio decoders used, the video format (codec, size, frame rate) and sound format (codec, sample rate, channels), dropped frames, whether the sound was off, and every reconnect with its reason (stream closed by the server, picture stopped, no new frames, or an error). **Copy** copies it as sensitive, so it isn't previewed, and **Delete** removes it. It names only the camera, never your server address, logins or tokens, is never sent anywhere, and logging out deletes it.
+
 ## 3.7.3 (2026-10-25)
 
 Fixes for a live view that froze, especially on Samsung phones.

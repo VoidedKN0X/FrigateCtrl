@@ -70,6 +70,7 @@ Settings, the server and login, log out and About are behind your profile pictur
 
 - **No sound in live view:** the camera's audio needs to be AAC. Convert it in your go2rtc config, e.g. `- "ffmpeg:your_cam#video=copy#audio=aac"`.
 - **Live view shows snapshots instead of video:** the note on the screen says why. `stream not found` usually means the go2rtc stream name doesn't match; map it with `live: streams:` in your Frigate config.
+- **Live video freezes on one phone but not another:** open the live view until it freezes, then copy **Settings > Troubleshooting > Last live view report** into a bug report. It shows the phone's video decoder, the stream's formats and why the live view reconnected.
 - **No PTZ buttons:** they only show for cameras with an `onvif:` section in your Frigate config.
 - **Talk button missing:** it only shows when the camera has a speaker, and go2rtc's WebRTC port (8555) must be reachable from your phone.
 - **Talk connects at home but not away from it:** talk only uses the STUN/TURN servers listed under `go2rtc: webrtc: ice_servers:` in your Frigate config; the app never contacts a public STUN server on its own. Add one there (your own, or a public one if you're happy for it to see your IP address).
@@ -141,6 +142,7 @@ Turn it on under **Settings > Privacy and security > App lock** (tap your profil
 - **Two-way talk:** the built-in web view it runs in has online page checks and usage reports turned off.
 - **Links:** the Support FrigateCtrl button and the Report a bug, Source code and Licence rows on the You page (tap your profile picture) open GitHub or gnu.org in your browser, only when you tap them.
 - **Crash reports stay on your phone.** If FrigateCtrl stops because of an error, the error is saved on the phone only (no logins or tokens in it) and shows as **Last crash report** in Settings, to copy into a bug report or delete. Nothing is ever sent anywhere.
+- **Live view reports stay on your phone.** After a live view, FrigateCtrl keeps a small report about it (phone model, Android and app version, the video and audio decoders and formats, dropped frames and why it reconnected) to help find out why live video misbehaves on a particular phone. It has no server address, logins or tokens, shows as **Last live view report** in Settings to copy or delete, and is never sent anywhere. Logging out deletes it.
 - Your login is stored encrypted on your phone. **Hide in screenshots** and **Hide in recent apps** (Settings > Privacy and security, both off by default) keep your cameras out of screenshots, screen recordings and the recent-apps preview.
 
 ## Build from source
