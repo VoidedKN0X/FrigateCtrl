@@ -4,6 +4,15 @@ What changed in each FrigateCtrl version. Every release on the [Releases page](h
 
 To publish a new version: bump `versionCode` and `versionName` in `app/build.gradle.kts`, add a section here, and push to `main`. Pushes without a version bump only build; they don't make a release.
 
+## 3.7.5 (2026-10-31)
+
+Fixes the live view starting over a couple of seconds after you open a camera.
+
+### Fixed
+
+- **The live view no longer restarts right after it starts.** Opening a camera started the live video before the camera's details had loaded from Frigate, using the camera's own name as the stream. A second or two later the details arrived, and if the camera's live stream has a different name in your Frigate config (under `live: streams:`), or *Prefer sub stream* is on, FrigateCtrl switched to that stream and the video started again from scratch. It now waits for the details (showing the camera's latest snapshot meanwhile) and connects once, straight to the right stream.
+- **Going fullscreen, rotating the phone or floating as picture-in-picture keeps the video playing.** Each of these used to close the live stream and open a new one, so the picture went back to a snapshot for a moment. The same connection now carries on.
+
 ## 3.7.4 (2026-10-25)
 
 More fixes for a live view that froze on some phones (Samsung in particular) while working fine on others, and an on-device report to find out why if it still happens.

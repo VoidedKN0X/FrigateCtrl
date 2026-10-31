@@ -86,6 +86,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -129,8 +131,11 @@ fun CameraScreen(camera: String, onBack: () -> Unit, historyAt: Double? = null) 
     val api = App.api
     var info by remember { mutableStateOf<CameraInfo?>(null) }
     var ptz by remember { mutableStateOf<PtzInfo?>(null) }
+    // Set once the camera's details are in (or failed to load): only then is the right live stream known.
+    var infoLoaded by remember { mutableStateOf(false) }
     LaunchedEffect(camera) {
         info = try { api.cameras().firstOrNull { it.name == camera } } catch (_: Exception) { null }
+        infoLoaded = true
         if (info?.hasOnvif == true) ptz = api.ptzInfo(camera)
     }
     // Opened from an alert notification: straight into History at that alert.
@@ -141,7 +146,7 @@ fun CameraScreen(camera: String, onBack: () -> Unit, historyAt: Double? = null) 
         BackHandler { showHistory = false }
         HistoryScreen(camera, info, onBack = { showHistory = false }, startAt = historyAt)
     } else {
-        LiveScreen(camera, info, ptz, onBack = onBack, onHistory = { showHistory = true })
+        LiveScreen(camera, info, infoLoaded, ptz, onBack = onBack, onHistory = { showHistory = true })
     }
 }
 
@@ -150,6 +155,7 @@ fun CameraScreen(camera: String, onBack: () -> Unit, historyAt: Double? = null) 
 private fun LiveScreen(
     camera: String,
     info: CameraInfo?,
+    infoLoaded: Boolean,
     ptz: PtzInfo?,
     onBack: () -> Unit,
     onHistory: () -> Unit,
@@ -160,10 +166,13 @@ private fun LiveScreen(
     val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     val streams = info?.streams.orEmpty()
-    var streamIdx by rememberSaveable(camera) { mutableIntStateOf(-1) }
-    LaunchedEffect(streams.size) {
-        if (streamIdx < 0 && streams.isNotEmpty())
-            streamIdx = if (settings.preferSubStream && streams.size > 1) streams.lastIndex else 0
+    // -1 = not picked by hand: use the default stream. Worked out directly (not set a moment later), so the
+    // live view connects to the right stream once instead of starting on one and switching to another.
+    var pickedStream by rememberSaveable(camera) { mutableIntStateOf(-1) }
+    val streamIdx = when {
+        pickedStream in streams.indices -> pickedStream
+        settings.preferSubStream && streams.size > 1 -> streams.lastIndex
+        else -> 0
     }
     var muted by rememberSaveable { mutableStateOf(settings.startMuted) }
     var streamMenu by remember { mutableStateOf(false) }
@@ -171,6 +180,17 @@ private fun LiveScreen(
     var showToggles by remember { mutableStateOf(false) }
     val zoom = remember(camera) { ZoomState() }
     val stream = streams.getOrNull(streamIdx)?.streamName ?: camera
+    // The live video is one movable piece, so going fullscreen, rotating or floating as picture-in-picture
+    // keeps the same connection instead of starting a new one. Until the stream is known it shows snapshots.
+    val liveVideo = remember(camera) {
+        movableContentOf { ready: Boolean, s: String, m: Boolean, notes: Boolean ->
+            if (ready) LiveView(camera, s, m, Modifier.fillMaxSize(), zoom = zoom, showNotes = notes)
+            else RemoteImage(
+                App.api.latestJpg(camera, 720), Modifier.fillMaxSize().background(Color.Black),
+                contentScale = ContentScale.Fit, refreshMs = 500,
+            )
+        }
+    }
 
     // ---- Frigate websocket: PTZ + camera toggles ----
     val socket = remember { FrigateSocket(api) }
@@ -237,7 +257,7 @@ private fun LiveScreen(
     if (inPip) {
         // Only the picture in the floating window.
         Box(Modifier.fillMaxSize().background(Color.Black)) {
-            LiveView(camera, stream, muted, Modifier.fillMaxSize(), zoom = zoom, showNotes = false)
+            liveVideo(infoLoaded, stream, muted, false)
         }
         return
     }
@@ -258,7 +278,7 @@ private fun LiveScreen(
 
     if (immersive) {
         Box(Modifier.fillMaxSize().background(Color.Black).zoomable(zoom)) {
-            LiveView(camera, stream, muted, Modifier.fillMaxSize(), zoom = zoom)
+            liveVideo(infoLoaded, stream, muted, true)
             OverlayChip(stringResource(R.string.chip_live), Status.live, Modifier.align(Alignment.TopStart).padding(16.dp), pulse = true)
             videoOverlay()
             Row(Modifier.align(Alignment.BottomEnd).padding(8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -309,7 +329,7 @@ private fun LiveScreen(
                     streams.forEachIndexed { i, s ->
                         DropdownMenuItem(
                             text = { Text(s.label, fontWeight = if (i == streamIdx) FontWeight.Bold else null) },
-                            onClick = { streamIdx = i; streamMenu = false },
+                            onClick = { pickedStream = i; streamMenu = false },
                         )
                     }
                 }
@@ -323,7 +343,7 @@ private fun LiveScreen(
                 .clip(CtrlShape.Tile).background(Color.Black)
                 .border(1.dp, CtrlColors.Outline, CtrlShape.Tile).zoomable(zoom)
         ) {
-            LiveView(camera, stream, muted, Modifier.fillMaxSize(), zoom = zoom)
+            liveVideo(infoLoaded, stream, muted, true)
             OverlayChip(stringResource(R.string.chip_live), Status.live, Modifier.align(Alignment.TopStart).padding(12.dp), pulse = true)
             videoOverlay()
             Row(Modifier.align(Alignment.BottomEnd).padding(6.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
