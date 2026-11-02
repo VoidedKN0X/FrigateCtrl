@@ -4,6 +4,18 @@ What changed in each FrigateCtrl version. Every release on the [Releases page](h
 
 To publish a new version: bump `versionCode` and `versionName` in `app/build.gradle.kts`, add a section here, and push to `main`. Pushes without a version bump only build; they don't make a release.
 
+## 3.7.7 (2026-11-02)
+
+Bottom sheets no longer show a stray grey box or outline.
+
+### Fixed
+
+- **Bottom sheets no longer show a stray grey box or outline.** The thin border around bottom sheets was drawn in the wrong place: Android positions the sheet after the border is drawn, so a grey rectangle sat partway down the open sheet (cutting across the top rows) and a loose rounded outline showed higher up on the screen. Sheets are now a plain card-coloured panel with rounded top corners and no outline; the darkened background behind them already sets them apart. Their colour, corners, drag handle and everything in them are unchanged. This fixes every bottom sheet in the app:
+  - the **Events** sheet in History,
+  - the **camera settings** sheet (camera on/off, detection, recording, snapshots, audio, notifications) on the camera screen,
+  - the **choice sheets** in Settings (grid columns, thumbnail refresh, lock again, timeline span, event pre-roll).
+- Dialogs keep their thin border (it's drawn in the right place there), and popup menus keep the look from 3.7.6.
+
 ## 3.7.6 (2026-11-02)
 
 Popup menus no longer show a grey box around them.
