@@ -37,6 +37,11 @@ import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.MenuDefaults
+import androidx.compose.material3.MenuItemColors
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
@@ -564,3 +569,61 @@ fun ctrlFieldColors(): TextFieldColors = OutlinedTextFieldDefaults.colors(
     focusedTrailingIconColor = CtrlColors.Text,
     unfocusedTrailingIconColor = CtrlColors.Muted,
 )
+
+/**
+ * Popup menu in the series style: flat surface, 16 dp corners, 1 dp card border and no shadow or tonal
+ * tint (Material's shadow shows as a grey box around the popup). Colours follow the current palette.
+ */
+@Composable
+fun CtrlDropdownMenu(
+    expanded: Boolean,
+    onDismissRequest: () -> Unit,
+    modifier: Modifier = Modifier,
+    offset: DpOffset = DpOffset(0.dp, 0.dp),
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    DropdownMenu(
+        expanded = expanded,
+        onDismissRequest = onDismissRequest,
+        modifier = modifier,
+        offset = offset,
+        shape = RoundedCornerShape(16.dp),
+        containerColor = CtrlColors.Surface,
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
+        border = BorderStroke(1.dp, CtrlColors.Outline),
+        content = content,
+    )
+}
+
+/** Menu item colours: text in the palette's text colour, icons muted, disabled items in the disabled grey. */
+@Composable
+fun ctrlMenuItemColors(): MenuItemColors = MenuDefaults.itemColors(
+    textColor = CtrlColors.Text,
+    leadingIconColor = CtrlColors.Muted,
+    trailingIconColor = CtrlColors.Muted,
+    disabledTextColor = CtrlColors.Inactive,
+    disabledLeadingIconColor = CtrlColors.Inactive,
+    disabledTrailingIconColor = CtrlColors.Inactive,
+)
+
+/** A [CtrlDropdownMenu] row with the series item colours. */
+@Composable
+fun CtrlDropdownMenuItem(
+    text: @Composable () -> Unit,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    leadingIcon: (@Composable () -> Unit)? = null,
+    trailingIcon: (@Composable () -> Unit)? = null,
+    enabled: Boolean = true,
+) {
+    DropdownMenuItem(
+        text = text,
+        onClick = onClick,
+        modifier = modifier,
+        leadingIcon = leadingIcon,
+        trailingIcon = trailingIcon,
+        enabled = enabled,
+        colors = ctrlMenuItemColors(),
+    )
+}

@@ -67,8 +67,8 @@ import androidx.compose.material.icons.outlined.HighQuality
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import com.vknxworks.frigatectrl.ui.components.CtrlDropdownMenu
+import com.vknxworks.frigatectrl.ui.components.CtrlDropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
@@ -321,13 +321,11 @@ private fun LiveScreen(
         ) {
             if (streams.size > 1) Box {
                 CtrlSquareButton(Icons.Outlined.HighQuality, stringResource(R.string.stream), { streamMenu = true })
-                DropdownMenu(
+                CtrlDropdownMenu(
                     streamMenu, { streamMenu = false },
-                    shape = CtrlShape.Field, containerColor = CtrlColors.Raised,
-                    border = BorderStroke(1.dp, CtrlColors.ControlOutline),
                 ) {
                     streams.forEachIndexed { i, s ->
-                        DropdownMenuItem(
+                        CtrlDropdownMenuItem(
                             text = { Text(s.label, fontWeight = if (i == streamIdx) FontWeight.Bold else null) },
                             onClick = { pickedStream = i; streamMenu = false },
                         )

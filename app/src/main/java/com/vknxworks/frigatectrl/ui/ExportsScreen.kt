@@ -34,8 +34,8 @@ import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import com.vknxworks.frigatectrl.ui.components.CtrlDropdownMenu
+import com.vknxworks.frigatectrl.ui.components.CtrlDropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -326,34 +326,32 @@ private fun ExportRow(
             CircularProgressIndicator(Modifier.padding(12.dp).size(22.dp), strokeWidth = 2.dp, color = CtrlColors.AccentText)
         } else Box {
             IconButton({ menu = true }) { Icon(Icons.Outlined.MoreVert, stringResource(R.string.more), tint = CtrlColors.Muted) }
-            DropdownMenu(
+            CtrlDropdownMenu(
                 menu, { menu = false },
-                shape = CtrlShape.Field, containerColor = CtrlColors.Raised,
-                border = BorderStroke(1.dp, CtrlColors.ControlOutline),
             ) {
                 if (!e.inProgress) {
-                    DropdownMenuItem(
+                    CtrlDropdownMenuItem(
                         text = { Text(stringResource(R.string.play)) },
                         leadingIcon = { Icon(Icons.Outlined.PlayArrow, null) },
                         onClick = { menu = false; onPlay() },
                     )
-                    DropdownMenuItem(
+                    CtrlDropdownMenuItem(
                         text = { Text(stringResource(R.string.save_to_gallery)) },
                         leadingIcon = { Icon(Icons.Outlined.Download, null) },
                         onClick = { menu = false; onSave() },
                     )
-                    DropdownMenuItem(
+                    CtrlDropdownMenuItem(
                         text = { Text(stringResource(R.string.share)) },
                         leadingIcon = { Icon(Icons.Outlined.Share, null) },
                         onClick = { menu = false; onShare() },
                     )
                 }
-                DropdownMenuItem(
+                CtrlDropdownMenuItem(
                     text = { Text(stringResource(R.string.export_rename)) },
                     leadingIcon = { Icon(Icons.Outlined.DriveFileRenameOutline, null) },
                     onClick = { menu = false; onRename() },
                 )
-                if (!e.inProgress) DropdownMenuItem(
+                if (!e.inProgress) CtrlDropdownMenuItem(
                     text = { Text(stringResource(R.string.export_delete), color = CtrlColors.Error) },
                     leadingIcon = { Icon(Icons.Outlined.Delete, null, tint = CtrlColors.Error) },
                     onClick = { menu = false; onDelete() },

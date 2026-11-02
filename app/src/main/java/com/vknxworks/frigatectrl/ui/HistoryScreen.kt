@@ -3,8 +3,8 @@ package com.vknxworks.frigatectrl.ui
 import android.content.res.Configuration
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.DropdownMenu
+import com.vknxworks.frigatectrl.ui.components.CtrlDropdownMenuItem
+import com.vknxworks.frigatectrl.ui.components.CtrlDropdownMenu
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.SwipeToDismissBox
@@ -747,27 +747,25 @@ private fun EventsList(
                     }
                     Box {
                         IconButton({ menu = true }) { Icon(Icons.Outlined.MoreVert, stringResource(R.string.more), tint = CtrlColors.Muted) }
-                        DropdownMenu(
+                        CtrlDropdownMenu(
                             menu, { menu = false },
-                            shape = CtrlShape.Field, containerColor = CtrlColors.Raised,
-                            border = BorderStroke(1.dp, CtrlColors.ControlOutline),
                         ) {
-                            DropdownMenuItem(
+                            CtrlDropdownMenuItem(
                                 text = { Text(stringResource(if (r.reviewed) R.string.mark_unreviewed else R.string.mark_reviewed)) },
                                 leadingIcon = { Icon(if (r.reviewed) Icons.Outlined.MarkEmailUnread else Icons.Outlined.DoneAll, null) },
                                 onClick = { menu = false; onReviewed(r, !r.reviewed) },
                             )
-                            DropdownMenuItem(
+                            CtrlDropdownMenuItem(
                                 text = { Text(stringResource(R.string.clip_save)) },
                                 leadingIcon = { Icon(Icons.Outlined.Download, null) },
                                 onClick = { menu = false; onClip(r, false) },
                             )
-                            DropdownMenuItem(
+                            CtrlDropdownMenuItem(
                                 text = { Text(stringResource(R.string.clip_share)) },
                                 leadingIcon = { Icon(Icons.Outlined.Share, null) },
                                 onClick = { menu = false; onClip(r, true) },
                             )
-                            DropdownMenuItem(
+                            CtrlDropdownMenuItem(
                                 text = { Text(stringResource(R.string.export_on_server)) },
                                 leadingIcon = { Icon(Icons.Outlined.CloudUpload, null) },
                                 onClick = { menu = false; onExport(r) },

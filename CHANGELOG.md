@@ -4,6 +4,18 @@ What changed in each FrigateCtrl version. Every release on the [Releases page](h
 
 To publish a new version: bump `versionCode` and `versionName` in `app/build.gradle.kts`, add a section here, and push to `main`. Pushes without a version bump only build; they don't make a release.
 
+## 3.7.6 (2026-11-02)
+
+Popup menus no longer show a grey box around them.
+
+### Fixed
+
+- **Popup menus have no grey box around them any more.** The menus still had Material's default shadow and tint, which Android draws inside the popup window, so they showed a grey, square-ish edge (easiest to see in light mode). They now have a flat card background (dark grey in dark mode, white in light mode), 16 dp rounded corners, a thin card-coloured border and no shadow, the same as the rest of the Ctrl / Signal look. This applies to every menu in the app:
+  - the **⋮ menu on an event** in the History events list (Mark reviewed / unreviewed, Save clip, Share clip),
+  - the **⋮ menu on an export** on the Exports screen (Play, Save to gallery, Share, Rename, Delete),
+  - the **stream picker** at the top of the camera screen.
+- **Menu text and icons follow the theme.** Item text uses the normal text colour and the icons the muted grey in both light and dark mode; Delete stays red. Nothing a menu does has changed.
+
 ## 3.7.5 (2026-10-31)
 
 Fixes the live view starting over a couple of seconds after you open a camera.
