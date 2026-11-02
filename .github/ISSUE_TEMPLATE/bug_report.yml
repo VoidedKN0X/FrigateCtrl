@@ -1,0 +1,62 @@
+name: Bug report
+description: Something in FrigateCtrl doesn't work as it should
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug! Before you post, please remove your server address, passwords, tokens, ntfy push address and anything personal from the text and screenshots (camera pictures from inside your home too). Found a security problem? Please report it privately from the Security tab instead.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the problem in a few sentences.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open ...
+        2. Tap ...
+        3. See ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+  - type: input
+    id: app-version
+    attributes:
+      label: FrigateCtrl version
+      placeholder: Profile picture > bottom of the You page, e.g. 3.7.8
+    validations:
+      required: true
+  - type: input
+    id: android
+    attributes:
+      label: Android version and phone
+      placeholder: Android 15, Pixel 8
+    validations:
+      required: true
+  - type: input
+    id: server-version
+    attributes:
+      label: Frigate NVR version
+      placeholder: e.g. 0.16.0 (shown on the You page)
+  - type: dropdown
+    id: source
+    attributes:
+      label: Installed from
+      options:
+        - GitHub Releases
+        - Obtainium
+        - CtrlF-Droid
+        - Built it myself
+  - type: textarea
+    id: logs
+    attributes:
+      label: Screenshots or logs
+      description: For live view problems, paste Settings > Troubleshooting > Last live view report. For crashes, paste the Last crash report.

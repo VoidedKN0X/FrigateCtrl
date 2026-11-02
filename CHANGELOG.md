@@ -4,6 +4,21 @@ What changed in each FrigateCtrl version. Every release on the [Releases page](h
 
 To publish a new version: bump `versionCode` and `versionName` in `app/build.gradle.kts`, add a section here, and push to `main`. Pushes without a version bump only build; they don't make a release.
 
+## 3.7.8 (2026-11-02)
+
+Alert notifications no longer show a camera picture while FrigateCtrl is locked.
+
+### Security
+
+- **No camera pictures in notifications while the app is locked.** With the app lock and **Alerts while locked** both on, alert notifications used to include the camera snapshot even though FrigateCtrl was locked, so a picture from inside your home could be seen in the notification shade once the phone was unlocked, without your app PIN. While FrigateCtrl is locked, alerts now show the camera, what was seen and the time, but no picture, and the snapshot isn't downloaded at all. Once you unlock FrigateCtrl, new alerts include the picture again. Without the app lock nothing changes, and the lock screen still only shows "New alert".
+- The **Alerts while locked** explanation in Settings > Notifications now says that those alerts come without the camera picture.
+
+### Project
+
+- New **SECURITY.md**: how to report a security problem privately, and the release key's fingerprint.
+- New issue forms for bug reports and feature requests, with a reminder to remove server addresses, passwords and camera pictures before posting.
+- README: clearer install steps (which file to download from the Releases page), a new **Is it safe to install?** section with the signing fingerprint and what every permission is for, a **How FrigateCtrl is made** section, the full Ctrl series list, and the empty Screenshots section removed.
+
 ## 3.7.7 (2026-11-02)
 
 Bottom sheets no longer show a stray grey box or outline.

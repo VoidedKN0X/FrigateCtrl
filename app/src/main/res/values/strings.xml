@@ -376,7 +376,7 @@
     <string name="push_battery_subtitle">Allow ntfy to run in the background (Battery: Don\'t optimise / Allow background activity) so pushes arrive while the phone sleeps</string>
     <string name="alerts_locked">Alerts while locked</string>
     <string name="alerts_locked_subtitle">The background check can sign in while FrigateCtrl is locked</string>
-    <string name="alerts_locked_footer">Off (most secure): your login is also encrypted with your app PIN, and alerts wait until you unlock FrigateCtrl. On: your login is encrypted with the phone\'s key only, so alerts arrive while the app is locked.</string>
+    <string name="alerts_locked_footer">Off (most secure): your login is also encrypted with your app PIN, and alerts wait until you unlock FrigateCtrl. On: your login is encrypted with the phone\'s key only, so alerts arrive while the app is locked, without the camera picture until you unlock.</string>
     <string name="ch_alerts">Alerts</string>
     <string name="ch_alerts_desc">New alerts from Frigate</string>
     <string name="ch_detections">Detections</string>

@@ -106,7 +106,10 @@ object AlertNotifier {
     suspend fun post(context: Context, r: ReviewItem, settings: NotifySettings, test: Boolean = false, picture: Bitmap? = null) {
         if (!canPost(context)) return
         val channel = if (r.isAlert) CH_ALERTS else CH_DETECTIONS
-        val img = picture ?: if (test) null else fetchPicture(r)
+        // With the app lock on and FrigateCtrl locked ("Alerts while locked"), no camera picture is fetched or
+        // shown: these are images from inside your home, and the app lock promises nothing of them shows while locked.
+        val appLocked = App.vault.enabled && !App.vault.isOpen
+        val img = if (appLocked) null else picture ?: if (test) null else fetchPicture(r)
         val title = context.getString(
             if (r.isAlert) R.string.nt_title_alert else R.string.nt_title_detection,
             labelsText(context, r), cameraLabel(r.camera),

@@ -28,10 +28,6 @@ Part of the [Ctrl series](#the-ctrl-series) by VKNXWorks.
 - **Hide in screenshots** and **Hide in recent apps** switches keep your cameras out of screenshots, screen recordings and the recent-apps preview when you turn them on
 - **Self-signed certificates** are pinned: you confirm the fingerprint once, and only that certificate is accepted after that
 
-## Screenshots
-
-Coming soon.
-
 ## Requirements
 
 - Android 13 or newer, on a 64-bit ARM phone (nearly every phone from the last several years)
@@ -44,7 +40,7 @@ Coming soon.
 
 ## Install
 
-1. Download the latest `.apk` file from the [Releases page](https://github.com/VoidedKN0X/FrigateCtrl/releases/latest).
+1. Open the [Releases page](https://github.com/VoidedKN0X/FrigateCtrl/releases/latest) on your phone, scroll down to **Assets** and tap the file that ends in `.apk` (for example `FrigateCtrl-v3.7.8.apk`) to download it. The "Source code" zip and tar.gz files are not the app.
 2. Open it on your phone. Android may ask you to allow installing apps from your browser or file manager.
 3. Updates install over the old version. Your settings and login are kept.
 
@@ -66,6 +62,30 @@ If the Obtainium button doesn't open the app, add `https://github.com/VoidedKN0X
 
 Settings, the server and login, log out and About are behind your profile picture at the top right of the Cameras and Health tabs: tap it to open the You page, then **Settings**.
 
+## Is it safe to install?
+
+- **Open source:** all of FrigateCtrl's code is in this repo, under the GPL-3.0 licence.
+- **Built by GitHub Actions, not on a personal computer:** every release on the Releases page is built from this code by [the build workflow](.github/workflows/build.yml).
+- **Always signed with the same release key.** Android refuses an update signed with a different key, and the CtrlF-Droid repo only accepts APKs signed with this key. Its SHA-256 certificate fingerprint is:
+
+  ```
+  C4:C9:D4:4D:BE:E9:FA:67:EB:11:B3:27:E9:16:B3:A7:17:DE:96:CB:41:F7:E2:FC:EF:39:AC:24:38:9D:B8:CA
+  ```
+
+  Advanced users can compare it with [AppVerifier](https://github.com/soupslurpr/AppVerifier).
+
+**Permissions**
+
+| Permission | What FrigateCtrl uses it for |
+| --- | --- |
+| Internet | Talking to your own Frigate server (and the STUN/TURN servers in your go2rtc config, for two-way talk) |
+| Network state | Checking for a connection before the background alert check runs |
+| Microphone (record audio) | Two-way talk only; asked the first time you tap the talk button |
+| Change audio settings | Sending the camera's sound to the loudspeaker while you talk |
+| Notifications | Alert notifications; asked when you turn notifications on |
+
+What FrigateCtrl collects (nothing) and which servers it talks to is in [Privacy](#privacy).
+
 ## Tips and troubleshooting
 
 - **No sound in live view:** the camera's audio needs to be AAC. Convert it in your go2rtc config, e.g. `- "ffmpeg:your_cam#video=copy#audio=aac"`.
@@ -82,7 +102,7 @@ Turn them on under **Settings > Notifications** (tap your profile picture, then 
 - **Background check:** FrigateCtrl asks your Frigate server for new alerts (and detections, if you choose) every 15, 30 or 60 minutes or less often. Android can delay it to save battery. Only alerts from the moment you turn notifications on are notified.
 - **Each notification** shows the snapshot, the camera, what was seen (person, car, ...) and the time. Tapping it opens that camera's History a few seconds before the alert. On the lock screen only "New alert" shows.
 - **Filters:** switch cameras and objects off, pick alerts only or alerts and detections, and set quiet hours (alerts arrive silently). Alerts and detections have their own channels in Android's settings for sound and importance.
-- **With the app lock on**, alerts wait until you unlock FrigateCtrl, because your login is encrypted with your PIN. Turn on **Alerts while locked** on the same page to keep your login encrypted with the phone's key only, so alerts arrive while the app is locked.
+- **With the app lock on**, alerts wait until you unlock FrigateCtrl, because your login is encrypted with your PIN. Turn on **Alerts while locked** on the same page to keep your login encrypted with the phone's key only, so alerts arrive while the app is locked. Those alerts show the camera, objects and time but no camera picture while FrigateCtrl is locked.
 
 ### Instant alerts with ntfy (optional)
 
@@ -145,6 +165,10 @@ Turn it on under **Settings > Privacy and security > App lock** (tap your profil
 - **Live view reports stay on your phone.** After a live view, FrigateCtrl keeps a small report about it (phone model, Android and app version, the video and audio decoders and formats, dropped frames and why it reconnected) to help find out why live video misbehaves on a particular phone. It has no server address, logins or tokens, shows as **Last live view report** in Settings to copy or delete, and is never sent anywhere. Logging out deletes it.
 - Your login is stored encrypted on your phone. **Hide in screenshots** and **Hide in recent apps** (Settings > Privacy and security, both off by default) keep your cameras out of screenshots, screen recordings and the recent-apps preview.
 
+## How FrigateCtrl is made
+
+FrigateCtrl is a one-person project by VoidedKN0X (VKNXWorks). Much of the code is written with the help of AI (Claude, by Anthropic). I decide what the app does, review the changes and use the app myself. Every change is listed in the [changelog](CHANGELOG.md), and you can read every line of code here.
+
 ## Build from source
 
 You need [Android Studio](https://developer.android.com/studio), or JDK 17 and the Android SDK.
@@ -165,7 +189,9 @@ Or open the folder in Android Studio and press **Run** with your phone connected
 
 ## Support the project
 
-FrigateCtrl is free and open source. If it's useful to you, tap **Support FrigateCtrl** at the bottom of the You page in the app (tap your profile picture at the top right) to sponsor development on [GitHub Sponsors](https://github.com/sponsors/VoidedKN0X). Found a problem or have an idea? Tap **Report a bug** under **About** on the same page, or [open an issue](https://github.com/VoidedKN0X/FrigateCtrl/issues). Starring the repo helps too.
+FrigateCtrl is free and open source. If it's useful to you, tap **Support FrigateCtrl** at the bottom of the You page in the app (tap your profile picture at the top right) to sponsor development on [GitHub Sponsors](https://github.com/sponsors/VoidedKN0X). Found a problem or have an idea? Tap **Report a bug** under **About** on the same page, or [open an issue](https://github.com/VoidedKN0X/FrigateCtrl/issues/new/choose) and pick the bug report or feature request form. Starring the repo helps too.
+
+Found a security problem? Please don't open a public issue; see [SECURITY.md](SECURITY.md).
 
 ## The Ctrl series
 
@@ -187,12 +213,17 @@ Native Android apps for self-hosted services and everyday tools, all with the sa
 | [PaperCtrl](https://github.com/VoidedKN0X/PaperCtrl) | Scan and browse documents on Paperless-ngx |
 | [PrintCtrl](https://github.com/VoidedKN0X/PrintCtrl) | Bambu Lab printers through Bambuddy, and Spoolman spools |
 | [ProxCtrl](https://github.com/VoidedKN0X/ProxCtrl) | Manage your Proxmox VE server |
+| [RideCtrl](https://github.com/VoidedKN0X/RideCtrl) | Offline maintenance, fuel and mod log for your vehicles |
 | [SeerrCtrl](https://github.com/VoidedKN0X/SeerrCtrl) | Request movies and shows on Seerr / Jellyseerr |
+| [SynapseCtrl](https://github.com/VoidedKN0X/SynapseCtrl) | Administer your Matrix Synapse server |
 | [TrueCtrl](https://github.com/VoidedKN0X/TrueCtrl) | Monitor and manage your TrueNAS server |
+| [WrtCtrl](https://github.com/VoidedKN0X/WrtCtrl) | Manage your OpenWrt router |
 
 ## License
 
 FrigateCtrl is licensed under the [GNU General Public License v3.0](LICENSE). © VKNXWorks
+
+FrigateCtrl is an independent app and isn't made by or affiliated with the Frigate project.
 
 ### Fonts
 
@@ -200,5 +231,3 @@ FrigateCtrl bundles two fonts, both under the [SIL Open Font License 1.1](https:
 
 - [Space Grotesk](https://github.com/floriankarsten/space-grotesk) by Florian Karsten and the Space Grotesk Project Authors
 - [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono) by JetBrains and the JetBrains Mono Project Authors
-
-FrigateCtrl is an unofficial app and is not affiliated with the Frigate project.
