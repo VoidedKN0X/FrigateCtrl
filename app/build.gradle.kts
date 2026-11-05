@@ -10,12 +10,12 @@ android {
 
     defaultConfig {
         applicationId = "com.vknxworks.frigatectrl"
-        minSdk = 33
+        minSdk = 35
         targetSdk = 36
         // CI passes the run number so every build installs over the previous one.
         // Bump both to publish a new release (see CHANGELOG.md).
-        versionCode = 59
-        versionName = "3.7.11"
+        versionCode = 60
+        versionName = "3.7.12"
         // 64-bit ARM phones only (arm64-v8a), like every Ctrl app.
         ndk { abiFilters += listOf("arm64-v8a") }
     }

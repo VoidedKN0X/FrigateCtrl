@@ -13,7 +13,7 @@
          (install-time, no prompt). -->
     <uses-permission android:name="android.permission.HIDE_OVERLAY_WINDOWS" />
     <!-- Fingerprint for the app lock goes through USE_BIOMETRIC. The biometric library also adds the old
-         USE_FINGERPRINT, which only Android 8 and older use (FrigateCtrl needs Android 13). -->
+         USE_FINGERPRINT, which only Android 8 and older use (FrigateCtrl needs Android 15). -->
     <uses-permission android:name="android.permission.USE_FINGERPRINT" tools:node="remove" />
     <!-- Added by WorkManager for work that runs as a foreground service. The alert check never does. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" tools:node="remove" />

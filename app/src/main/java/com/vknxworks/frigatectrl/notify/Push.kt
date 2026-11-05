@@ -5,7 +5,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Binder
-import android.os.Build
 import android.os.IBinder
 import com.vknxworks.frigatectrl.App
 import com.vknxworks.frigatectrl.R
@@ -123,10 +122,8 @@ class PushReceiver : BroadcastReceiver() {
     private fun handle(context: Context, intent: Intent) {
         val token = intent.getStringExtra(UnifiedPush.EXTRA_TOKEN) ?: return
         if (token != UnifiedPush.token(context)) return
-        if (Build.VERSION.SDK_INT >= 34) {
-            val sender = sentFromPackage
-            if (sender != null && sender != UnifiedPush.NTFY) return
-        }
+        val sender = sentFromPackage
+        if (sender != null && sender != UnifiedPush.NTFY) return
         val app = context.applicationContext
         when (intent.action) {
             UnifiedPush.ACTION_NEW_ENDPOINT -> {

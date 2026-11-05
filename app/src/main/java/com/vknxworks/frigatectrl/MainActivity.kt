@@ -3,7 +3,6 @@ package com.vknxworks.frigatectrl
 import android.content.Intent
 import android.content.res.Configuration
 import android.graphics.Color
-import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.view.WindowManager
@@ -127,10 +126,10 @@ class MainActivity : FragmentActivity() {
                 val inPip = com.vknxworks.frigatectrl.ui.rememberIsInPip()
                 val hideOverlays = SecureScreens.noOverlays > 0 && !inPip
                 LaunchedEffect(hideOverlays) { runCatching { window.setHideOverlayWindows(hideOverlays) } }
-                // Lock and PIN screens: only real accessibility tools (screen readers) can read them (Android 14+).
+                // Lock and PIN screens: only real accessibility tools (screen readers) can read them.
                 val sensitive = SecureScreens.sensitive > 0
                 LaunchedEffect(sensitive) {
-                    if (Build.VERSION.SDK_INT >= 34) runCatching {
+                    runCatching {
                         window.decorView.setAccessibilityDataSensitive(
                             if (sensitive) View.ACCESSIBILITY_DATA_SENSITIVE_YES else View.ACCESSIBILITY_DATA_SENSITIVE_AUTO,
                         )
