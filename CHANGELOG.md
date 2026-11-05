@@ -4,6 +4,21 @@ What changed in each FrigateCtrl version. Every release on the [Releases page](h
 
 To publish a new version: bump `versionCode` and `versionName` in `app/build.gradle.kts`, add a section here, and push to `main`. Pushes without a version bump only build; they don't make a release.
 
+## 3.7.9 (2026-11-05)
+
+Two permissions FrigateCtrl never used are gone, and release builds no longer keep library debug logging.
+
+### Privacy
+
+- **Two unused permissions removed.** The old Android 8 fingerprint permission (`USE_FINGERPRINT`) is gone: fingerprint unlock for the app lock already uses the current biometrics permission, so nothing changes there. The foreground-service permission (`FOREGROUND_SERVICE`) is gone too: Android's background work library added it, but the alert check never runs as a foreground service.
+- **No debug logging in release builds.** Debug, verbose and info messages from the libraries FrigateCtrl uses are now stripped from the app, so nothing about your server or cameras can end up in the phone's system log. FrigateCtrl's own code already logged nothing.
+
+### Project
+
+- The build now checks that the Gradle wrapper is an official Gradle release, and fails if any Google Play services, Firebase, ML Kit, Play Core or Tink library ever ends up in the app.
+- `.gitignore` also covers signing-key property files, `.p12` keys and `google-services.json`, so they can't be committed by accident.
+- README: every permission in the app is now listed with what it's for, the ntfy download link is listed under Privacy, and the Ctrl series list now has all 28 apps.
+
 ## Project updates (2026-11-03)
 
 ### Project

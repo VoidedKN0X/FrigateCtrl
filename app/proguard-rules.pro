@@ -28,3 +28,11 @@
 -dontwarn org.conscrypt.**
 -dontwarn org.bouncycastle.**
 -dontwarn org.openjsse.**
+
+# No debug, verbose or info logging in release builds (FrigateCtrl's own code doesn't log; this also
+# silences libraries).
+-assumenosideeffects class android.util.Log {
+    public static int v(...);
+    public static int d(...);
+    public static int i(...);
+}

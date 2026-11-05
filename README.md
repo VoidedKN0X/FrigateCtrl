@@ -83,6 +83,11 @@ Settings, the server and login, log out and About are behind your profile pictur
 | Microphone (record audio) | Two-way talk only; asked the first time you tap the talk button |
 | Change audio settings | Sending the camera's sound to the loudspeaker while you talk |
 | Notifications | Alert notifications; asked when you turn notifications on |
+| Biometrics (`USE_BIOMETRIC`) | Optional fingerprint unlock for the app lock |
+| Run at startup (`RECEIVE_BOOT_COMPLETED`) | Setting the background alert check up again after the phone restarts (added by Android's WorkManager) |
+| Prevent phone from sleeping (`WAKE_LOCK`) | Keeping the phone awake for the few seconds the background alert check takes (added by WorkManager) |
+
+Android also lists a "dynamic receiver" permission (`DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`) that AndroidX adds to every app so only FrigateCtrl itself can send it internal broadcasts; it gives the app no access to anything. FrigateCtrl has no location, camera, contacts, storage or phone permissions.
 
 What FrigateCtrl collects (nothing) and which servers it talks to is in [Privacy](#privacy).
 
@@ -160,6 +165,7 @@ Turn it on under **Settings > Privacy and security > App lock** (tap your profil
 - **Servers it talks to:** your own Frigate server, and, for two-way talk, only the STUN/TURN servers listed in your go2rtc config. It never contacts a public STUN server on its own.
 - **Push:** only through the ntfy app and your own ntfy server, and only if you turn it on. A push is a wake-up call; nothing in it is shown.
 - **Two-way talk:** the built-in web view it runs in has online page checks and usage reports turned off.
+- **ntfy download link:** the **Get ntfy** button in Settings > Notifications opens ntfy's page on f-droid.org in your browser, only when you tap it.
 - **Links:** the Support FrigateCtrl button and the Report a bug, Source code and Licence rows on the You page (tap your profile picture) open GitHub or gnu.org in your browser, only when you tap them.
 - **Crash reports stay on your phone.** If FrigateCtrl stops because of an error, the error is saved on the phone only (no logins or tokens in it) and shows as **Last crash report** in Settings, to copy into a bug report or delete. Nothing is ever sent anywhere.
 - **Live view reports stay on your phone.** After a live view, FrigateCtrl keeps a small report about it (phone model, Android and app version, the video and audio decoders and formats, dropped frames and why it reconnected) to help find out why live video misbehaves on a particular phone. It has no server address, logins or tokens, shows as **Last live view report** in Settings to copy or delete, and is never sent anywhere. Logging out deletes it.
@@ -202,21 +208,29 @@ Native Android apps for self-hosted services and everyday tools, all with the sa
 | [AdCtrl](https://github.com/VoidedKN0X/AdCtrl) | Control your AdGuard Home DNS server |
 | [ArrCtrl](https://github.com/VoidedKN0X/ArrCtrl) | Radarr, Sonarr, Prowlarr, Bazarr, qBittorrent, autobrr and Cleanuparr in one app |
 | [BeamCtrl](https://github.com/VoidedKN0X/BeamCtrl) | TV remote for phones with an IR blaster |
+| [CallCtrl](https://github.com/VoidedKN0X/CallCtrl) | Phone app: dialer, call history and in-call screen |
 | [ChatCtrl](https://github.com/VoidedKN0X/ChatCtrl) | Matrix chat client for matrix.org and self-hosted Synapse |
+| [ClockCtrl](https://github.com/VoidedKN0X/ClockCtrl) | Alarms, timers, stopwatch and world clock |
+| [ContactCtrl](https://github.com/VoidedKN0X/ContactCtrl) | Contacts: browse, edit, import and export |
 | [CraftyCtrl](https://github.com/VoidedKN0X/CraftyCtrl) | Manage Minecraft servers on Crafty Controller |
+| [DateCtrl](https://github.com/VoidedKN0X/DateCtrl) | Calendar for the calendars on your phone and your accounts |
 | [FilesCtrl](https://github.com/VoidedKN0X/FilesCtrl) | File manager with NFS, SMB, SFTP, FTP and WebDAV |
 | **FrigateCtrl** (this app) | Watch and review your Frigate NVR cameras |
 | [ImmichCtrl](https://github.com/VoidedKN0X/ImmichCtrl) | Photos and backup for your Immich server |
 | [JellyCtrl](https://github.com/VoidedKN0X/JellyCtrl) | Movies, shows, music and Live TV from Jellyfin |
+| [LijnCtrl](https://github.com/VoidedKN0X/LijnCtrl) | Live De Lijn bus and tram departures |
+| [MailCtrl](https://github.com/VoidedKN0X/MailCtrl) | Email for Gmail and Proton Mail |
 | [MemoCtrl](https://github.com/VoidedKN0X/MemoCtrl) | Notes on your Memos server |
 | [NaviCtrl](https://github.com/VoidedKN0X/NaviCtrl) | Music player for Navidrome servers |
 | [PaperCtrl](https://github.com/VoidedKN0X/PaperCtrl) | Scan and browse documents on Paperless-ngx |
 | [PrintCtrl](https://github.com/VoidedKN0X/PrintCtrl) | Bambu Lab printers through Bambuddy, and Spoolman spools |
 | [ProxCtrl](https://github.com/VoidedKN0X/ProxCtrl) | Manage your Proxmox VE server |
+| [RecorderCtrl](https://github.com/VoidedKN0X/RecorderCtrl) | Private, offline voice recorder |
 | [RideCtrl](https://github.com/VoidedKN0X/RideCtrl) | Offline maintenance, fuel and mod log for your vehicles |
 | [SeerrCtrl](https://github.com/VoidedKN0X/SeerrCtrl) | Request movies and shows on Seerr / Jellyseerr |
 | [SumCtrl](https://github.com/VoidedKN0X/SumCtrl) | Offline calculator, unit converter and work tools |
 | [SynapseCtrl](https://github.com/VoidedKN0X/SynapseCtrl) | Administer your Matrix Synapse server |
+| [TextCtrl](https://github.com/VoidedKN0X/TextCtrl) | Private SMS and MMS messaging |
 | [TrueCtrl](https://github.com/VoidedKN0X/TrueCtrl) | Monitor and manage your TrueNAS server |
 | [WrtCtrl](https://github.com/VoidedKN0X/WrtCtrl) | Manage your OpenWrt router |
 

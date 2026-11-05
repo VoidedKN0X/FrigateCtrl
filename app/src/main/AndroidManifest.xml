@@ -9,6 +9,11 @@
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <!-- Alert notifications; asked for when you turn notifications on. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Fingerprint for the app lock goes through USE_BIOMETRIC. The biometric library also adds the old
+         USE_FINGERPRINT, which only Android 8 and older use (FrigateCtrl needs Android 13). -->
+    <uses-permission android:name="android.permission.USE_FINGERPRINT" tools:node="remove" />
+    <!-- Added by WorkManager for work that runs as a foreground service. The alert check never does. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" tools:node="remove" />
 
     <!-- Push through ntfy (UnifiedPush) only: FrigateCtrl registers with the ntfy app and nothing else. -->
     <queries>
