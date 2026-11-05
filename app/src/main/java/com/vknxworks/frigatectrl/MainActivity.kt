@@ -3,7 +3,9 @@ package com.vknxworks.frigatectrl
 import android.content.Intent
 import android.content.res.Configuration
 import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
+import android.view.View
 import android.view.WindowManager
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
@@ -120,6 +122,20 @@ class MainActivity : FragmentActivity() {
                     if (secure) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
                     else window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
                 }
+                // Lock, PIN and confirmation screens: other apps' floating windows (chat heads, overlays) are hidden
+                // so they can't cover or fake a button. Never while the video floats in picture-in-picture.
+                val inPip = com.vknxworks.frigatectrl.ui.rememberIsInPip()
+                val hideOverlays = SecureScreens.noOverlays > 0 && !inPip
+                LaunchedEffect(hideOverlays) { runCatching { window.setHideOverlayWindows(hideOverlays) } }
+                // Lock and PIN screens: only real accessibility tools (screen readers) can read them (Android 14+).
+                val sensitive = SecureScreens.sensitive > 0
+                LaunchedEffect(sensitive) {
+                    if (Build.VERSION.SDK_INT >= 34) runCatching {
+                        window.decorView.setAccessibilityDataSensitive(
+                            if (sensitive) View.ACCESSIBILITY_DATA_SENSITIVE_YES else View.ACCESSIBILITY_DATA_SENSITIVE_AUTO,
+                        )
+                    }
+                }
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { Root(this) }
             }
         }
@@ -150,6 +166,10 @@ class MainActivity : FragmentActivity() {
 /** Screens that must never be captured (sign-in, the lock screen, PIN screens) bump [active] while shown. */
 object SecureScreens {
     var active by androidx.compose.runtime.mutableIntStateOf(0)
+    /** Lock, PIN and confirmation screens showing: other apps' floating windows are hidden while > 0. */
+    var noOverlays by androidx.compose.runtime.mutableIntStateOf(0)
+    /** Lock and PIN screens showing: apps that aren't accessibility tools can't read the window while > 0. */
+    var sensitive by androidx.compose.runtime.mutableIntStateOf(0)
 }
 
 /** Keeps FLAG_SECURE on while the calling screen is showing, whatever the user's setting. */
@@ -158,6 +178,23 @@ fun SecureWindow() {
     DisposableEffect(Unit) {
         SecureScreens.active++
         onDispose { SecureScreens.active-- }
+    }
+}
+
+/**
+ * Hides other apps' floating windows while the calling lock, PIN or confirmation screen is showing, so nothing
+ * can be drawn over it to trick a tap. With [sensitive] (lock and PIN screens), apps that aren't real
+ * accessibility tools also can't read the screen. Counted, so nested screens work.
+ */
+@Composable
+fun GuardedWindow(sensitive: Boolean = false) {
+    DisposableEffect(sensitive) {
+        SecureScreens.noOverlays++
+        if (sensitive) SecureScreens.sensitive++
+        onDispose {
+            SecureScreens.noOverlays--
+            if (sensitive) SecureScreens.sensitive--
+        }
     }
 }
 

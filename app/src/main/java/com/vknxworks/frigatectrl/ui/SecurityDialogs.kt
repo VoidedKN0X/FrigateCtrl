@@ -60,6 +60,7 @@ suspend fun fetchCertInfo(baseUrl: String): CertInfo = withContext(Dispatchers.I
 /** Asks the user to confirm a self-signed certificate by its SHA-256 fingerprint (trust on first use). */
 @Composable
 fun CertTrustDialog(cert: CertInfo, changed: Boolean, intro: String? = null, onTrust: () -> Unit, onCancel: () -> Unit) {
+    com.vknxworks.frigatectrl.GuardedWindow()
     val cs = MaterialTheme.colorScheme
     CtrlAlertDialog(
         onDismissRequest = onCancel,
@@ -95,6 +96,7 @@ fun CertTrustDialog(cert: CertInfo, changed: Boolean, intro: String? = null, onT
 /** Explicit confirmation before using a plain-http (unencrypted) server. */
 @Composable
 fun HttpWarningDialog(host: String, intro: String? = null, onConfirm: () -> Unit, onCancel: () -> Unit) {
+    com.vknxworks.frigatectrl.GuardedWindow()
     CtrlAlertDialog(
         onDismissRequest = onCancel,
         icon = { Icon(Icons.Outlined.NoEncryption, null, tint = MaterialTheme.colorScheme.error) },

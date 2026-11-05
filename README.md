@@ -74,6 +74,12 @@ Settings, the server and login, log out and About are behind your profile pictur
 
   Advanced users can compare it with [AppVerifier](https://github.com/soupslurpr/AppVerifier).
 
+**Check a download**
+
+- The APK's SHA-256 checksum is at the bottom of each release's notes. Compare it with `sha256sum FrigateCtrl-vX.Y.Z.apk` (or `Get-FileHash` on Windows).
+- Each release also has a signed build provenance attestation. With the [GitHub CLI](https://cli.github.com/), `gh attestation verify FrigateCtrl-vX.Y.Z.apk -R VoidedKN0X/FrigateCtrl` proves the APK was built by this repo's build workflow from the tagged commit, not uploaded by hand.
+- The signing-certificate fingerprint above still applies: Android and AppVerifier check it on the phone.
+
 **Permissions**
 
 | Permission | What FrigateCtrl uses it for |
@@ -84,6 +90,7 @@ Settings, the server and login, log out and About are behind your profile pictur
 | Change audio settings | Sending the camera's sound to the loudspeaker while you talk |
 | Notifications | Alert notifications; asked when you turn notifications on |
 | Biometrics (`USE_BIOMETRIC`) | Optional fingerprint unlock for the app lock |
+| Hide other apps' floating windows (`HIDE_OVERLAY_WINDOWS`) | Hide other apps' floating windows over the PIN screen, the lock screen and confirmations, so nothing can be drawn over them to trick a tap (never over live video or picture-in-picture) |
 | Run at startup (`RECEIVE_BOOT_COMPLETED`) | Setting the background alert check up again after the phone restarts (added by Android's WorkManager) |
 | Prevent phone from sleeping (`WAKE_LOCK`) | Keeping the phone awake for the few seconds the background alert check takes (added by WorkManager) |
 
@@ -154,6 +161,7 @@ Turn it on under **Settings > Privacy and security > App lock** (tap your profil
 - **Change app PIN** asks for your current PIN first, and turning the app lock off asks for the PIN too.
 - **Forgot your PIN?** It can't be recovered, because it encrypts your login. The lock screen offers to log out and forget the server, the app lock and anything kept from the server, so you can log in again; your Frigate server isn't changed.
 - **With the app lock on**, the recent-apps screen always shows a blank card, and nothing of your cameras is shown or streamed while the app is locked.
+- **Nothing can be drawn over the lock screen or PIN pad.** While the lock screen, a PIN screen or a confirmation (log out, delete an export, trust a certificate, use HTTP) is showing, other apps' floating windows such as chat heads are hidden, so they can't cover a button to trick you into tapping it. On Android 14 and newer, apps that aren't real accessibility tools also can't read the lock and PIN screens; screen readers such as TalkBack still work. Floating windows show again as soon as you leave those screens, and they're never hidden over live video or picture-in-picture.
 - **Picture-in-picture counts as leaving.** When the live view floats in its own window, the lock timer starts as if you had left the app, and expanding the window back to full screen shows the lock screen when the lock is due. With **Lock again** set to as soon as you leave, the floating window only shows a lock, and the live view doesn't float by itself when you go home. With **Hide in screenshots** on, it doesn't float by itself either; you can still float it from the camera screen.
 
 **Hide in screenshots** and **Hide in recent apps** are in the same section, work without the app lock too, and are both off by default. The first keeps FrigateCtrl out of screenshots and screen recordings; the second shows a blank card in the recent-apps view instead of the app. Sign-in, the lock screen and the PIN screens are always kept out of screenshots, whatever the switches say.
@@ -192,6 +200,8 @@ You need [Android Studio](https://developer.android.com/studio), or JDK 17 and t
 3. The APK is in `app/build/outputs/apk/debug/`. Copy it to your phone and install it.
 
 Or open the folder in Android Studio and press **Run** with your phone connected.
+
+Every library and Gradle plugin download is checked against the SHA-256 checksums in `gradle/verification-metadata.xml`; the build stops if anything doesn't match. When a dependency or plugin changes, run the **Dependency verification metadata** workflow (Actions tab), check the diff of the file it prints, and commit the new file in the same push. On Windows or macOS, Android's `aapt2` tool is a different download that isn't listed, so add `--dependency-verification=lenient` to local builds there.
 
 ## Support the project
 

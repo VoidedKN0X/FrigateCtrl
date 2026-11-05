@@ -130,6 +130,7 @@ fun LockScreenButtons(showFingerprint: Boolean, onFingerprint: () -> Unit, onFor
 /** Asks before "Forgot PIN?" resets the app. [body] says what's removed. */
 @Composable
 fun ForgotPinDialog(body: String, confirm: String, onDismiss: () -> Unit, onConfirm: () -> Unit) {
+    com.vknxworks.frigatectrl.GuardedWindow()
     CtrlAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.lock_forgot_title)) },
@@ -285,6 +286,8 @@ fun PinPadScreen(
     // The PIN pad is never in screenshots, screen recordings or casting, whatever the app's setting says:
     // a recording would show which keys were pressed.
     KeepOutOfScreenshots()
+    // No other app's floating window over the PIN pad, and no reading it by apps that aren't accessibility tools.
+    com.vknxworks.frigatectrl.GuardedWindow(sensitive = true)
     Surface(Modifier.fillMaxSize(), color = CtrlColors.Background) {
         BoxWithConstraints(Modifier.fillMaxSize().systemBarsPadding()) {
             Column(

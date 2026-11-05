@@ -255,6 +255,7 @@ fun YouScreen(onBack: () -> Unit, onSettings: () -> Unit, onServer: () -> Unit, 
     }
 
     if (confirmLogout) {
+        com.vknxworks.frigatectrl.GuardedWindow()
         CtrlAlertDialog(
             onDismissRequest = { confirmLogout = false },
             icon = { Icon(Icons.AutoMirrored.Outlined.Logout, null) },

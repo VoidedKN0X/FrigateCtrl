@@ -13,3 +13,7 @@ Every new version needs a detailed entry at the top of `CHANGELOG.md`, under a h
 - Write for people using the app, not for developers: what's new, what changed, what was fixed.
 - Cover every user-visible change in the version, one bullet each, with enough detail to understand it without opening the app.
 - Group with `### New`, `### Changed`, `### Fixed` and `### Security` when there's more than a couple of items.
+
+## Dependency verification
+
+Every library and plugin download is checked against `gradle/verification-metadata.xml` (SHA-256 only, no PGP). When you add, remove or update a dependency or Gradle plugin, run the manual **Dependency verification metadata** workflow (`gh api -X POST repos/VoidedKN0X/FrigateCtrl/actions/workflows/verification-metadata.yml/dispatches -f ref=main`), take the file from its log (gzipped and base64-encoded between the BEGIN/END markers), check the diff (only Maven Central, Google's Maven and the Gradle plugin portal) and commit it in the same push. Keep the `<trusted-artifacts>` entries for `-sources.jar` and `-javadoc.jar`. Never turn verification off or to lenient in CI.

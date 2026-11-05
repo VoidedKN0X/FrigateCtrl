@@ -9,6 +9,9 @@
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <!-- Alert notifications; asked for when you turn notifications on. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Hides other apps' floating windows while the lock screen, a PIN screen or a confirmation is showing
+         (install-time, no prompt). -->
+    <uses-permission android:name="android.permission.HIDE_OVERLAY_WINDOWS" />
     <!-- Fingerprint for the app lock goes through USE_BIOMETRIC. The biometric library also adds the old
          USE_FINGERPRINT, which only Android 8 and older use (FrigateCtrl needs Android 13). -->
     <uses-permission android:name="android.permission.USE_FINGERPRINT" tools:node="remove" />
@@ -23,8 +26,11 @@
         </intent>
     </queries>
 
+    <!-- Android 16 and newer: explicit intents from other apps (the launcher, ntfy) must match one of the intent
+         filters below; intents without an action are refused. FrigateCtrl's own intents aren't affected. -->
     <application
         android:allowBackup="false"
+        android:intentMatchingFlags="enforceIntentFilter"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher"

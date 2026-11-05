@@ -6,16 +6,16 @@ plugins {
 
 android {
     namespace = "com.vknxworks.frigatectrl"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.vknxworks.frigatectrl"
         minSdk = 33
-        targetSdk = 35
+        targetSdk = 36
         // CI passes the run number so every build installs over the previous one.
         // Bump both to publish a new release (see CHANGELOG.md).
-        versionCode = 58
-        versionName = "3.7.10"
+        versionCode = 59
+        versionName = "3.7.11"
         // 64-bit ARM phones only (arm64-v8a), like every Ctrl app.
         ndk { abiFilters += listOf("arm64-v8a") }
     }

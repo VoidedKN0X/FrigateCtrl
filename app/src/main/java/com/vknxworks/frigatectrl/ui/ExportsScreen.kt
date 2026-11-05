@@ -245,6 +245,7 @@ fun ExportsScreen(onYou: () -> Unit, bottomPadding: Dp = 0.dp) {
     }
 
     deleting?.let { e ->
+        com.vknxworks.frigatectrl.GuardedWindow()
         CtrlAlertDialog(
             onDismissRequest = { deleting = null },
             icon = { Icon(Icons.Outlined.Delete, null) },
