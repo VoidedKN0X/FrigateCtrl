@@ -160,7 +160,7 @@ Turn it on under **Settings > Privacy and security > App lock** (tap your profil
 
 ## Privacy
 
-**Telemetry-free.** FrigateCtrl has no analytics, crash reporting, usage stats or tracking of any kind. It only talks to the servers you add.
+**Telemetry-free.** FrigateCtrl has no analytics, crash reporting, usage stats or tracking of any kind. It only talks to the servers you add. Its video players hand no playback diagnostics to Android's media diagnostics service.
 
 - **Servers it talks to:** your own Frigate server, and, for two-way talk, only the STUN/TURN servers listed in your go2rtc config. It never contacts a public STUN server on its own.
 - **Push:** only through the ntfy app and your own ntfy server, and only if you turn it on. A push is a wake-up call; nothing in it is shown.

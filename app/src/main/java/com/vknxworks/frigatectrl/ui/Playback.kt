@@ -34,7 +34,7 @@ class Playback(private val context: Context, private val camera: String, private
 
     private class Clip(val start: Double, val durMs: Long)
 
-    val player: ExoPlayer = ExoPlayer.Builder(context).build()
+    val player: ExoPlayer = ExoPlayer.Builder(context).setUsePlatformDiagnostics(false).build()
     private val dataSource = OkHttpDataSource.Factory(App.api.http)
 
     private var winStart = 0L

@@ -369,6 +369,7 @@ fun ExportPlayerScreen(e: ExportItem, onClose: () -> Unit) {
     val player = remember(e.id) {
         ExoPlayer.Builder(ctx)
             .setMediaSourceFactory(DefaultMediaSourceFactory(OkHttpDataSource.Factory(App.api.http)))
+            .setUsePlatformDiagnostics(false)
             .build()
             .apply {
                 setMediaItem(MediaItem.fromUri(App.api.exportVideoUrl(e)))

@@ -332,7 +332,7 @@ private fun buildLivePlayer(ctx: Context, audioOff: Boolean): ExoPlayer {
     // Fall back to another decoder when the first one fails to start (some phones list a decoder that can't
     // handle the camera's stream).
     val renderers = DefaultRenderersFactory(ctx).setEnableDecoderFallback(true)
-    val player = ExoPlayer.Builder(ctx, renderers).setLoadControl(load).build()
+    val player = ExoPlayer.Builder(ctx, renderers).setLoadControl(load).setUsePlatformDiagnostics(false).build()
     // Without sound (muted, or turned off after freezes) no audio decoder runs and the video plays on the
     // system clock instead of depending on the audio output.
     if (audioOff) {

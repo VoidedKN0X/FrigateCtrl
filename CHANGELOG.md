@@ -4,6 +4,14 @@ What changed in each FrigateCtrl version. Every release on the [Releases page](h
 
 To publish a new version: bump `versionCode` and `versionName` in `app/build.gradle.kts`, add a section here, and push to `main`. Pushes without a version bump only build; they don't make a release.
 
+## 3.7.10 (2026-11-05)
+
+Video playback no longer hands playback diagnostics to Android.
+
+### Privacy
+
+- **No playback diagnostics are handed to Android.** The video players for live view, recordings and exports used to report playback details (such as the stream format, buffering and errors) to Android's own media diagnostics service, which can pass them on to Google when the phone shares usage and diagnostics data. All three players now have this turned off, so no playback diagnostics are handed to Android. Live view, recordings and exports play exactly as before.
+
 ## 3.7.9 (2026-11-05)
 
 Two permissions FrigateCtrl never used are gone, and release builds no longer keep library debug logging.
