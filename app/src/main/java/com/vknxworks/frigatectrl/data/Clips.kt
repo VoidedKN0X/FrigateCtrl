@@ -8,6 +8,8 @@ import android.provider.MediaStore
 import androidx.core.content.FileProvider
 import com.vknxworks.frigatectrl.App
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import okhttp3.Request
 import java.io.File
@@ -54,16 +56,19 @@ object Clips {
         return if (base.isBlank()) fileName(e.camera, e.date) else "$base.mp4"
     }
 
-    /** Saves a server export to Movies/FrigateCtrl. Returns the display name. */
-    suspend fun saveExport(context: Context, e: ExportItem): String =
-        saveFile(context, downloadUrl(context, App.api.exportVideoUrl(e), exportFileName(e)))
+    /**
+     * Saves a server export to Movies/FrigateCtrl. Returns the display name. [onProgress] gets 0..1 while it
+     * downloads, when the server says how big the file is.
+     */
+    suspend fun saveExport(context: Context, e: ExportItem, onProgress: (Float) -> Unit = {}): String =
+        saveFile(context, downloadUrl(context, App.api.exportVideoUrl(e), exportFileName(e), onProgress))
 
     /** Downloads a server export and opens the Android share sheet. */
-    suspend fun shareExport(context: Context, e: ExportItem) =
-        shareFile(context, downloadUrl(context, App.api.exportVideoUrl(e), exportFileName(e)))
+    suspend fun shareExport(context: Context, e: ExportItem, onProgress: (Float) -> Unit = {}) =
+        shareFile(context, downloadUrl(context, App.api.exportVideoUrl(e), exportFileName(e), onProgress))
 
     /** Downloads [url] from the Frigate server into the app's private cache as [name]. */
-    private suspend fun downloadUrl(context: Context, url: String, name: String): File =
+    private suspend fun downloadUrl(context: Context, url: String, name: String, onProgress: (Float) -> Unit = {}): File =
         withContext(Dispatchers.IO) {
             val dir = clipDir(context).apply { mkdirs() }
             // Old shared clips are only needed until the receiving app has read them.
@@ -76,7 +81,26 @@ object Clips {
                 client.newCall(Request.Builder().url(url).build()).execute().use { r ->
                     if (!r.isSuccessful) throw Exception(if (r.code == 404) App.str(R.string.clip_error_no_recordings) else App.str(R.string.error_http, r.code))
                     val body = r.body ?: throw Exception(App.str(R.string.error_empty_response))
-                    out.outputStream().use { body.byteStream().copyTo(it) }
+                    val total = body.contentLength()
+                    out.outputStream().use { o ->
+                        body.byteStream().use { i ->
+                            val buf = ByteArray(64 * 1024)
+                            var done = 0L
+                            var lastStep = -1
+                            while (true) {
+                                currentCoroutineContext().ensureActive()
+                                val n = i.read(buf)
+                                if (n < 0) break
+                                o.write(buf, 0, n)
+                                done += n
+                                if (total > 0) {
+                                    // Whole percents only, so the screen isn't redrawn for every buffer.
+                                    val step = (done * 100 / total).toInt().coerceIn(0, 100)
+                                    if (step != lastStep) { lastStep = step; onProgress(step / 100f) }
+                                }
+                            }
+                        }
+                    }
                 }
                 if (out.length() < 1024) throw Exception(App.str(R.string.clip_error_no_recordings))
             } catch (e: Throwable) {

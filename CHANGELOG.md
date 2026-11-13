@@ -4,6 +4,21 @@ What changed in each FrigateCtrl version. Every release on the [Releases page](h
 
 To publish a new version: bump `versionCode` and `versionName` in `app/build.gradle.kts`, add a section here, and push to `main`. Pushes without a version bump only build; they don't make a release.
 
+## v3.8.0 (2026-11-13)
+
+A Quick Settings tile for object detection, and server exports you can follow from start to gallery.
+
+### New
+
+- **Detection tile in Quick Settings.** Add the **Detection** tile from your phone's Quick Settings edit screen and choose its camera under **Settings > Quick Settings tile**. It shows whether object detection is on for that camera, updated live while the panel is open, and a tap switches it on or off. It works like the switch on the camera screen: it changes the running Frigate only, not your config file, and it doesn't need MQTT. Switching always asks you to unlock your phone first, and while FrigateCtrl is locked by the app lock the tile only says "Locked" and shows nothing about the camera.
+- **Follow an export from the History screen.** After you start an export on the server (the export button on a clip selection or an event), a bar above the timeline follows it: waiting to start, how far Frigate is (as a percentage on Frigate 0.18 and newer, a moving bar on older versions), then a **Save to gallery** button that downloads it to Movies/FrigateCtrl. If Frigate can't make it, the bar says why.
+- **Export progress in the Exports tab.** Exports that are still being made show their percentage (Frigate 0.18 and newer) with a progress bar, and saving or sharing an export shows how much of it has downloaded.
+
+### Fixed
+
+- **Deleting exports works on Frigate 0.18.** Frigate 0.18 removed the old way to delete an export; FrigateCtrl now uses the new one there and still works with older versions.
+- **Time-lapse exports on Frigate 0.18.** Frigate 0.18 ignores the old time-lapse option, so a time-lapse export came out in real time. On 0.18 and newer, FrigateCtrl now asks for a time-lapse with Frigate's own time-lapse settings.
+
 ## v3.7.14 (2026-11-13)
 
 ### Security

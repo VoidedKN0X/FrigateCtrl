@@ -462,19 +462,70 @@ class FrigateApi(private val prefs: Prefs) {
         }.sortedByDescending { it.date }
     }
 
+    /** The server's Frigate version, read once per server (null when it can't be read). */
+    @Volatile private var versionCache: Pair<String, FrigateVersion?>? = null
+
+    suspend fun frigateVersion(): FrigateVersion? {
+        val base = baseUrl
+        versionCache?.let { if (it.first == base) return it.second }
+        val v = version()?.let(FrigateVersion::parse)
+        if (v != null) versionCache = base to v
+        return v
+    }
+
     /**
      * Asks Frigate to export [start]..[end] of [camera] as an MP4 on the server. [timelapse] makes a 25×
      * time-lapse instead of real time. Returns the new export's id when Frigate says it.
+     * Frigate 0.18 dropped the `playback` field: a time-lapse there is a custom export with Frigate's own
+     * default time-lapse settings (see [ExportRequests]).
      */
     suspend fun startExport(camera: String, start: Double, end: Double, name: String, timelapse: Boolean): String? =
         withContext(Dispatchers.IO) {
-            val body = JSONObject().put("playback", if (timelapse) "timelapse_25x" else "realtime")
+            val r = ExportRequests.start(camera, start, end, timelapse, frigateVersion())
+            val body = JSONObject()
+            r.playback?.let { body.put("playback", it) }
+            body.put("source", "recordings")
             if (name.isNotBlank()) body.put("name", name.take(256))
-            val path = "/api/export/${enc(camera)}/start/${start.toLong()}/end/${kotlin.math.ceil(end).toLong()}"
-            val req = Request.Builder().url(url(path)).post(body.toString().toRequestBody(JSON)).build()
+            val req = Request.Builder().url(url(r.path)).post(body.toString().toRequestBody(JSON)).build()
             val text = call(req)
             runCatching { JSONObject(text).optString("export_id").takeIf { it.isNotBlank() } }.getOrNull()
         }
+
+    /**
+     * The export job behind [exportId] (Frigate 0.18 and newer: queued or running, with a percentage). Null when
+     * the server has no job for it: an older Frigate, or the job has finished. [exports] then says where it stands.
+     */
+    suspend fun exportJob(exportId: String): ExportJob? = withContext(Dispatchers.IO) {
+        try {
+            http.newCall(Request.Builder().url(url("/api/jobs/export/${enc(exportId)}")).build()).execute().use { r ->
+                if (!r.isSuccessful) return@use null
+                parseJob(JSONObject(r.body?.string().orEmpty().take(64 * 1024)))
+            }
+        } catch (_: Exception) { null }
+    }
+
+    /** Every queued or running export job (Frigate 0.18 and newer; empty on older servers). */
+    suspend fun exportJobs(): List<ExportJob> = withContext(Dispatchers.IO) {
+        try {
+            http.newCall(Request.Builder().url(url("/api/jobs/export")).build()).execute().use { r ->
+                if (!r.isSuccessful) return@use emptyList()
+                val arr = JSONArray(r.body?.string().orEmpty().take(512 * 1024))
+                (0 until minOf(arr.length(), 200)).mapNotNull { arr.optJSONObject(it)?.let(::parseJob) }
+            }
+        } catch (_: Exception) { emptyList() }
+    }
+
+    private fun parseJob(o: JSONObject): ExportJob? {
+        val id = o.optString("id").takeIf { it.isNotBlank() } ?: return null
+        return ExportJob(
+            id = id,
+            status = o.optString("status"),
+            step = o.optString("current_step").takeIf { it.isNotBlank() && it != "null" },
+            percent = o.optDouble("progress_percent", Double.NaN).takeUnless { it.isNaN() },
+            error = o.optString("error_message").takeIf { it.isNotBlank() && it != "null" }
+                ?.replace(Regex("[\\p{Cntrl}]+"), " ")?.take(200),
+        )
+    }
 
     /**
      * Renames an export. Frigate 0.16 takes PATCH /api/export/<id>/rename with the name in the body; 0.14
@@ -498,8 +549,30 @@ class FrigateApi(private val prefs: Prefs) {
         Unit
     }
 
+    /**
+     * Deletes an export. Frigate 0.18 removed DELETE /api/export/<id> in favour of POST /api/exports/delete with
+     * a list of ids; older versions only have the first. The one that fits the server's version goes first, and
+     * the other is tried when the server doesn't know that route.
+     */
     suspend fun deleteExport(id: String) = withContext(Dispatchers.IO) {
-        call(Request.Builder().url(url("/api/export/${enc(id)}")).delete().build())
+        val single = Request.Builder().url(url("/api/export/${enc(id)}")).delete().build()
+        val bulk = Request.Builder().url(url("/api/exports/delete"))
+            .post(JSONObject().put("ids", JSONArray(listOf(id))).toString().toRequestBody(JSON)).build()
+        val order = if (ExportRequests.bulkDelete(frigateVersion())) listOf(bulk, single) else listOf(single, bulk)
+        val first = try {
+            http.newCall(order[0]).execute().use { r ->
+                when {
+                    r.code == 401 -> throw AuthException(App.str(R.string.error_session_expired))
+                    r.isSuccessful -> null
+                    r.code == 404 || r.code == 405 -> serverMessage(r)
+                    else -> throw Exception(serverMessage(r))
+                }
+            }
+        } catch (e: IOException) {
+            throw Tls.pinMismatchMessage(e)?.let { Exception(it, e) } ?: e
+        } ?: return@withContext
+        // The first form isn't on this server (or the export is gone): the other form says which.
+        try { call(order[1]) } catch (e: AuthException) { throw e } catch (_: Exception) { throw Exception(first) }
         Unit
     }
 

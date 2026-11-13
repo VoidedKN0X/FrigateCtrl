@@ -281,6 +281,8 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit, startAt
     // ---- server-side export of the selected range (Frigate's Exports page) ----
     var exportRange by remember { mutableStateOf<Pair<Double, Double>?>(null) }
     var exportBusy by remember { mutableStateOf(false) }
+    // The export started from here, followed until it's ready.
+    var watched by remember(camera) { mutableStateOf<WatchedExport?>(null) }
     fun askExport(start: Double, end: Double) {
         val a = minOf(start, end); val b = maxOf(start, end)
         if (b - a < 1) { Toast.makeText(ctx, ctx.getString(R.string.clip_move_playhead), Toast.LENGTH_SHORT).show(); return }
@@ -292,9 +294,10 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit, startAt
         exportBusy = true
         scope.launch {
             try {
-                api.startExport(camera, a, b, name, timelapse)
+                val id = api.startExport(camera, a, b, name, timelapse)
                 exportRange = null
                 clipStart = null
+                if (id != null) watched = WatchedExport(id, camera, System.currentTimeMillis() / 1000.0)
                 Toast.makeText(ctx, ctx.getString(R.string.export_started), Toast.LENGTH_LONG).show()
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
@@ -338,6 +341,7 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit, startAt
     }
 
     val controls: @Composable () -> Unit = {
+        watched?.let { w -> ExportWatchBar(w, onDismiss = { watched = null }) }
         clipStart?.let { start ->
             ClipBar(
                 start = start, end = tl.center, busy = clipBusy,

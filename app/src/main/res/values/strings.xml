@@ -437,4 +437,22 @@
     <string name="live_report_footer">Reports stay on this phone and are never sent anywhere; copy one into a bug report if you like.</string>
     <string name="live_sound_off_freezes">Sound off: video kept freezing with sound on this phone</string>
     <string name="close">Close</string>
+    <!-- Export progress -->
+    <string name="export_queued">Waiting to start</string>
+    <string name="export_running_percent">Being made · %1$d %%</string>
+    <string name="export_failed_short">Export failed</string>
+    <string name="export_downloading_percent">Downloading · %1$d %%</string>
+    <!-- Quick Settings tile -->
+    <string name="tile_detect_label">Detection</string>
+    <string name="tile_sub_setup">Set up FrigateCtrl</string>
+    <string name="tile_sub_locked">Locked</string>
+    <string name="tile_sub_pick">Choose a camera</string>
+    <string name="tile_sub_offline">%1$s · can\'t reach Frigate</string>
+    <string name="tile_sub_switching">%1$s · switching…</string>
+    <string name="tile_state_on">Detection on</string>
+    <string name="tile_state_off">Detection off</string>
+    <string name="group_tile">Quick Settings tile</string>
+    <string name="tile_camera">Camera for the Detection tile</string>
+    <string name="tile_camera_none">None</string>
+    <string name="tile_footer">Add the Detection tile from your phone\'s Quick Settings edit screen. It switches object detection on or off for this camera on the running Frigate, like the switch on the camera screen; your Frigate config file isn\'t changed. Changes need your phone unlocked, and while FrigateCtrl is locked the tile only shows Locked.</string>
 </resources>

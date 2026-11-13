@@ -23,6 +23,8 @@ class FrigateSocket(private val api: FrigateApi) {
     private val pending = mutableListOf<String>()
 
     var onMessage: ((topic: String, payload: String) -> Unit)? = null
+    /** The connection failed or the server closed it (on the main thread). */
+    var onDisconnected: (() -> Unit)? = null
 
     fun connect() {
         if (ws != null) return
@@ -40,9 +42,11 @@ class FrigateSocket(private val api: FrigateApi) {
             }
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
                 connected = false; ws = null
+                main.post { onDisconnected?.invoke() }
             }
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
                 connected = false; ws = null
+                main.post { onDisconnected?.invoke() }
             }
         })
     }

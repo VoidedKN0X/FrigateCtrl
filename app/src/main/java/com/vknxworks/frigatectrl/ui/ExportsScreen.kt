@@ -76,6 +76,8 @@ import com.vknxworks.frigatectrl.App
 import com.vknxworks.frigatectrl.R
 import com.vknxworks.frigatectrl.data.Clips
 import com.vknxworks.frigatectrl.data.ExportItem
+import com.vknxworks.frigatectrl.data.ExportJob
+import com.vknxworks.frigatectrl.data.ExportProgress
 import com.vknxworks.frigatectrl.notify.AlertNotifier
 import com.vknxworks.frigatectrl.ui.components.CtrlAlertDialog
 import com.vknxworks.frigatectrl.ui.components.CtrlChip
@@ -113,13 +115,18 @@ fun ExportsScreen(onYou: () -> Unit, bottomPadding: Dp = 0.dp) {
     var renaming by remember { mutableStateOf<ExportItem?>(null) }
     var deleting by remember { mutableStateOf<ExportItem?>(null) }
     var busyId by remember { mutableStateOf<String?>(null) }
+    var busyProgress by remember { mutableStateOf<Float?>(null) }
+    // Progress of exports Frigate is still making (Frigate 0.18 and newer report a percentage).
+    var jobs by remember { mutableStateOf<Map<String, ExportJob>>(emptyMap()) }
 
     val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(reload) {
         while (true) {
             lifecycle.awaitStarted()
             try {
-                exports = App.api.exports(); error = null
+                val list = App.api.exports()
+                jobs = if (list.any { it.inProgress }) App.api.exportJobs().associateBy { it.id } else emptyMap()
+                exports = list; error = null
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -133,16 +140,17 @@ fun ExportsScreen(onYou: () -> Unit, bottomPadding: Dp = 0.dp) {
     fun download(e: ExportItem, share: Boolean) {
         if (busyId != null) return
         busyId = e.id
+        busyProgress = null
         Toast.makeText(ctx, ctx.getString(R.string.clip_preparing), Toast.LENGTH_SHORT).show()
         scope.launch {
             try {
-                if (share) Clips.shareExport(ctx, e)
-                else Toast.makeText(ctx, ctx.getString(R.string.clip_saved, Clips.saveExport(ctx, e)), Toast.LENGTH_LONG).show()
+                if (share) Clips.shareExport(ctx, e) { busyProgress = it }
+                else Toast.makeText(ctx, ctx.getString(R.string.clip_saved, Clips.saveExport(ctx, e) { busyProgress = it }), Toast.LENGTH_LONG).show()
             } catch (ex: CancellationException) {
                 throw ex
             } catch (ex: Exception) {
                 Toast.makeText(ctx, ctx.getString(R.string.clip_failed, ex.message.orEmpty()), Toast.LENGTH_LONG).show()
-            } finally { busyId = null }
+            } finally { busyId = null; busyProgress = null }
         }
     }
 
@@ -202,6 +210,8 @@ fun ExportsScreen(onYou: () -> Unit, bottomPadding: Dp = 0.dp) {
             items(shown, key = { it.id }) { e ->
                 ExportRow(
                     e, busy = busyId == e.id,
+                    downloadProgress = if (busyId == e.id) busyProgress else null,
+                    progress = if (e.inProgress) ExportProgress.of(jobs[e.id], e) else null,
                     onPlay = { if (!e.inProgress) ExportPlayer.current = e },
                     onSave = { download(e, false) },
                     onShare = { download(e, true) },
@@ -277,6 +287,8 @@ private fun pluralString(id: Int, n: Int): String = LocalContext.current.resourc
 private fun ExportRow(
     e: ExportItem,
     busy: Boolean,
+    downloadProgress: Float?,
+    progress: ExportProgress?,
     onPlay: () -> Unit,
     onSave: () -> Unit,
     onShare: () -> Unit,
@@ -317,11 +329,17 @@ private fun ExportRow(
                 CtrlStatusDot(if (e.inProgress) CtrlColors.AccentText else CtrlColors.Inactive)
                 Spacer(Modifier.width(6.dp))
                 Text(
-                    stringResource(if (e.inProgress) R.string.export_in_progress else R.string.export_ready).uppercase(),
+                    when {
+                        downloadProgress != null -> stringResource(R.string.export_downloading_percent, (downloadProgress * 100).toInt())
+                        e.inProgress -> exportProgressLabel(progress ?: ExportProgress.Running(null))
+                        else -> stringResource(R.string.export_ready)
+                    }.uppercase(),
                     style = CtrlType.Label, fontSize = 10.sp,
-                    color = if (e.inProgress) CtrlColors.AccentText else CtrlColors.Muted,
+                    color = if (e.inProgress || downloadProgress != null) CtrlColors.AccentText else CtrlColors.Muted,
                 )
             }
+            val bar = downloadProgress ?: (progress as? ExportProgress.Running)?.fraction
+            if (e.inProgress || downloadProgress != null) ExportProgressBar(bar, Modifier.padding(top = 4.dp))
         }
         if (busy) {
             CircularProgressIndicator(Modifier.padding(12.dp).size(22.dp), strokeWidth = 2.dp, color = CtrlColors.AccentText)

@@ -75,6 +75,22 @@
             </intent-filter>
         </service>
 
+        <!-- Quick Settings tile for object detection on one camera. Exported only so the system's Quick Settings
+             can bind to it: BIND_QUICK_SETTINGS_TILE is held by the system alone, so no other app can. -->
+        <service
+            android:name=".tile.DetectTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_tile_detect"
+            android:label="@string/tile_detect_label"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.TOGGLEABLE_TILE"
+                android:value="true" />
+        </service>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.clips"

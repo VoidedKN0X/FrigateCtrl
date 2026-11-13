@@ -14,8 +14,8 @@ android {
         targetSdk = 36
         // CI passes the run number so every build installs over the previous one.
         // Bump both to publish a new release (see CHANGELOG.md).
-        versionCode = 62
-        versionName = "3.7.14"
+        versionCode = 63
+        versionName = "3.8.0"
         // 64-bit ARM phones only (arm64-v8a), like every Ctrl app.
         ndk { abiFilters += listOf("arm64-v8a") }
     }
@@ -96,4 +96,7 @@ dependencies {
     implementation("androidx.media3:media3-exoplayer-hls:$media3")
     implementation("androidx.media3:media3-datasource-okhttp:$media3")
     implementation("androidx.media3:media3-ui:$media3")
+
+    // Unit tests only (not in the app).
+    testImplementation("junit:junit:4.13.2")
 }

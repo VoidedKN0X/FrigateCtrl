@@ -21,8 +21,9 @@ Part of the [Ctrl series](#the-ctrl-series) by VKNXWorks.
 - **Save or share clips** of any event or time range
 - **Alert notifications** with the snapshot, camera, objects and time; tap one to open that moment in History. A background check every 15 minutes or more, and optional instant push through your own ntfy server
 - **Notification filters**: per camera and per object, alerts only or alerts and detections, quiet hours and a test notification
-- **Server exports**: export a range from the History timeline (real time or 25× time-lapse) on your Frigate server, follow its progress, then play, save, share, rename or delete it from the Exports tab
+- **Server exports**: export a range from the History timeline (real time or 25× time-lapse) on your Frigate server, follow its progress right there (with a percentage on Frigate 0.18 and newer) and save it to your gallery when it's ready; play, save, share, rename or delete exports from the Exports tab
 - **Camera switches**: camera on/off, detection, recording, snapshots, audio detection and notifications
+- **Detection tile** in Quick Settings: see and switch object detection for the camera you choose, live while the panel is open (needs your phone unlocked to switch; shows only "Locked" while FrigateCtrl is locked)
 - **System health**: CPU, GPU, memory, detector speed, camera FPS and disk usage
 - **App lock** with its own PIN and optional fingerprint unlock; your login stays encrypted while the app is locked
 - **Hide in screenshots** and **Hide in recent apps** switches keep your cameras out of screenshots, screen recordings and the recent-apps preview when you turn them on
@@ -171,6 +172,7 @@ Turn it on under **Settings > Privacy and security > App lock** (tap your profil
 **Telemetry-free.** FrigateCtrl has no analytics, crash reporting, usage stats or tracking of any kind. It only talks to the servers you add. Its video players hand no playback diagnostics to Android's media diagnostics service.
 
 - **Servers it talks to:** your own Frigate server, and, for two-way talk, only the STUN/TURN servers listed in your go2rtc config. It never contacts a public STUN server on its own.
+- **Detection tile:** only connects to your own Frigate server, only while the Quick Settings panel shows the tile, and only once you've chosen a camera for it (Settings > Quick Settings tile; set it to None to turn it off).
 - **Push:** only through the ntfy app and your own ntfy server, and only if you turn it on. A push is a wake-up call; nothing in it is shown.
 - **Two-way talk:** the built-in web view it runs in has online page checks and usage reports turned off.
 - **ntfy download link:** the **Get ntfy** button in Settings > Notifications opens ntfy's page on f-droid.org in your browser, only when you tap it.

@@ -85,4 +85,11 @@ class Settings(context: Context) {
     var eventPreroll: Int
         get() = _preroll.intValue
         set(v) { _preroll.intValue = v; sp.edit().putInt("event_preroll", v).apply() }
+
+    // Quick Settings tile
+    /** The camera whose object detection the Quick Settings tile switches ("" = none chosen). */
+    private val _tileCamera = mutableStateOf(sp.getString("tile_camera", "") ?: "")
+    var tileCamera: String
+        get() = _tileCamera.value
+        set(v) { _tileCamera.value = v; sp.edit().putString("tile_camera", v).apply() }
 }

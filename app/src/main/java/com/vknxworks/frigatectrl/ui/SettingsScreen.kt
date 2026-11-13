@@ -98,6 +98,10 @@ import com.vknxworks.frigatectrl.data.LiveReport
 import com.vknxworks.frigatectrl.ui.components.CtrlAlertDialog
 import com.vknxworks.frigatectrl.ui.theme.CtrlType
 import com.vknxworks.frigatectrl.App
+import androidx.compose.material.icons.outlined.CenterFocusStrong
+import androidx.compose.runtime.LaunchedEffect
+import com.vknxworks.frigatectrl.notify.AlertNotifier
+import com.vknxworks.frigatectrl.tile.DetectTileService
 import com.vknxworks.frigatectrl.R
 import com.vknxworks.frigatectrl.ui.components.CtrlSubTopBar
 import com.vknxworks.frigatectrl.ui.theme.CtrlColors
@@ -262,6 +266,21 @@ fun SettingsScreen(onBack: () -> Unit, onNotifications: () -> Unit = {}) {
                 Divider()
                 Toggle(Icons.Outlined.Vibration, stringResource(R.string.haptic_ticks), stringResource(R.string.haptic_ticks_subtitle), s.timelineHaptics) {
                     s.timelineHaptics = it
+                }
+            }
+
+            Section(stringResource(R.string.group_tile), footer = stringResource(R.string.tile_footer)) {
+                var cams by remember { mutableStateOf<List<String>?>(null) }
+                LaunchedEffect(Unit) { cams = runCatching { App.api.cameras().map { it.name } }.getOrNull() }
+                val current = s.tileCamera
+                val names = (cams.orEmpty() + listOfNotNull(current.takeIf { it.isNotBlank() })).distinct()
+                Choice(
+                    Icons.Outlined.CenterFocusStrong, stringResource(R.string.tile_camera),
+                    listOf(stringResource(R.string.tile_camera_none)) + names.map { AlertNotifier.cameraLabel(it) },
+                    if (current.isBlank()) 0 else names.indexOf(current) + 1,
+                ) { i ->
+                    s.tileCamera = if (i == 0) "" else names[i - 1]
+                    DetectTileService.refresh(ctx)
                 }
             }
 
