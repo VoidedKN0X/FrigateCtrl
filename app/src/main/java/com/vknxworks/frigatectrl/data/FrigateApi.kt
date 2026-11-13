@@ -308,7 +308,15 @@ class FrigateApi(private val prefs: Prefs) {
         val u = if (pathOrUrl.startsWith("http")) pathOrUrl else url(pathOrUrl)
         try {
             http.newCall(Request.Builder().url(u).build()).execute().use { r ->
-                if (r.isSuccessful) r.body?.bytes() else null
+                val body = r.body
+                when {
+                    !r.isSuccessful || body == null -> null
+                    // Only images come through here: refuse anything implausibly large instead of reading it all
+                    // into memory (a broken or hostile server can't make the app run out of memory).
+                    body.contentLength() > MAX_IMAGE_BYTES -> null
+                    body.source().request(MAX_IMAGE_BYTES + 1) -> null
+                    else -> body.source().buffer.readByteArray()
+                }
             }
         } catch (_: Exception) { null }
     }
@@ -582,6 +590,8 @@ class FrigateApi(private val prefs: Prefs) {
 
     private companion object {
         const val MAX_REDIRECTS = 5
+        /** Largest snapshot or thumbnail the app will read (a 4K JPEG is a few MB). */
+        const val MAX_IMAGE_BYTES = 24L * 1024 * 1024
         val REDIRECT_CODES = setOf(301, 302, 303, 307, 308)
         const val DEFAULT_ICE = "[]"
         val JSON = "application/json".toMediaType()

@@ -130,14 +130,27 @@ class Prefs(context: Context, private val vault: LockVault) {
     // --- Keystore AES-GCM ---
     private val alias = "frigate_remote_key"
 
+    @Volatile private var cachedKey: SecretKey? = null
+
+    @Synchronized
     private fun key(): SecretKey {
+        cachedKey?.let { return it }
         val ks = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
-        (ks.getKey(alias, null) as? SecretKey)?.let { return it }
+        val key = (ks.getKey(alias, null) as? SecretKey)
+            // New keys go into the phone's secure element (StrongBox) when it has one, else the normal Keystore.
+            // An existing key keeps working as it is, so nobody has to sign in again.
+            ?: runCatching { generateKey(strongBox = true) }.getOrElse { generateKey(strongBox = false) }
+        cachedKey = key
+        return key
+    }
+
+    private fun generateKey(strongBox: Boolean): SecretKey {
         val gen = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore")
         gen.init(
             KeyGenParameterSpec.Builder(alias, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
                 .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
                 .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                .setIsStrongBoxBacked(strongBox)
                 .build()
         )
         return gen.generateKey()

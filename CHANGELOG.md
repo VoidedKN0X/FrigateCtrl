@@ -4,6 +4,21 @@ What changed in each FrigateCtrl version. Every release on the [Releases page](h
 
 To publish a new version: bump `versionCode` and `versionName` in `app/build.gradle.kts`, add a section here, and push to `main`. Pushes without a version bump only build; they don't make a release.
 
+## v3.7.14 (2026-11-13)
+
+### Security
+
+- **Saved logins are protected by the phone's secure chip where it has one.** On a fresh install (or after clearing FrigateCtrl's data), the key that encrypts your Frigate password and session token is now created in the phone's StrongBox secure element when the phone has one, and in the normal Android Keystore otherwise. If you already use FrigateCtrl nothing changes for you: your existing key keeps working and you stay signed in.
+- **Oversized images are refused.** Snapshots, thumbnails and notification pictures larger than 24 MB are no longer read into memory, so a misbehaving server or proxy can't make FrigateCtrl run out of memory. Real camera snapshots are far smaller and load as before.
+
+### Performance
+
+- **Camera pictures use less memory.** The in-memory picture cache is now limited by size (an eighth of the memory Android gives FrigateCtrl, at most 64 MB) instead of by count, so a handful of full-resolution snapshots can't push memory use up. Pictures are still never written to storage.
+
+### Project
+
+- The Gradle wrapper download is now checked against its published SHA-256 checksum before a build runs.
+
 ## 3.7.13 (2026-11-12)
 
 ### Changed

@@ -21,8 +21,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
-// Thumbnails and snapshots are only ever kept in memory, never written to disk.
-private val imageCache = object : LruCache<String, ImageBitmap>(48) {}
+// Thumbnails and snapshots are only ever kept in memory, never written to disk. The cache is limited by memory
+// (an eighth of the app's heap, at most 64 MB) rather than by count, so a few full-size snapshots can't fill it up.
+private val imageCache = object : LruCache<String, ImageBitmap>(
+    (Runtime.getRuntime().maxMemory() / 8).coerceAtMost(64L * 1024 * 1024).toInt(),
+) {
+    override fun sizeOf(key: String, value: ImageBitmap): Int = value.asAndroidBitmap().allocationByteCount
+}
 
 /** Drops every cached camera image (on logout). */
 fun clearImageCache() = imageCache.evictAll()
