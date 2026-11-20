@@ -48,13 +48,15 @@ suspend fun loadBitmap(url: String, useCache: Boolean = true): ImageBitmap? {
  * plays) into [BUFFERS] bitmaps used in turn, instead of a new full-size bitmap for every frame. The bitmap
  * on screen is never the one being written: with three in turn, a bitmap comes up for reuse only after the
  * two frames after it were decoded and shown. A frame of another size, or anything else Android can't decode
- * into an old bitmap, gets a fresh one. Not thread-safe: one frame at a time, for one picture, and the
+ * into an old bitmap, gets a fresh one. For one picture only, and the
  * bitmaps must not be handed to anything that keeps them (the cache, a caller).
  */
 private class RefreshFrames {
     private val buffers = arrayOfNulls<Bitmap>(BUFFERS)
     private var next = 0
 
+    // One at a time, also when a new refresh loop starts while the last frame of the old one is still decoding.
+    @Synchronized
     fun decode(jpeg: ByteArray): Bitmap? {
         val out = decodeInto(jpeg, buffers[next]) ?: BitmapFactory.decodeByteArray(jpeg, 0, jpeg.size) ?: return null
         // Only a bitmap that can be written again is kept for reuse.
