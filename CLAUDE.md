@@ -14,6 +14,13 @@ Every new version needs a detailed entry at the top of `CHANGELOG.md`, under a h
 - Cover every user-visible change in the version, one bullet each, with enough detail to understand it without opening the app.
 - Group with `### New`, `### Changed`, `### Fixed` and `### Security` when there's more than a couple of items.
 
+## Build toolchain
+
+- AGP 9.5.1, Gradle 9.9.2, Kotlin 2.4.21, Compose BOM 2026.09.00, `compileSdk` 37 (Compose 1.12 needs it), `minSdk` 35, `targetSdk` 36. There is no version catalog: the versions are inline in the root `build.gradle.kts` and `app/build.gradle.kts`.
+- AGP 9 has built-in Kotlin: there is no `org.jetbrains.kotlin.android` plugin and no `kotlinOptions {}` any more (the JVM target comes from the top-level `kotlin { jvmToolchain(17) }`). The Kotlin version is pinned by the `kotlin-gradle-plugin` classpath entry in the root `build.gradle.kts`; keep it equal to the Compose compiler plugin's version. Don't re-add the Kotlin Android plugin.
+- AGP 9's R8 is stricter (`-keep class X` without a member block no longer keeps the constructor; resources are shrunk together with code). Keep rules in `proguard-rules.pro` must name the members they need, and resources must be referenced through `R`, never by name.
+- Any change here needs the dependency verification procedure below.
+
 ## Dependency verification
 
 Every library and plugin download is checked against `gradle/verification-metadata.xml` (SHA-256 only, no PGP). When you add, remove or update a dependency or Gradle plugin, run the manual **Dependency verification metadata** workflow (`gh api -X POST repos/VoidedKN0X/FrigateCtrl/actions/workflows/verification-metadata.yml/dispatches -f ref=main`), take the file from its log (gzipped and base64-encoded between the BEGIN/END markers), check the diff (only Maven Central and Google's Maven) and commit it in the same push. Keep the `<trusted-artifacts>` entries for `-sources.jar` and `-javadoc.jar`. Never turn verification off or to lenient in CI.
