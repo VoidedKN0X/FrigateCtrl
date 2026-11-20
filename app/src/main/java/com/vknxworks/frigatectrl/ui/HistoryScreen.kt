@@ -115,6 +115,7 @@ import androidx.media3.ui.PlayerView
 import com.vknxworks.frigatectrl.App
 import com.vknxworks.frigatectrl.data.CameraInfo
 import com.vknxworks.frigatectrl.data.RecordingSegment
+import com.vknxworks.frigatectrl.data.RecordingTail
 import com.vknxworks.frigatectrl.data.ReviewItem
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
@@ -147,6 +148,16 @@ import com.vknxworks.frigatectrl.ui.theme.CtrlFonts
 import com.vknxworks.frigatectrl.ui.theme.CtrlShape
 import com.vknxworks.frigatectrl.ui.theme.CtrlType
 
+/** What the timeline's recording segments were last loaded for in full (see the refresh in [HistoryScreen]). */
+private class SegmentLoad {
+    var camera: String? = null
+    var bucket: Long? = null
+    var tails = 0
+}
+
+/** After this many refreshes of only the newest part (one every 30 seconds), the whole 24 h chunk is loaded again. */
+private const val TAILS_PER_FULL_LOAD = 9
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit, startAt: Double? = null) {
@@ -177,12 +188,37 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit, startAt
     var reviews by remember { mutableStateOf(emptyList<ReviewItem>()) }
     var refreshTick by remember { mutableIntStateOf(0) }
     val bucket by remember { derivedStateOf { floor(tl.center / 21600.0).toLong() } }
+    // Which camera and 24 h chunk [segments] was loaded for in full, and how many refreshes since only asked
+    // for the newest part.
+    val segmentLoad = remember { SegmentLoad() }
     LaunchedEffect(bucket, refreshTick) {
         val a = bucket * 21600.0 - 43200
         val b = min(nowSec(), bucket * 21600.0 + 43200)
         // Recordings and review items are asked for at the same time.
         coroutineScope {
-            launch { try { segments = api.recordings(camera, a, b) } catch (_: Exception) {} }
+            launch {
+                try {
+                    val known = segments
+                    // The same chunk as on screen: only the segments from two minutes before the newest known
+                    // one are asked for and put in place of that last part. Every few minutes, and for
+                    // another chunk, the whole chunk is loaded again.
+                    val cut = if (segmentLoad.camera == camera && segmentLoad.bucket == bucket && segmentLoad.tails < TAILS_PER_FULL_LOAD) {
+                        RecordingTail.cut(known, a)
+                    } else {
+                        null
+                    }
+                    if (cut != null) {
+                        val tail = api.recordings(camera, cut, b)
+                        segments = RecordingTail.merge(known, tail, cut)
+                        segmentLoad.tails++
+                    } else {
+                        segments = api.recordings(camera, a, b)
+                        segmentLoad.camera = camera
+                        segmentLoad.bucket = bucket
+                        segmentLoad.tails = 0
+                    }
+                } catch (_: Exception) {}
+            }
             launch { try { reviews = api.reviews(camera, a, b) } catch (_: Exception) {} }
         }
     }
