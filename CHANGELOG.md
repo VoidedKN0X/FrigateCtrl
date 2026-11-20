@@ -11,6 +11,7 @@ Built and checked by CI only: nothing here had been run on a phone when it was w
 ### Changed
 
 - **History uses far less data while it is open.** To keep the timeline growing at the live edge, FrigateCtrl asked Frigate for the full list of recording segments of the 24 hours around the playhead every 30 seconds (thousands of entries for a camera that records all day). It now asks only for the segments from two minutes before the newest one it already has and puts those in place of the end of its list; the rest of the list is kept. The whole list is still loaded when you move to another part of the timeline, and once every 5 minutes. What you might notice: a recording somewhere in the middle of the day that Frigate deletes (its clean-up of recordings it does not have to keep) can stay on the timeline for up to 5 minutes instead of 30 seconds. Review items (alerts and detections) are still loaded in full every 30 seconds, because they change after they are made.
+- **Less memory churn while a camera shows snapshots instead of video.** Until live video plays (and when it cannot), the camera page shows a fresh snapshot twice a second. Each one used to get a new full-size picture in memory that was thrown away half a second later. Three pictures are now used in turn; the one on screen is never the one being written, and it is only written again after the two frames after it were shown. The picture is the same. This applies to pictures refreshed once a second or faster; the Cameras overview with a slower refresh works as before.
 
 ## v3.9.0 (2026-11-20)
 
