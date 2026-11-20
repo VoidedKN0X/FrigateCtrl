@@ -86,8 +86,51 @@ class FrigateApi(private val prefs: Prefs) {
 
     @Volatile var baseUrl: String = prefs.baseUrl.trimEnd('/')
         private set
-    @Volatile var token: String = prefs.token
-        private set
+    private val tokenLock = Any()
+
+    /** Counts every change of [token], so the read at start can tell whether something else set it meanwhile. */
+    private var tokenWrites = 0
+    @Volatile private var tokenValue: String = ""
+
+    /** Open while the saved token is still being read at start. */
+    @Volatile private var tokenRead: java.util.concurrent.CountDownLatch? = null
+
+    /**
+     * The login token in use ("" when there is none, or while the app is locked). The saved one is read on a
+     * background thread when the app starts (it asks the phone's Keystore, which can be slow); whatever needs
+     * the token before that read is done waits for it here, so it never sees "no token" only because of that.
+     */
+    var token: String
+        get() {
+            tokenRead?.let { pending -> runCatching { pending.await() } }
+            return tokenValue
+        }
+        private set(value) {
+            synchronized(tokenLock) {
+                tokenWrites++
+                tokenValue = value
+            }
+        }
+
+    init {
+        val pending = java.util.concurrent.CountDownLatch(1)
+        val stamp = synchronized(tokenLock) {
+            tokenRead = pending
+            tokenWrites
+        }
+        Thread({
+            try {
+                val saved = runCatching { prefs.token }.getOrDefault("")
+                // A token set meanwhile (unlocking, signing in, locking) is newer than what was read: it stays.
+                synchronized(tokenLock) {
+                    if (tokenWrites == stamp) tokenValue = saved
+                }
+            } finally {
+                pending.countDown()
+                if (tokenRead === pending) tokenRead = null
+            }
+        }, "token-read").start()
+    }
     @Volatile private var baseHttpUrl: HttpUrl? = baseUrl.toHttpUrlOrNull()
 
     private data class ClientKey(val base: String, val pin: String, val httpOk: Boolean)
