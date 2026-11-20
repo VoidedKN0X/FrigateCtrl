@@ -20,15 +20,24 @@ android {
         ndk { abiFilters += listOf("arm64-v8a") }
     }
 
-    // Release signing from env (GitHub secrets). Local builds fall back to the debug key so the APK
-    // is always installable; on CI a missing key fails the build instead of publishing a debug-signed APK.
+    // Release signing. On GitHub Actions the build job has no signing key at all: it sets
+    // UNSIGNED_RELEASE=true and gets app-release-unsigned.apk, which a separate job signs with apksigner
+    // (see .github/workflows/build.yml). An unsigned APK cannot be installed, so nothing unsigned can ship.
+    // A keystore from environment variables still works (SIGNING_KEYSTORE_PATH, SIGNING_STORE_PASSWORD,
+    // SIGNING_KEY_ALIAS, SIGNING_KEY_PASSWORD). Local builds without one fall back to the debug key so the
+    // APK is always installable; on CI a release build that has neither a key nor UNSIGNED_RELEASE=true
+    // fails, so a debug-signed APK is never published as a release.
     val ksPath = System.getenv("SIGNING_KEYSTORE_PATH")
     val hasReleaseKey = !ksPath.isNullOrBlank() && file(ksPath).exists() &&
         listOf("SIGNING_STORE_PASSWORD", "SIGNING_KEY_ALIAS", "SIGNING_KEY_PASSWORD").all { !System.getenv(it).isNullOrBlank() }
     val onCi = System.getenv("CI") == "true" || System.getenv("GITHUB_ACTIONS") == "true"
     val buildingRelease = gradle.startParameter.taskNames.any { it.contains("Release", ignoreCase = true) }
-    if (onCi && buildingRelease && !hasReleaseKey) {
-        throw GradleException("Release signing key or passwords are missing on CI - refusing to sign the release with the debug key")
+    val unsignedRelease = System.getenv("UNSIGNED_RELEASE") == "true"
+    if (onCi && buildingRelease && !hasReleaseKey && !unsignedRelease) {
+        throw GradleException(
+            "Release signing key or passwords are missing on CI and UNSIGNED_RELEASE=true is not set - " +
+                "refusing to sign the release with the debug key",
+        )
     }
     signingConfigs {
         if (hasReleaseKey) {
@@ -46,7 +55,8 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
+            // UNSIGNED_RELEASE=true: no signing here at all, the output is app-release-unsigned.apk.
+            signingConfig = if (unsignedRelease) null else (signingConfigs.findByName("release") ?: signingConfigs.getByName("debug"))
         }
     }
 

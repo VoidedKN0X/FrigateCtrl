@@ -14,6 +14,15 @@ Built and checked by CI only: nothing here had been run on a phone when it was w
 - **Less memory churn while a camera shows snapshots instead of video.** Until live video plays (and when it cannot), the camera page shows a fresh snapshot twice a second. Each one used to get a new full-size picture in memory that was thrown away half a second later. Three pictures are now used in turn; the one on screen is never the one being written, and it is only written again after the two frames after it were shown. The picture is the same. This applies to pictures refreshed once a second or faster; the Cameras overview with a slower refresh works as before.
 - **The app opens a little faster.** Your Frigate login is kept encrypted by the phone's secure hardware, and reading it held up the first screen for a moment. It is now read in the background while the screen is drawn; the first request to Frigate waits for it if it is not there yet. Nothing changes with the app lock on: the login stays sealed until you unlock.
 
+### Security
+
+- **The signing key is no longer available to the build (the app itself is unchanged).** Until now the release key and its passwords were present in the same GitHub Actions job that runs Gradle, so any build plugin or library could in principle have read them. The build job now has no secrets at all and produces an unsigned APK. A separate job, which checks out no code and runs no Gradle, signs it with `apksigner`, and then refuses to hand it on unless it is signed by exactly the certificate published in SECURITY.md and README.md and its contents are identical to what the build job made. Releases are signed with the same key and the same signature scheme (v2) as before, so updates install as usual. The first release made this way has not been published yet.
+- **The build checks that the published fingerprint and the enforced one are the same.** If `build.yml` ever disagrees with SECURITY.md and README.md about the signing certificate, the build fails.
+
+### Project
+
+- **Builds no longer use a saved Gradle cache.** Other Ctrl apps had builds fail with "Dependency verification failed ... from repository Gradle Central Plugin Repository", and keep failing until the caches were deleted by hand. The cause (reproduced on DateCtrl): with a restored cache Gradle still fetches the plugin files from Maven Central on every build; when Maven Central can't be reached for a moment, Gradle takes the Kotlin plugin "marker" file from the Gradle plugin portal instead, the portal serves a different file under the same name, verification rightly refuses it, and the failed run then saved that state as the cache for every later run. Now every build and the weekly code scan start from a clean Gradle home, and the plugin portal is no longer a plugin source at all (`settings.gradle.kts`): everything the build needs is on Maven Central and Google's Maven. Dependency verification itself is unchanged and as strict as before.
+
 ## v3.9.0 (2026-11-20)
 
 Built and checked by CI only: nothing in this release had been run on a phone when it was published.

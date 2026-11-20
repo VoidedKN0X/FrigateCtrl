@@ -65,7 +65,7 @@ Settings, the server and login, log out and About are behind your profile pictur
 ## Is it safe to install?
 
 - **Open source:** all of FrigateCtrl's code is in this repo, under the GPL-3.0 licence.
-- **Built by GitHub Actions, not on a personal computer:** every release on the Releases page is built from this code by [the build workflow](.github/workflows/build.yml).
+- **Built by GitHub Actions, not on a personal computer:** every release on the Releases page is built from this code by [the build workflow](.github/workflows/build.yml). The signing key is kept away from the build: one job builds the APK without any secrets, and a separate job that runs no code from this repo signs it and checks the signature against the fingerprint below.
 - **Always signed with the same release key.** Android refuses an update signed with a different key, and the CtrlF-Droid repo only accepts APKs signed with this key. Its SHA-256 certificate fingerprint is:
 
   ```
