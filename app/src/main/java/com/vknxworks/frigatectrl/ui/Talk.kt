@@ -59,10 +59,16 @@ class TalkSession(private val activity: Activity, private val stream: String) {
             // The page is inline HTML; it never needs local files or content providers.
             settings.allowFileAccess = false
             settings.allowContentAccess = false
+            // Talk only uses the microphone: the page never gets a location.
+            settings.setGeolocationEnabled(false)
             webChromeClient = object : WebChromeClient() {
                 override fun onPermissionRequest(request: PermissionRequest) {
-                    // Only ever grant the microphone, and only to our own page.
-                    if (PermissionRequest.RESOURCE_AUDIO_CAPTURE in request.resources)
+                    // Only ever grant the microphone, and only to our own page: the request has to come from
+                    // the address the inline page is loaded under (see loadDataWithBaseURL below).
+                    val origin = request.origin
+                    val ownPage = origin != null && origin.scheme.equals("https", ignoreCase = true) &&
+                        origin.host.equals(PAGE_HOST, ignoreCase = true)
+                    if (ownPage && PermissionRequest.RESOURCE_AUDIO_CAPTURE in request.resources)
                         request.grant(arrayOf(PermissionRequest.RESOURCE_AUDIO_CAPTURE))
                     else request.deny()
                 }
@@ -77,12 +83,12 @@ class TalkSession(private val activity: Activity, private val stream: String) {
         // Attached (invisibly) so WebRTC and audio capture run normally.
         (activity.window.decorView as ViewGroup).addView(wv, ViewGroup.LayoutParams(1, 1))
         web = wv
-        wv.loadDataWithBaseURL("https://appassets.androidplatform.net/", PAGE, "text/html", "utf-8", null)
+        wv.loadDataWithBaseURL("https://$PAGE_HOST/", PAGE, "text/html", "utf-8", null)
     }
 
     private fun openSignalling() {
         val url = App.api.wsUrl("/live/webrtc/api/ws?src=") + URLEncoder.encode(stream, "UTF-8")
-        ws = App.api.http.newWebSocket(Request.Builder().url(url).build(), object : WebSocketListener() {
+        ws = App.api.wsHttp.newWebSocket(Request.Builder().url(url).build(), object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 main.post { web?.evaluateJavascript("start(${App.api.iceServersJson})", null) }
             }
@@ -152,6 +158,8 @@ class TalkSession(private val activity: Activity, private val stream: String) {
     }
 
     private companion object {
+        /** The (never contacted) secure address the inline page runs under; the microphone is granted to it alone. */
+        const val PAGE_HOST = "appassets.androidplatform.net"
         const val PAGE = """<!doctype html><html><body><script>
 let pc = null, stream = null;
 function report(s){ try{ Android.state(s) }catch(e){} }

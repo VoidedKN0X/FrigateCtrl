@@ -104,7 +104,8 @@ class MainActivity : FragmentActivity() {
         // Alert notifications: the background check and the registration with ntfy, as they were left.
         // Never in the way of opening the app: a background-check or ntfy problem only means no alerts for now.
         if (App.prefs.isConfigured) {
-            runCatching { AlertWorker.schedule(appCtx) }
+            // Off the main thread: starting WorkManager opens its database, which shouldn't hold up the first frame.
+            Thread { runCatching { AlertWorker.schedule(appCtx) } }.start()
             runCatching { Push.start(appCtx, App.notify.enabled && App.notify.push) }
         }
         // A tapped alert notification opens that camera's History (after unlocking, if the app is locked).

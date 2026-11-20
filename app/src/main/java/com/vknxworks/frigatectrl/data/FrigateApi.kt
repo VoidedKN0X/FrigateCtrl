@@ -125,6 +125,22 @@ class FrigateApi(private val prefs: Prefs) {
             return c
         }
 
+    @Volatile private var wsCache: Pair<OkHttpClient, OkHttpClient>? = null
+
+    /**
+     * [http] for websockets (live view, camera switches, talk): the same client, connections and login, plus
+     * a ping every 20 seconds so a silently dropped socket is noticed. Ordinary requests don't ping, so an
+     * idle connection doesn't keep waking the phone's radio.
+     */
+    val wsHttp: OkHttpClient
+        get() {
+            val base = http
+            wsCache?.let { if (it.first === base) return it.second }
+            val c = base.newBuilder().pingInterval(20, TimeUnit.SECONDS).build()
+            wsCache = base to c
+            return c
+        }
+
     fun url(path: String): String = baseUrl + (if (path.startsWith("/")) path else "/$path")
 
     /**
@@ -135,6 +151,7 @@ class FrigateApi(private val prefs: Prefs) {
         token = ""
         val c = clientCache?.second
         clientCache = null
+        wsCache = null
         // Off the main thread: closing an encrypted connection sends a last TLS message, which Android refuses
         // on the main thread (NetworkOnMainThreadException). Locking runs on the main thread as you leave.
         if (c != null) Thread {
@@ -148,6 +165,7 @@ class FrigateApi(private val prefs: Prefs) {
         baseHttpUrl = baseUrl.toHttpUrlOrNull()
         token = prefs.token
         clientCache = null
+        wsCache = null
     }
 
     // ---------- auth ----------
@@ -275,7 +293,6 @@ class FrigateApi(private val prefs: Prefs) {
         val b = OkHttpClient.Builder()
             .connectTimeout(10, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
-            .pingInterval(20, TimeUnit.SECONDS)
             // Redirects are followed by [serverInterceptor], only within the server.
             .followRedirects(false)
             .followSslRedirects(false)
@@ -303,6 +320,10 @@ class FrigateApi(private val prefs: Prefs) {
             throw Tls.pinMismatchMessage(e)?.let { Exception(it, e) } ?: e
         }
     }
+
+    /** Turns a (possibly large) answer into objects off the main thread, so the screen never stutters on it. */
+    private suspend fun <T> parsed(text: String, parse: (String) -> T): T =
+        withContext(Dispatchers.Default) { parse(text) }
 
     suspend fun bytes(pathOrUrl: String): ByteArray? = withContext(Dispatchers.IO) {
         val u = if (pathOrUrl.startsWith("http")) pathOrUrl else url(pathOrUrl)
@@ -332,8 +353,10 @@ class FrigateApi(private val prefs: Prefs) {
     @Volatile var iceServersJson: String = DEFAULT_ICE
         private set
 
-    suspend fun cameras(): List<CameraInfo> {
-        val root = JSONObject(getString("/api/config"))
+    suspend fun cameras(): List<CameraInfo> = parsed(getString("/api/config")) { parseCameras(it) }
+
+    private fun parseCameras(text: String): List<CameraInfo> {
+        val root = JSONObject(text)
         iceServersJson = root.optJSONObject("go2rtc")?.optJSONObject("webrtc")?.optJSONArray("ice_servers")
             ?.takeIf { it.length() > 0 }?.toString() ?: DEFAULT_ICE
         groups = root.optJSONObject("camera_groups")?.let { g ->
@@ -377,22 +400,28 @@ class FrigateApi(private val prefs: Prefs) {
     }
 
     suspend fun recordings(camera: String, after: Double, before: Double): List<RecordingSegment> {
-        val arr = JSONArray(getString("/api/$camera/recordings?after=${after.toLong()}&before=${before.toLong() + 1}"))
-        return (0 until arr.length()).map { i ->
-            val o = arr.getJSONObject(i)
-            RecordingSegment(
-                o.getDouble("start_time"), o.getDouble("end_time"),
-                o.optInt("motion", 0), o.optInt("objects", 0),
-                o.optDouble("duration", o.getDouble("end_time") - o.getDouble("start_time")),
-            )
-        }.sortedBy { it.start }
+        val text = getString("/api/$camera/recordings?after=${after.toLong()}&before=${before.toLong() + 1}")
+        return parsed(text) { body ->
+            val arr = JSONArray(body)
+            val segments = (0 until arr.length()).map { i ->
+                val o = arr.getJSONObject(i)
+                RecordingSegment(
+                    o.getDouble("start_time"), o.getDouble("end_time"),
+                    o.optInt("motion", 0), o.optInt("objects", 0),
+                    o.optDouble("duration", o.getDouble("end_time") - o.getDouble("start_time")),
+                )
+            }
+            segments.sortedBy { it.start }
+        }
     }
 
     suspend fun reviews(camera: String, after: Double, before: Double): List<ReviewItem> {
-        val arr = JSONArray(
-            getString("/api/review?cameras=$camera&after=${after.toLong()}&before=${before.toLong() + 1}&limit=500")
-        )
-        return (0 until arr.length()).map { i -> parseReview(arr.getJSONObject(i)) }.sortedBy { it.start }
+        val text = getString("/api/review?cameras=$camera&after=${after.toLong()}&before=${before.toLong() + 1}&limit=500")
+        return parsed(text) { body ->
+            val arr = JSONArray(body)
+            val items = (0 until arr.length()).map { i -> parseReview(arr.getJSONObject(i)) }
+            items.sortedBy { it.start }
+        }
     }
 
     /**
@@ -400,8 +429,12 @@ class FrigateApi(private val prefs: Prefs) {
      * newest first. Used by the notification check.
      */
     suspend fun unreviewedSince(after: Double, limit: Int = 50): List<ReviewItem> {
-        val arr = JSONArray(getString("/api/review?after=${after.toLong()}&reviewed=0&limit=$limit"))
-        return (0 until arr.length()).map { i -> parseReview(arr.getJSONObject(i)) }.sortedByDescending { it.start }
+        val text = getString("/api/review?after=${after.toLong()}&reviewed=0&limit=$limit")
+        return parsed(text) { body ->
+            val arr = JSONArray(body)
+            val items = (0 until arr.length()).map { i -> parseReview(arr.getJSONObject(i)) }
+            items.sortedByDescending { it.start }
+        }
     }
 
     /** One review item by id, or null if Frigate doesn't know it. */
@@ -617,7 +650,7 @@ class FrigateApi(private val prefs: Prefs) {
     }
 
     /** Raw /api/stats (structure varies a little between Frigate versions, so it's parsed leniently). */
-    suspend fun stats(): JSONObject = JSONObject(getString("/api/stats"))
+    suspend fun stats(): JSONObject = parsed(getString("/api/stats")) { JSONObject(it) }
 
     /** Per-camera recording storage: { camera: { usage (MB), bandwidth (MB/h), usage_percent } }. */
     suspend fun recordingStorage(): JSONObject? = try { JSONObject(getString("/api/recordings/storage")) } catch (_: Exception) { null }

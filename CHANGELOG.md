@@ -12,6 +12,17 @@ Not in a release yet: these changes are built, and go out with the next version.
 
 - **The Detection tile in Quick Settings is gone.** The tile that showed and switched object detection for one camera is removed from FrigateCtrl, together with **Settings > Quick Settings tile** where you chose its camera. A tile you had added disappears from Quick Settings, and the camera you had chosen for it is forgotten. Switching detection on or off still works on the camera screen, as before.
 
+### Changed
+
+- **Smoother Cameras, History and System health screens.** The answers from Frigate (its full configuration, a day of recording segments, review items, the system statistics) are now worked through in the background instead of on the thread that draws the screen, so scrolling and video no longer hitch while they load. What is shown is the same.
+- **The History timeline and the unread-alert badges load sooner.** Recordings and review items are asked for at the same time instead of one after the other, and the unread-alert counts on the Cameras screen are fetched while the cameras load.
+- **Less battery use on mobile data and Wi-Fi.** FrigateCtrl sent a keep-alive ping every 20 seconds on every connection to Frigate, also idle ones, which kept the phone's radio awake. Only the live connections that need it to notice a dropped link still ping: live view, the camera switches and two-way talk.
+- **The app opens a little faster:** the background alert check is set up off the main thread at start-up.
+
+### Security
+
+- **Two-way talk: the microphone goes only to FrigateCtrl's own talk page.** The hidden web view that carries your voice to the camera now checks which page asks for the microphone and only says yes to the app's built-in page; anything else is refused. It could already not browse anywhere else, so this is an extra lock on the same door. The page also can't ask for your location.
+
 ## Project updates (2026-11-19)
 
 ### Project

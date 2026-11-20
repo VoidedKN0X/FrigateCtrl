@@ -29,7 +29,7 @@ class FrigateSocket(private val api: FrigateApi) {
     fun connect() {
         if (ws != null) return
         val req = Request.Builder().url(api.wsUrl("/ws")).build()
-        ws = api.http.newWebSocket(req, object : WebSocketListener() {
+        ws = api.wsHttp.newWebSocket(req, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 connected = true
                 synchronized(pending) { pending.forEach { webSocket.send(it) }; pending.clear() }

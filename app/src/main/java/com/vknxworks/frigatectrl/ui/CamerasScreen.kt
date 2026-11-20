@@ -1,5 +1,7 @@
 package com.vknxworks.frigatectrl.ui
 
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -88,14 +90,20 @@ fun CamerasScreen(onOpen: (String) -> Unit, onYou: () -> Unit, bottomPadding: Dp
 
     LaunchedEffect(reload) {
         error = null
-        try {
-            cameras = App.api.cameras()
-            groups = App.api.groups
-        } catch (e: Exception) { error = e.message ?: ctx.getString(R.string.cameras_load_failed) }
-        alerts = try {
-            App.api.reviews("all", nowSec() - 86400, nowSec())
-                .filter { it.isAlert && !it.reviewed }.groupingBy { it.camera }.eachCount()
-        } catch (_: Exception) { alerts }
+        coroutineScope {
+            // The unread-alert counts are asked for while the cameras load, not after them.
+            val unread = async {
+                try {
+                    App.api.reviews("all", nowSec() - 86400, nowSec())
+                        .filter { it.isAlert && !it.reviewed }.groupingBy { it.camera }.eachCount()
+                } catch (_: Exception) { null }
+            }
+            try {
+                cameras = App.api.cameras()
+                groups = App.api.groups
+            } catch (e: Exception) { error = e.message ?: ctx.getString(R.string.cameras_load_failed) }
+            unread.await()?.let { alerts = it }
+        }
         refreshing = false
     }
 

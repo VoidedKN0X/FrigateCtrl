@@ -1,5 +1,6 @@
 package com.vknxworks.frigatectrl.ui
 
+import kotlinx.coroutines.coroutineScope
 import android.content.res.Configuration
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -179,8 +180,11 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit, startAt
     LaunchedEffect(bucket, refreshTick) {
         val a = bucket * 21600.0 - 43200
         val b = min(nowSec(), bucket * 21600.0 + 43200)
-        try { segments = api.recordings(camera, a, b) } catch (_: Exception) {}
-        try { reviews = api.reviews(camera, a, b) } catch (_: Exception) {}
+        // Recordings and review items are asked for at the same time.
+        coroutineScope {
+            launch { try { segments = api.recordings(camera, a, b) } catch (_: Exception) {} }
+            launch { try { reviews = api.reviews(camera, a, b) } catch (_: Exception) {} }
+        }
     }
     val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(Unit) {

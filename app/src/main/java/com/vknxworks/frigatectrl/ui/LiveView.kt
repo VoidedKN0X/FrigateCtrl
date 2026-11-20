@@ -165,7 +165,7 @@ fun LiveView(
         val src = URLEncoder.encode(streamName, "UTF-8")
         // Frigate only exposes go2rtc's live video as the MSE websocket, so read fMP4 straight from it.
         val source = ProgressiveMediaSource.Factory(
-            MseWebSocketDataSource.Factory(App.api.http),
+            MseWebSocketDataSource.Factory(App.api.wsHttp),
             ExtractorsFactory { arrayOf<Extractor>(FragmentedMp4Extractor()) },
         ).createMediaSource(MediaItem.fromUri(App.api.url("/live/mse/api/ws?src=$src")))
         player.setMediaSource(source)
