@@ -4,6 +4,14 @@ What changed in each FrigateCtrl version. Every release on the [Releases page](h
 
 To publish a new version: bump `versionCode` and `versionName` in `app/build.gradle.kts`, add a section here, and push to `main`. Pushes without a version bump only build; they don't make a release.
 
+## Unreleased
+
+Not in a release yet: these changes are built, and go out with the next version.
+
+### Removed
+
+- **The Detection tile in Quick Settings is gone.** The tile that showed and switched object detection for one camera is removed from FrigateCtrl, together with **Settings > Quick Settings tile** where you chose its camera. A tile you had added disappears from Quick Settings, and the camera you had chosen for it is forgotten. Switching detection on or off still works on the camera screen, as before.
+
 ## Project updates (2026-11-19)
 
 ### Project
