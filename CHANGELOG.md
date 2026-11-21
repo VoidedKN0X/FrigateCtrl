@@ -4,6 +4,12 @@ What changed in each FrigateCtrl version. Every release on the [Releases page](h
 
 To publish a new version: bump `versionCode` and `versionName` in `app/build.gradle.kts`, add a section here, and push to `main`. Pushes without a version bump only build; they don't make a release.
 
+## Unreleased
+
+### New
+
+- **FrigateCtrl in French and German, following the phone's language.** With the phone set to French or German, every screen, message and notification of FrigateCtrl is now in that language (French with the polite "vous", German with the informal "du"); with Dutch it stays Dutch and with any other language English. Under Settings > Apps > FrigateCtrl > Language you can also pick French or German for FrigateCtrl alone. As in Dutch, Frigate's own names (Birdseye, go2rtc, NVR, PTZ), units, ntfy and the app name are not translated, what your server sends (camera names, object labels, descriptions, error text) stays as Frigate writes it, and the troubleshooting reports stay in English. The translation has not been read on a phone yet: tell me where a word is off.
+
 ## v3.11.0 (2026-11-21)
 
 Built and checked by CI only: nothing in this release had been run on a phone when it was published.
