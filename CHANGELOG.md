@@ -4,9 +4,9 @@ What changed in each FrigateCtrl version. Every release on the [Releases page](h
 
 To publish a new version: bump `versionCode` and `versionName` in `app/build.gradle.kts`, add a section here, and push to `main`. Pushes without a version bump only build; they don't make a release.
 
-## Unreleased
+## v3.11.0 (2026-11-21)
 
-Changes on `main` that aren't in a release yet. They ship with the next version. Built and checked by CI only: none of this has been run on a phone or against a Frigate server yet.
+Built and checked by CI only: nothing in this release had been run on a phone when it was published.
 
 ### New
 
