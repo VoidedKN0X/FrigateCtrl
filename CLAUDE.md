@@ -14,6 +14,10 @@ Every new version needs a detailed entry at the top of `CHANGELOG.md`, under a h
 - Cover every user-visible change in the version, one bullet each, with enough detail to understand it without opening the app.
 - Group with `### New`, `### Changed`, `### Fixed` and `### Security` when there's more than a couple of items.
 
+## Languages
+
+English (`values/strings.xml`) and Dutch (`values-nl/strings.xml`, Belgian Dutch, informal "je"). Android picks by the phone's language (`res/xml/locales_config.xml` lists both for the per-app language setting); there is no in-app switch. A new string needs both files. The live view and crash reports (`LiveReport`, `CrashReport`) are for bug reports and stay in English.
+
 ## Build toolchain
 
 - AGP 9.5.1, Gradle 9.9.2, Kotlin 2.4.21, Compose BOM 2026.09.00, `compileSdk` 37 (Compose 1.12 needs it), `minSdk` 35, `targetSdk` 36. There is no version catalog: the versions are inline in the root `build.gradle.kts` and `app/build.gradle.kts`.

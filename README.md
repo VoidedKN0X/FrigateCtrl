@@ -29,6 +29,7 @@ Part of the [Ctrl series](#the-ctrl-series) by VKNXWorks.
 - **Server exports**: export a range from the History timeline (real time or 25× time-lapse) on your Frigate server, follow its progress right there (with a percentage on Frigate 0.18 and newer) and save it to your gallery when it's ready; play, save, share, rename or delete exports from the Exports tab
 - **Camera switches**: camera on/off, detection, recording, snapshots, audio detection and notifications
 - **System health**: CPU, GPU, memory, detector speed, camera FPS and disk usage
+- **English and Dutch**, following your phone's language
 - **App lock** with its own PIN and optional fingerprint unlock; your login stays encrypted while the app is locked
 - **Hide in screenshots** and **Hide in recent apps** switches keep your cameras out of screenshots, screen recordings and the recent-apps preview when you turn them on
 - **Self-signed certificates** are pinned: you confirm the fingerprint once, and only that certificate is accepted after that
