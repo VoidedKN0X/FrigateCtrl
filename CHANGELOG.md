@@ -4,6 +4,13 @@ What changed in each FrigateCtrl version. Every release on the [Releases page](h
 
 To publish a new version: bump `versionCode` and `versionName` in `app/build.gradle.kts`, add a section here, and push to `main`. Pushes without a version bump only build; they don't make a release.
 
+## Unreleased
+
+### Fixed
+
+- **Frigate's uptime uses your language's short units.** The uptime on the Health page was always written with English letters (like "14d 2h"). It now uses the phone's own short units, so French shows "14j 2h", German its own abbreviations, and English stays as it was.
+- **Decimal numbers on the Health page and the timeline zoom follow your language.** Detection speed, temperatures, frames per second, storage sizes and the timeline's zoom ("1.5 h") always used a decimal point; in Dutch, French and German they now use a decimal comma, like the rest of the phone.
+
 ## v3.12.0 (2026-11-21)
 
 Built and checked by CI only: nothing in this release had been run on a phone when it was published.

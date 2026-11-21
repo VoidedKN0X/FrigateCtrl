@@ -1,5 +1,8 @@
 package com.vknxworks.frigatectrl.ui
 
+import android.icu.text.MeasureFormat
+import android.icu.util.Measure
+import android.icu.util.MeasureUnit
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,17 +35,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vknxworks.frigatectrl.App
-import kotlinx.coroutines.delay
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import org.json.JSONObject
-import java.util.Locale
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.platform.LocalContext
+import com.vknxworks.frigatectrl.App
 import com.vknxworks.frigatectrl.R
 import com.vknxworks.frigatectrl.ui.components.CtrlCard
 import com.vknxworks.frigatectrl.ui.components.CtrlHeroCard
@@ -52,6 +52,9 @@ import com.vknxworks.frigatectrl.ui.components.CtrlStatusDot
 import com.vknxworks.frigatectrl.ui.theme.CtrlColors
 import com.vknxworks.frigatectrl.ui.theme.CtrlFonts
 import com.vknxworks.frigatectrl.ui.theme.CtrlType
+import java.util.Locale
+import kotlinx.coroutines.delay
+import org.json.JSONObject
 
 /** Frigate's /api/stats, refreshed every 5 seconds. */
 @Composable
@@ -291,19 +294,21 @@ private fun pct(v: Any?): Double? = when (v) {
     else -> null
 }
 
-private fun fmt1(v: Double) = String.format(Locale.US, "%.1f", v)
+private fun fmt1(v: Double) = String.format(Locale.getDefault(), "%.1f", v)
 
 private fun size(mb: Double): String = when {
-    mb >= 1024 * 1024 -> String.format(Locale.US, "%.2f TB", mb / 1024 / 1024)
-    mb >= 1024 -> String.format(Locale.US, "%.1f GB", mb / 1024)
-    else -> String.format(Locale.US, "%.0f MB", mb)
+    mb >= 1024 * 1024 -> String.format(Locale.getDefault(), "%.2f TB", mb / 1024 / 1024)
+    mb >= 1024 -> String.format(Locale.getDefault(), "%.1f GB", mb / 1024)
+    else -> String.format(Locale.getDefault(), "%.0f MB", mb)
 }
 
+/** Uptime with the phone's own short units (ICU's narrow format): 14d 2h, 5h 3m, 12m in English. */
 private fun duration(sec: Long): String {
     val d = sec / 86400; val h = (sec % 86400) / 3600; val m = (sec % 3600) / 60
-    return when {
-        d > 0 -> "${d}d ${h}h"
-        h > 0 -> "${h}h ${m}m"
-        else -> "${m}m"
+    val measures = when {
+        d > 0 -> arrayOf(Measure(d, MeasureUnit.DAY), Measure(h, MeasureUnit.HOUR))
+        h > 0 -> arrayOf(Measure(h, MeasureUnit.HOUR), Measure(m, MeasureUnit.MINUTE))
+        else -> arrayOf(Measure(m, MeasureUnit.MINUTE))
     }
+    return MeasureFormat.getInstance(Locale.getDefault(), MeasureFormat.FormatWidth.NARROW).formatMeasures(*measures)
 }

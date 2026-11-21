@@ -594,7 +594,7 @@ private fun TimeReadout(t: Double, spp: Double, widthPx: Float, onZoomIn: () -> 
 private fun zoomLabel(spanSec: Double): String = when {
     spanSec < 120 -> "${spanSec.toInt()} s"
     spanSec < 7200 -> "${(spanSec / 60).toInt()} min"
-    else -> "${"%.1f".format(Locale.US, spanSec / 3600)} h"
+    else -> "${"%.1f".format(Locale.getDefault(), spanSec / 3600)} h"
 }
 
 @Composable
