@@ -13,8 +13,8 @@ android {
         targetSdk = 36
         // CI passes the run number so every build installs over the previous one.
         // Bump both to publish a new release (see CHANGELOG.md).
-        versionCode = 66
-        versionName = "3.11.0"
+        versionCode = 67
+        versionName = "3.12.0"
         // 64-bit ARM phones only (arm64-v8a), like every Ctrl app.
         ndk { abiFilters += listOf("arm64-v8a") }
     }
