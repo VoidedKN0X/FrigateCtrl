@@ -8,6 +8,10 @@ To publish a new version: bump `versionCode` and `versionName` in `app/build.gra
 
 Built and checked by CI only: nothing here had been run on a phone when it was written.
 
+### Fixed
+
+- **Fixed before release: the app would have crashed at start with the new build tools.** FrigateCtrl uses WorkManager for its background work, and WorkManager stores its jobs in a small Room database that is created by name when the app starts. The shrinker (R8) in Android Gradle Plugin 9 is stricter than the old one and removed the constructor that needs, which makes the app stop right at launch (a known problem with Room 2.6.1 under Android Gradle Plugin 9). A keep rule for that constructor, the same one newer Room versions ship themselves, is now in `app/proguard-rules.pro`. No released version was affected: the new build tools have not been in any release. Built by CI only; not yet run on a phone.
+
 ### Changed
 
 - **History uses far less data while it is open.** To keep the timeline growing at the live edge, FrigateCtrl asked Frigate for the full list of recording segments of the 24 hours around the playhead every 30 seconds (thousands of entries for a camera that records all day). It now asks only for the segments from two minutes before the newest one it already has and puts those in place of the end of its list; the rest of the list is kept. The whole list is still loaded when you move to another part of the timeline, and once every 5 minutes. What you might notice: a recording somewhere in the middle of the day that Frigate deletes (its clean-up of recordings it does not have to keep) can stay on the timeline for up to 5 minutes instead of 30 seconds. Review items (alerts and detections) are still loaded in full every 30 seconds, because they change after they are made.
