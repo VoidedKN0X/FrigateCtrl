@@ -396,7 +396,59 @@ class FrigateApi(private val prefs: Prefs) {
     @Volatile var iceServersJson: String = DEFAULT_ICE
         private set
 
+    /** Birdseye is on and restreamed, so it can be watched live (filled in by [cameras]). */
+    @Volatile var birdseyeLive: Boolean = false
+        private set
+
+    /** The server has semantic search on, so Explore can search by text (filled in by [cameras]). */
+    @Volatile var semanticSearch: Boolean = false
+        private set
+
     suspend fun cameras(): List<CameraInfo> = parsed(getString("/api/config")) { parseCameras(it) }
+
+    // ---------- Explore (tracked objects) ----------
+
+    /** One page of tracked objects for [filter], newest first; [before] continues after an earlier page. */
+    suspend fun trackedObjects(filter: ExploreFilter, before: Double? = null): List<TrackedObject> {
+        val now = System.currentTimeMillis() / 1000.0
+        val path = if (filter.query.isNotBlank() && semanticSearch) ExploreRequests.search(filter, now) else ExploreRequests.list(filter, now, before)
+        return parsed(getString(path)) { ExploreRequests.parse(it) }
+    }
+
+    /** The small picture of a tracked object (webp since Frigate 0.17, jpg before). */
+    suspend fun eventThumbnailUrl(eventId: String): String {
+        val webp = (frigateVersion() ?: FrigateVersion(0, 17, 0)) >= FrigateVersion(0, 17, 0)
+        return url("/api/events/${enc(eventId)}/thumbnail." + if (webp) "webp" else "jpg")
+    }
+
+    // ---------- Frigate 0.18: profiles and motion search ----------
+
+    /** The server's profiles and which one is active. Only asked on Frigate 0.18 or newer. */
+    suspend fun profiles(): ProfileState = Frigate018.parseProfiles(getString("/api/profiles"))
+
+    /** The profile that is active now, or null for none. */
+    suspend fun activeProfile(): String? {
+        val o = JSONObject(getString("/api/profile/active"))
+        return if (o.isNull("active_profile")) null else o.optString("active_profile").takeIf { it.isNotBlank() && it != "none" }
+    }
+
+    /** Starts a motion search in a rectangle of [camera]'s picture; returns the job's id. */
+    suspend fun startMotionSearch(camera: String, start: Double, end: Double, left: Float, top: Float, right: Float, bottom: Float): String =
+        withContext(Dispatchers.IO) {
+            val body = Frigate018.motionSearchBody(start, end, left, top, right, bottom).toString()
+            val req = Request.Builder().url(url("/api/${enc(camera)}/search/motion")).post(body.toRequestBody(JSON)).build()
+            val id = runCatching { JSONObject(call(req)).optString("job_id") }.getOrElse { throw it }
+            id.takeIf { Frigate018.jobIdOk(it) } ?: throw Exception(App.str(R.string.motion_search_no_job))
+        }
+
+    suspend fun motionSearchStatus(camera: String, jobId: String): MotionSearchStatus? =
+        Frigate018.parseMotionStatus(getString("/api/${enc(camera)}/search/motion/${enc(jobId)}"))
+
+    suspend fun cancelMotionSearch(camera: String, jobId: String) = withContext(Dispatchers.IO) {
+        val req = Request.Builder().url(url("/api/${enc(camera)}/search/motion/${enc(jobId)}/cancel")).post("".toRequestBody(JSON)).build()
+        runCatching { call(req) }
+        Unit
+    }
 
     private fun parseCameras(text: String): List<CameraInfo> {
         val root = JSONObject(text)
@@ -410,6 +462,9 @@ class FrigateApi(private val prefs: Prefs) {
                 CameraGroup(k, cams, o.optInt("order", 0))
             }.sortedWith(compareBy({ it.order }, { it.name })).toList()
         } ?: emptyList()
+        // Birdseye can be played like a camera only when it is restreamed through go2rtc.
+        birdseyeLive = root.optJSONObject("birdseye")?.let { it.optBoolean("enabled", false) && it.optBoolean("restream", false) } ?: false
+        semanticSearch = root.optJSONObject("semantic_search")?.optBoolean("enabled", false) ?: false
         val cams = root.optJSONObject("cameras") ?: return emptyList()
         val list = mutableListOf<CameraInfo>()
         for (name in cams.keys()) {
@@ -691,6 +746,45 @@ class FrigateApi(private val prefs: Prefs) {
             }
         }
     }
+
+    // ---------- previews (for scrubbing) ----------
+
+    private fun ts(t: Double) = "%.3f".format(java.util.Locale.US, t)
+
+    /** Frigate's preview clips of [camera] that overlap [after]..[before]. Empty when it has none (it answers 404). */
+    suspend fun previews(camera: String, after: Double, before: Double): List<PreviewClip> {
+        val text = try {
+            getString("/api/preview/${enc(camera)}/start/${ts(after)}/end/${ts(before)}")
+        } catch (e: AuthException) {
+            throw e
+        } catch (_: Exception) {
+            return emptyList()
+        }
+        return parsed(text) { t ->
+            val arr = runCatching { JSONArray(t) }.getOrNull() ?: return@parsed emptyList()
+            (0 until arr.length()).mapNotNull { i ->
+                val o = arr.optJSONObject(i) ?: return@mapNotNull null
+                val src = o.optString("src").takeIf { it.startsWith("/") && !it.contains("..") } ?: return@mapNotNull null
+                PreviewClip(webPath(src), o.optDouble("start", 0.0), o.optDouble("end", 0.0))
+            }.filter { it.end > it.start }
+        }
+    }
+
+    /** Names of the preview frames Frigate has cached for [camera] in [after]..[before] (the hour still being recorded). */
+    suspend fun previewFrames(camera: String, after: Double, before: Double): List<String> {
+        val text = try {
+            getString("/api/preview/${enc(camera)}/start/${ts(after)}/end/${ts(before)}/frames")
+        } catch (e: AuthException) {
+            throw e
+        } catch (_: Exception) {
+            return emptyList()
+        }
+        val arr = runCatching { JSONArray(text) }.getOrNull() ?: return emptyList()
+        return (0 until arr.length()).mapNotNull { i -> arr.optString(i).takeIf { it.isNotBlank() } }
+    }
+
+    /** One cached preview frame, by the name [previewFrames] gave. */
+    fun previewFrameUrl(name: String) = url("/api/preview/${enc(name)}/thumbnail.webp")
 
     /** Raw /api/stats (structure varies a little between Frigate versions, so it's parsed leniently). */
     suspend fun stats(): JSONObject = parsed(getString("/api/stats")) { JSONObject(it) }

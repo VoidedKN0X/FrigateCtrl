@@ -139,6 +139,18 @@ object AlertNotifier {
             .setPriority(if (r.isAlert) NotificationCompat.PRIORITY_HIGH else NotificationCompat.PRIORITY_DEFAULT)
             .setSilent(settings.inQuietHours())
             .setContentIntent(openIntent(context, r, settings.linkSecret))
+        // "Mark reviewed" and "Snooze 1 h" (see [AlertActionReceiver]); not on the test notification, which
+        // stands for no real review item.
+        if (!test) {
+            b.addAction(
+                0, context.getString(R.string.nt_action_reviewed),
+                AlertActionReceiver.intent(context, AlertActionReceiver.ACTION_REVIEWED, r.camera, r.id, settings.linkSecret),
+            )
+            b.addAction(
+                0, context.getString(R.string.nt_action_snooze),
+                AlertActionReceiver.intent(context, AlertActionReceiver.ACTION_SNOOZE, r.camera, r.id, settings.linkSecret),
+            )
+        }
         if (img != null) {
             b.setLargeIcon(img)
             b.setStyle(NotificationCompat.BigPictureStyle().bigPicture(img).bigLargeIcon(null as Bitmap?).setSummaryText(text))

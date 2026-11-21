@@ -207,6 +207,21 @@ fun NotificationsScreen(onBack: () -> Unit) {
                 }
             }
 
+            // Cameras snoozed from a notification's "Snooze 1 h" button: tap one to end its snooze now.
+            val snoozed = n.snoozedCameras.filterValues { it > System.currentTimeMillis() }
+            if (snoozed.isNotEmpty()) {
+                val timeFormat = remember { java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT) }
+                Group(stringResource(R.string.group_notif_snoozed), gutter = 0.dp, footer = stringResource(R.string.notif_snoozed_footer)) {
+                    snoozed.forEach { (cam, until) ->
+                        GroupRow(
+                            AlertNotifier.cameraLabel(cam),
+                            stringResource(R.string.notif_snoozed_until, timeFormat.format(java.util.Date(until))),
+                            Icons.Outlined.Videocam,
+                            onClick = { n.endSnooze(cam) },
+                        )
+                    }
+                }
+            }
             if (cameras.isNotEmpty()) {
                 Group(stringResource(R.string.group_notif_cameras), gutter = 0.dp, footer = stringResource(R.string.notif_cameras_footer)) {
                     cameras.forEach { cam ->

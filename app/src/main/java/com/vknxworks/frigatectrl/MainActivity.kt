@@ -36,6 +36,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.MonitorHeart
 import androidx.compose.material.icons.outlined.Videocam
+import androidx.compose.material.icons.outlined.TravelExplore
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -341,7 +342,18 @@ private fun Root(activity: FragmentActivity, lockVm: AppLockViewModel = viewMode
                 onTab = { homeTab = it },
                 onOpen = { route = "camera:$it" },
                 onYou = { route = "you" },
+                onWall = { birdseye, group -> route = if (birdseye) "birdseye" else "wall:" + group.orEmpty() },
+                onOpenAt = { camera, time -> route = "review:$camera:$time" },
             )
+            r == "birdseye" || r.startsWith("wall:") -> {
+                BackHandler { route = "cameras" }
+                com.vknxworks.frigatectrl.ui.WallScreen(
+                    birdseye = r == "birdseye",
+                    group = r.removePrefix("wall:").takeIf { r.startsWith("wall:") && it.isNotEmpty() },
+                    onOpen = { route = "camera:$it" },
+                    onBack = { route = "cameras" },
+                )
+            }
             r == "you" -> {
                 BackHandler { route = "cameras" }
                 YouScreen(
@@ -380,22 +392,32 @@ private fun Root(activity: FragmentActivity, lockVm: AppLockViewModel = viewMode
 private fun depth(route: String): Int = when {
     route == "setup" -> 0
     route == "cameras" -> 1
-    route == "you" || route.startsWith("camera:") || route.startsWith("review:") -> 2
+    route == "you" || route.startsWith("camera:") || route.startsWith("review:") ||
+        route == "birdseye" || route.startsWith("wall:") -> 2
     route == "notifications" -> 4
     else -> 3 // "settings" and "setup-edit", both opened from You
 }
 
 /** Dashboard: Cameras, Exports and System health as bottom tabs. */
 @Composable
-private fun HomeScreen(tab: Int, onTab: (Int) -> Unit, onOpen: (String) -> Unit, onYou: () -> Unit) {
+private fun HomeScreen(
+    tab: Int,
+    onTab: (Int) -> Unit,
+    onOpen: (String) -> Unit,
+    onYou: () -> Unit,
+    onWall: (birdseye: Boolean, group: String?) -> Unit,
+    onOpenAt: (camera: String, time: Double) -> Unit,
+) {
     // Back on the Exports or Health tab returns to Cameras first.
     if (tab != 0) BackHandler { onTab(0) }
     val camerasLabel = stringResource(R.string.tab_cameras)
     val healthLabel = stringResource(R.string.tab_health)
     val exportsLabel = stringResource(R.string.tab_exports)
-    val tabs = remember(camerasLabel, healthLabel, exportsLabel) {
+    val exploreLabel = stringResource(R.string.tab_explore)
+    val tabs = remember(camerasLabel, healthLabel, exportsLabel, exploreLabel) {
         listOf(
             CtrlTab(camerasLabel, Icons.Outlined.Videocam),
+            CtrlTab(exploreLabel, Icons.Outlined.TravelExplore),
             CtrlTab(exportsLabel, Icons.Outlined.VideoLibrary),
             CtrlTab(healthLabel, Icons.Outlined.MonitorHeart),
         )
@@ -412,8 +434,9 @@ private fun HomeScreen(tab: Int, onTab: (Int) -> Unit, onOpen: (String) -> Unit,
                 label = "tab",
             ) { t ->
                 when (t) {
-                    0 -> CamerasScreen(onOpen = onOpen, onYou = onYou, bottomPadding = contentBottom)
-                    1 -> ExportsScreen(onYou = onYou, bottomPadding = contentBottom)
+                    0 -> CamerasScreen(onOpen = onOpen, onYou = onYou, onWall = onWall, bottomPadding = contentBottom)
+                    1 -> com.vknxworks.frigatectrl.ui.ExploreScreen(onYou = onYou, onOpenAt = onOpenAt, bottomPadding = contentBottom)
+                    2 -> ExportsScreen(onYou = onYou, bottomPadding = contentBottom)
                     else -> HealthScreen(onYou = onYou, bottomPadding = contentBottom)
                 }
             }

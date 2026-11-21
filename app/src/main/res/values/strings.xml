@@ -442,4 +442,88 @@
     <string name="export_running_percent">Being made · %1$d %%</string>
     <string name="export_failed_short">Export failed</string>
     <string name="export_downloading_percent">Downloading · %1$d %%</string>
+
+    <!-- Buttons on an alert notification -->
+    <string name="nt_action_reviewed">Mark reviewed</string>
+    <string name="nt_action_snooze">Snooze 1 h</string>
+    <string name="nt_snoozed">No notifications from %1$s for an hour</string>
+    <string name="nt_reviewed_locked">Unlock FrigateCtrl first to mark this reviewed</string>
+    <string name="nt_reviewed_failed">Couldn\'t mark it reviewed. Frigate didn\'t answer.</string>
+    <string name="group_notif_snoozed">Snoozed cameras</string>
+    <string name="notif_snoozed_until">No notifications until %1$s. Tap to end the snooze.</string>
+    <string name="notif_snoozed_footer">Snoozing is only about notifications on this phone. Frigate keeps recording and the alerts still show in History.</string>
+
+    <!-- Live wall and Birdseye -->
+    <string name="wall_title">Live wall</string>
+    <string name="wall_birdseye">Birdseye</string>
+    <string name="wall_snapshots_note">The first %1$d cameras play live video. The others show a snapshot every second, because a phone can only decode a few videos at once.</string>
+    <!-- Explore (tracked objects) -->
+    <string name="tab_explore">Explore</string>
+    <string name="explore_label">Tracked objects</string>
+    <string name="explore_search_hint">Describe what you are looking for</string>
+    <string name="explore_range_day">24 hours</string>
+    <string name="explore_range_week">7 days</string>
+    <string name="explore_range_month">30 days</string>
+    <string name="explore_range_all">All time</string>
+    <string name="explore_all_cameras">All cameras</string>
+    <string name="explore_all_objects">All objects</string>
+    <string name="explore_load_failed">Couldn\'t load the tracked objects</string>
+    <string name="explore_empty">Nothing was tracked in this period.</string>
+    <string name="explore_no_match">Nothing matches that search.</string>
+    <string name="explore_load_more">Show older ones</string>
+    <string name="explore_loading_more">Loading…</string>
+    <string name="explore_score">%1$d%%</string>
+    <string name="explore_in_progress">Still going on</string>
+    <string name="explore_camera">Camera</string>
+    <string name="explore_started">Started</string>
+    <string name="explore_ended">Ended</string>
+    <string name="explore_confidence">Confidence</string>
+    <string name="explore_zones">Zones</string>
+    <string name="explore_open_history">Open in History</string>
+    <!-- Frigate 0.18: profiles and motion search -->
+    <string name="profile_chip">Profile: %1$s</string>
+    <string name="profile_none">None</string>
+    <string name="profile_title">Frigate profile</string>
+    <string name="profile_body">A profile is a set of settings in your Frigate config (which cameras detect, record or notify, for example) that is switched on as a whole.</string>
+    <string name="profile_confirm_title">Switch to %1$s?</string>
+    <string name="profile_confirm_body">Frigate applies this profile\'s settings to your cameras straight away.</string>
+    <string name="profile_confirm_none">Frigate goes back to the settings from its config, without a profile.</string>
+    <string name="profile_switch">Switch</string>
+    <string name="profile_failed">Frigate didn\'t switch the profile. Your account may not be allowed to.</string>
+    <string name="motion_search_title">Motion search</string>
+    <string name="motion_search_hint">Drag over the part of the picture you care about. Frigate looks through the recordings for moments where that part changed.</string>
+    <string name="motion_range_1h">Last hour</string>
+    <string name="motion_range_6h">Last 6 hours</string>
+    <string name="motion_range_24h">Last 24 hours</string>
+    <string name="motion_range_3d">Last 3 days</string>
+    <string name="motion_search_start">Search</string>
+    <string name="motion_search_stop">Stop</string>
+    <string name="motion_search_running">Frigate is searching…</string>
+    <string name="motion_search_running_percent">Frigate is searching… %1$d%%</string>
+    <string name="motion_search_none">Nothing changed in that part of the picture.</string>
+    <string name="motion_search_failed">The motion search failed</string>
+    <string name="motion_search_no_job">Frigate didn\'t start the search</string>
+    <string name="motion_search_changed">%1$d%% changed</string>
+
+    <!-- Settings: back up and restore -->
+    <string name="backup_group">Back up and restore</string>
+    <string name="backup_footer">The file holds FrigateCtrl\'s settings only: no server address, login, PIN or push address. Reading a file never turns off the app lock or a \"hide\" switch, and never changes notifications being on, certificates or plain HTTP.</string>
+    <string name="backup_export">Save settings to a file</string>
+    <string name="backup_export_subtitle">Camera grid, live view, History and notification filters</string>
+    <string name="backup_import">Read settings from a file</string>
+    <string name="backup_import_subtitle">Shows what would change and asks before replacing anything</string>
+    <string name="backup_exported">Settings saved to the file</string>
+    <string name="backup_export_failed">Couldn\'t write the settings file</string>
+    <string name="backup_not_a_file">That isn\'t a FrigateCtrl settings file</string>
+    <string name="backup_nothing_to_change">Your settings are already the same as in that file</string>
+    <string name="backup_confirm_title">Replace these settings?</string>
+    <string name="backup_confirm_body">Reading this file changes:</string>
+    <string name="backup_change_line">• %1$s: %2$s → %3$s</string>
+    <string name="backup_replace">Replace</string>
+    <string name="backup_imported">Settings replaced</string>
+    <string name="backup_on">on</string>
+    <string name="backup_off">off</string>
+    <string name="backup_none">none</string>
+    <string name="backup_muted_cameras">Cameras that don\'t notify</string>
+    <string name="backup_muted_labels">Objects that don\'t notify</string>
 </resources>

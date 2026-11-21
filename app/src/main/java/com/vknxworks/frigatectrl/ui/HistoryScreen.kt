@@ -99,6 +99,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.material.icons.outlined.ImageSearch
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -243,8 +245,15 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit, startAt
         if (end < nowSec() - 30) playback.seek(end + 0.05, play = true) else playback.pause()
     }
 
+    // Motion search only exists on Frigate 0.18 or newer: the button is not there on an older server.
+    var motionSearchOk by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { motionSearchOk = com.vknxworks.frigatectrl.data.Frigate018.supported(runCatching { api.frigateVersion() }.getOrNull()) }
+    var showMotion by rememberSaveable { mutableStateOf(false) }
     var wasPlaying by remember { mutableStateOf(false) }
     var previewTime by remember { mutableStateOf<Double?>(null) }
+    // Scrub pictures from Frigate's preview clips (kept in memory while this screen is open).
+    val scrubber = remember(camera) { com.vknxworks.frigatectrl.data.PreviewScrubber(api, camera) }
+    DisposableEffect(scrubber) { onDispose { scrubber.release() } }
     var lastFastSeek by remember { mutableLongStateOf(0L) }
 
     fun seekTo(t: Double, play: Boolean) {
@@ -358,10 +367,21 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit, startAt
         }
     }
 
+    // Motion search (Frigate 0.18 and newer): on top of History, which stays as it was underneath.
+    if (showMotion) {
+        androidx.activity.compose.BackHandler { showMotion = false }
+        MotionSearchScreen(
+            camera,
+            onBack = { showMotion = false },
+            onOpenAt = { t -> showMotion = false; seekTo(t - settings.eventPreroll, play = true) },
+        )
+        return
+    }
+
     val video: @Composable (Modifier) -> Unit = { m ->
         Box(m.background(Color.Black).zoomable(zoom)) {
             PlayerSurface(playback.player, zoom)
-            previewTime?.let { ScrubPreview(api.snapshotAt(camera, it, 480), Modifier.fillMaxSize()) }
+            previewTime?.let { ScrubPreview(scrubber, it, api.snapshotAt(camera, it, 480), Modifier.fillMaxSize()) }
             if (playback.loading && previewTime == null)
                 CircularProgressIndicator(Modifier.align(Alignment.Center).size(36.dp), strokeWidth = 3.dp, color = Color.White)
             if (playback.noRecording && previewTime == null)
@@ -426,6 +446,9 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit, startAt
                 video(Modifier.fillMaxSize())
                 Row(Modifier.align(Alignment.TopEnd).padding(6.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     VideoIconButton(Icons.Outlined.ContentCut, stringResource(R.string.make_clip)) { clipStart = if (clipStart == null) tl.center else null }
+                    if (motionSearchOk) {
+                        VideoIconButton(Icons.Outlined.ImageSearch, stringResource(R.string.motion_search_title)) { playback.pause(); showMotion = true }
+                    }
                     VideoIconButton(Icons.Outlined.CalendarMonth, stringResource(R.string.pick_date)) { showDate = true }
                     VideoIconButton(Icons.AutoMirrored.Outlined.List, stringResource(R.string.events)) { showEvents = true }
                     VideoIconButton(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back_to_live), onClick = onBack)
@@ -451,6 +474,9 @@ fun HistoryScreen(camera: String, info: CameraInfo?, onBack: () -> Unit, startAt
                     { clipStart = if (clipStart == null) tl.center else null },
                     accent = clipStart != null,
                 )
+                if (motionSearchOk) {
+                    CtrlSquareButton(Icons.Outlined.ImageSearch, stringResource(R.string.motion_search_title), { playback.pause(); showMotion = true })
+                }
                 CtrlSquareButton(Icons.Outlined.CalendarMonth, stringResource(R.string.pick_date), { showDate = true })
                 CtrlSquareButton(
                     Icons.AutoMirrored.Outlined.List, stringResource(R.string.events), { showEvents = true },
@@ -861,13 +887,23 @@ private fun ClipBar(
     }
 }
 
-/** Frame preview from Frigate's recording snapshot API while scrubbing outside the loaded window. */
+/**
+ * The picture shown while scrubbing outside the loaded window: a frame from Frigate's preview clips, which
+ * follows the finger almost at once. When Frigate has no preview for that moment (previews off, or pruned),
+ * it falls back to asking the server for a frame of the recording at [fallbackUrl], which is slower.
+ */
 @Composable
-private fun ScrubPreview(url: String, modifier: Modifier) {
+private fun ScrubPreview(scrubber: com.vknxworks.frigatectrl.data.PreviewScrubber, time: Double, fallbackUrl: String, modifier: Modifier) {
     var bmp by remember { mutableStateOf<ImageBitmap?>(null) }
-    LaunchedEffect(url) {
-        delay(120) // debounce while the finger is moving
-        loadBitmap(url)?.let { bmp = it }
+    LaunchedEffect(time) {
+        delay(40) // skip positions the finger only passes through
+        val frame = runCatching { scrubber.frameAt(time) }.getOrNull()
+        if (frame != null) {
+            bmp = frame.asImageBitmap()
+        } else {
+            delay(100)
+            loadBitmap(fallbackUrl)?.let { bmp = it }
+        }
     }
     bmp?.let { Image(it, null, modifier.background(Color.Black), contentScale = ContentScale.Fit) }
 }

@@ -33,6 +33,8 @@ import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material.icons.outlined.FileUpload
+import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -267,6 +269,8 @@ fun SettingsScreen(onBack: () -> Unit, onNotifications: () -> Unit = {}) {
                 }
             }
 
+            SettingsBackupSection()
+
             // Only there after FrigateCtrl stopped because of an error, or after a live view: reports stay on this phone.
             if (crash != null || liveReport != null) {
                 Section(
@@ -352,6 +356,200 @@ private fun CrashReportDialog(
             }
         },
     )
+}
+
+/** The settings as they are now, by the keys of [com.vknxworks.frigatectrl.data.SettingsBackup]. */
+private fun currentSettings(): Map<String, Any> {
+    val s = App.settings
+    val n = App.notify
+    val b = com.vknxworks.frigatectrl.data.SettingsBackup
+    return mapOf(
+        b.GRID_COLUMNS to s.gridColumns.coerceIn(0, 3),
+        b.THUMB_REFRESH to s.thumbRefreshSec,
+        b.SHOW_DISABLED to s.showDisabled,
+        b.PREFER_SUB to s.preferSubStream,
+        b.START_MUTED to s.startMuted,
+        b.KEEP_AWAKE to s.keepScreenOn,
+        b.AUTO_PIP to s.autoPip,
+        b.TIMELINE_MINUTES to s.timelineMinutes,
+        b.TIMELINE_HAPTICS to s.timelineHaptics,
+        b.EVENT_PREROLL to s.eventPreroll,
+        b.NOTIFY_DETECTIONS to n.includeDetections,
+        b.NOTIFY_INTERVAL to n.intervalMinutes,
+        b.QUIET_HOURS to n.quietHours,
+        b.QUIET_FROM to n.quietFrom,
+        b.QUIET_TO to n.quietTo,
+        b.MUTED_CAMERAS to n.mutedCameras,
+        b.MUTED_LABELS to n.mutedLabels,
+        b.HIDE_SCREENSHOTS to App.lock.hideScreenshots,
+        b.HIDE_RECENTS to App.lock.hideRecents,
+    )
+}
+
+/** Applies the [keys] of [incoming] (exactly the changes the confirmation listed). */
+@Suppress("UNCHECKED_CAST")
+private fun applySettings(ctx: android.content.Context, incoming: Map<String, Any>, keys: List<String>) {
+    val s = App.settings
+    val n = App.notify
+    val b = com.vknxworks.frigatectrl.data.SettingsBackup
+    for (key in keys) {
+        val v = incoming[key] ?: continue
+        when (key) {
+            b.GRID_COLUMNS -> s.gridColumns = v as Int
+            b.THUMB_REFRESH -> s.thumbRefreshSec = v as Int
+            b.SHOW_DISABLED -> s.showDisabled = v as Boolean
+            b.PREFER_SUB -> s.preferSubStream = v as Boolean
+            b.START_MUTED -> s.startMuted = v as Boolean
+            b.KEEP_AWAKE -> s.keepScreenOn = v as Boolean
+            b.AUTO_PIP -> s.autoPip = v as Boolean
+            b.TIMELINE_MINUTES -> s.timelineMinutes = v as Int
+            b.TIMELINE_HAPTICS -> s.timelineHaptics = v as Boolean
+            b.EVENT_PREROLL -> s.eventPreroll = v as Int
+            b.NOTIFY_DETECTIONS -> n.includeDetections = v as Boolean
+            b.NOTIFY_INTERVAL -> n.intervalMinutes = v as Int
+            b.QUIET_HOURS -> n.quietHours = v as Boolean
+            b.QUIET_FROM -> n.quietFrom = v as Int
+            b.QUIET_TO -> n.quietTo = v as Int
+            b.MUTED_CAMERAS -> n.mutedCameras = v as Set<String>
+            b.MUTED_LABELS -> n.mutedLabels = v as Set<String>
+            // Only ever switched on by a file.
+            b.HIDE_SCREENSHOTS -> App.lock.hideScreenshots = true
+            b.HIDE_RECENTS -> App.lock.hideRecents = true
+        }
+    }
+    // The background check follows the interval that may have changed.
+    if (b.NOTIFY_INTERVAL in keys) runCatching { com.vknxworks.frigatectrl.notify.AlertWorker.schedule(ctx.applicationContext) }
+}
+
+private fun settingLabel(key: String): Int {
+    val b = com.vknxworks.frigatectrl.data.SettingsBackup
+    return when (key) {
+        b.GRID_COLUMNS -> R.string.grid_columns
+        b.THUMB_REFRESH -> R.string.thumb_refresh
+        b.SHOW_DISABLED -> R.string.show_disabled
+        b.PREFER_SUB -> R.string.prefer_sub
+        b.START_MUTED -> R.string.start_muted
+        b.KEEP_AWAKE -> R.string.keep_screen_on
+        b.AUTO_PIP -> R.string.pip_setting
+        b.TIMELINE_MINUTES -> R.string.timeline_span
+        b.TIMELINE_HAPTICS -> R.string.haptic_ticks
+        b.EVENT_PREROLL -> R.string.event_preroll
+        b.NOTIFY_DETECTIONS -> R.string.notif_what
+        b.NOTIFY_INTERVAL -> R.string.notif_interval
+        b.QUIET_HOURS -> R.string.quiet_hours
+        b.QUIET_FROM -> R.string.quiet_from
+        b.QUIET_TO -> R.string.quiet_to
+        b.MUTED_CAMERAS -> R.string.backup_muted_cameras
+        b.MUTED_LABELS -> R.string.backup_muted_labels
+        b.HIDE_SCREENSHOTS -> R.string.hide_screenshots
+        else -> R.string.hide_recents
+    }
+}
+
+private fun settingValue(ctx: android.content.Context, v: Any?): String = when (v) {
+    is Boolean -> ctx.getString(if (v) R.string.backup_on else R.string.backup_off)
+    is Set<*> -> if (v.isEmpty()) ctx.getString(R.string.backup_none) else v.filterIsInstance<String>().sorted().joinToString(", ")
+    null -> ctx.getString(R.string.backup_none)
+    else -> v.toString()
+}
+
+/**
+ * "Back up and restore": saves FrigateCtrl's own settings to a file and reads them back. The file has no
+ * server address, login or PIN in it; reading one lists what would change and asks first.
+ */
+@Composable
+private fun SettingsBackupSection() {
+    val ctx = LocalContext.current
+    var pending by remember { mutableStateOf<Map<String, Any>?>(null) }
+    fun toast(id: Int) = android.widget.Toast.makeText(ctx, id, android.widget.Toast.LENGTH_LONG).show()
+
+    val exporter = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/json"),
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        val ok = runCatching {
+            val text = com.vknxworks.frigatectrl.data.SettingsBackup.toJson(currentSettings())
+            ctx.contentResolver.openOutputStream(uri, "w")?.use { it.write(text.toByteArray(Charsets.UTF_8)) } ?: error("no stream")
+        }.isSuccess
+        toast(if (ok) R.string.backup_exported else R.string.backup_export_failed)
+    }
+    val importer = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        val max = com.vknxworks.frigatectrl.data.SettingsBackup.MAX_BYTES
+        val text = runCatching {
+            ctx.contentResolver.openInputStream(uri)?.use { input ->
+                // A settings file is tiny; stop reading anything that isn't.
+                val bytes = input.readNBytes(max + 1)
+                if (bytes.size > max) null else String(bytes, Charsets.UTF_8)
+            }
+        }.getOrNull()
+        val parsed = text?.let { com.vknxworks.frigatectrl.data.SettingsBackup.parse(it) }
+        when {
+            parsed == null -> toast(R.string.backup_not_a_file)
+            com.vknxworks.frigatectrl.data.SettingsBackup.changes(currentSettings(), parsed).isEmpty() -> toast(R.string.backup_nothing_to_change)
+            else -> pending = parsed
+        }
+    }
+
+    Section(stringResource(R.string.backup_group), footer = stringResource(R.string.backup_footer)) {
+        GroupRow(
+            stringResource(R.string.backup_export),
+            stringResource(R.string.backup_export_subtitle),
+            icon = Icons.Outlined.FileUpload,
+            showChevron = true,
+            onClick = {
+                // Android's "save as" screen opens: that doesn't count as leaving the app.
+                com.vknxworks.frigatectrl.ui.lock.LockTrips.expectReturn()
+                exporter.launch("frigatectrl-settings.json")
+            },
+        )
+        GroupRow(
+            stringResource(R.string.backup_import),
+            stringResource(R.string.backup_import_subtitle),
+            icon = Icons.Outlined.FileDownload,
+            showChevron = true,
+            onClick = {
+                com.vknxworks.frigatectrl.ui.lock.LockTrips.expectReturn()
+                importer.launch(arrayOf("application/json", "text/plain", "application/octet-stream"))
+            },
+        )
+    }
+
+    pending?.let { incoming ->
+        val now = currentSettings()
+        val keys = com.vknxworks.frigatectrl.data.SettingsBackup.changes(now, incoming)
+        com.vknxworks.frigatectrl.GuardedWindow()
+        com.vknxworks.frigatectrl.ui.components.CtrlAlertDialog(
+            onDismissRequest = { pending = null },
+            title = { Text(stringResource(R.string.backup_confirm_title)) },
+            text = {
+                androidx.compose.foundation.layout.Column(
+                    Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp),
+                ) {
+                    Text(stringResource(R.string.backup_confirm_body))
+                    keys.forEach { key ->
+                        Text(
+                            stringResource(R.string.backup_change_line, stringResource(settingLabel(key)), settingValue(ctx, now[key]), settingValue(ctx, incoming[key])),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton({
+                    applySettings(ctx, incoming, keys)
+                    pending = null
+                    toast(R.string.backup_imported)
+                }) { Text(stringResource(R.string.backup_replace), color = CtrlColors.AccentText) }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton({ pending = null }) { Text(stringResource(R.string.cancel), color = CtrlColors.Text) }
+            },
+        )
+    }
 }
 
 /** Copied as sensitive, so Android doesn't preview it. */

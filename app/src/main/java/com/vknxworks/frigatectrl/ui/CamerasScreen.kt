@@ -29,6 +29,9 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.GridView
+import androidx.compose.material.icons.outlined.Tune
+import kotlinx.coroutines.launch
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.ControlCamera
 import androidx.compose.material.icons.outlined.NotificationsActive
@@ -77,7 +80,12 @@ import com.vknxworks.frigatectrl.ui.theme.CtrlType
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CamerasScreen(onOpen: (String) -> Unit, onYou: () -> Unit, bottomPadding: Dp = 0.dp) {
+fun CamerasScreen(
+    onOpen: (String) -> Unit,
+    onYou: () -> Unit,
+    onWall: (birdseye: Boolean, group: String?) -> Unit = { _, _ -> },
+    bottomPadding: Dp = 0.dp,
+) {
     val settings = App.settings
     var cameras by remember { mutableStateOf<List<CameraInfo>?>(null) }
     var groups by remember { mutableStateOf<List<CameraGroup>>(emptyList()) }
@@ -87,6 +95,10 @@ fun CamerasScreen(onOpen: (String) -> Unit, onYou: () -> Unit, bottomPadding: Dp
     var refreshing by remember { mutableStateOf(false) }
     var group by rememberSaveable { mutableStateOf<String?>(null) }
     val ctx = LocalContext.current
+    // Birdseye can be watched only when Frigate restreams it; profiles exist from Frigate 0.18 on.
+    var birdseye by remember { mutableStateOf(App.api.birdseyeLive) }
+    var profiles by remember { mutableStateOf<com.vknxworks.frigatectrl.data.ProfileState?>(null) }
+    var pickProfile by remember { mutableStateOf(false) }
 
     LaunchedEffect(reload) {
         error = null
@@ -101,7 +113,17 @@ fun CamerasScreen(onOpen: (String) -> Unit, onYou: () -> Unit, bottomPadding: Dp
             try {
                 cameras = App.api.cameras()
                 groups = App.api.groups
+                birdseye = App.api.birdseyeLive
             } catch (e: Exception) { error = e.message ?: ctx.getString(R.string.cameras_load_failed) }
+            // Profiles are only asked for on a server that has them (Frigate 0.18 or newer); an older
+            // server is never asked and never shows the chip.
+            profiles = try {
+                if (com.vknxworks.frigatectrl.data.Frigate018.supported(App.api.frigateVersion())) {
+                    App.api.profiles().takeIf { it.profiles.isNotEmpty() }
+                } else {
+                    null
+                }
+            } catch (_: Exception) { profiles }
             unread.await()?.let { alerts = it }
         }
         refreshing = false
@@ -114,6 +136,14 @@ fun CamerasScreen(onOpen: (String) -> Unit, onYou: () -> Unit, bottomPadding: Dp
     val totalAlerts = alerts.values.sum()
 
     val bars = WindowInsets.statusBars.asPaddingValues()
+    val shownProfiles = profiles
+    if (pickProfile && shownProfiles != null) {
+        ProfilePicker(
+            shownProfiles,
+            onDismiss = { pickProfile = false },
+            onChanged = { now -> profiles = shownProfiles.copy(active = now); pickProfile = false },
+        )
+    }
 
     PullToRefreshBox(
         isRefreshing = refreshing,
@@ -177,6 +207,27 @@ fun CamerasScreen(onOpen: (String) -> Unit, onYou: () -> Unit, bottomPadding: Dp
                 }
             }
 
+            // The live wall (two cameras or more), Birdseye (when Frigate restreams it) and the server's
+            // profile (Frigate 0.18 or newer, when it has profiles).
+            val wallCount = visible?.count { it.enabled } ?: 0
+            val profileState = profiles
+            if (wallCount >= 2 || birdseye || profileState != null) {
+                item(span = { GridItemSpan(maxLineSpan) }, key = "views") {
+                    Row(
+                        Modifier.horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        if (wallCount >= 2) CtrlChip(stringResource(R.string.wall_title), false, { onWall(false, group) }, icon = Icons.Outlined.GridView)
+                        if (birdseye) CtrlChip(stringResource(R.string.wall_birdseye), false, { onWall(true, null) }, icon = Icons.Outlined.GridView)
+                        if (profileState != null) {
+                            val active = profileState.profiles.firstOrNull { it.name == profileState.active }?.friendlyName
+                                ?: stringResource(R.string.profile_none)
+                            CtrlChip(stringResource(R.string.profile_chip, active), profileState.active != null, { pickProfile = true }, icon = Icons.Outlined.Tune)
+                        }
+                    }
+                }
+            }
+
             when {
                 error != null && cameras == null -> item(span = { GridItemSpan(maxLineSpan) }, key = "err") {
                     EmptyState(stringResource(R.string.cant_reach_frigate), error!!, stringResource(R.string.retry)) { reload++ }
@@ -197,6 +248,78 @@ fun CamerasScreen(onOpen: (String) -> Unit, onYou: () -> Unit, bottomPadding: Dp
         }
     }
 }
+
+/**
+ * Frigate 0.18's profiles: pick one (or none) and confirm; Frigate then applies that profile's settings.
+ * The switch goes over Frigate's websocket ("profile/set"), like in its own web page, and is checked
+ * afterwards by asking which profile is active.
+ */
+@Composable
+private fun ProfilePicker(
+    state: com.vknxworks.frigatectrl.data.ProfileState,
+    onDismiss: () -> Unit,
+    onChanged: (String?) -> Unit,
+) {
+    val ctx = LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var confirm by remember { mutableStateOf<Pair<String?, String>?>(null) }
+    var busy by remember { mutableStateOf(false) }
+    val noneLabel = stringResource(R.string.profile_none)
+    com.vknxworks.frigatectrl.ui.components.CtrlBottomSheet(onDismissRequest = { if (!busy) onDismiss() }) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(stringResource(R.string.profile_title), style = MaterialTheme.typography.titleLarge, color = CtrlColors.Text)
+            Text(stringResource(R.string.profile_body), style = MaterialTheme.typography.bodySmall, color = CtrlColors.Muted)
+            (listOf<Pair<String?, String>>(null to noneLabel) + state.profiles.map { it.name to it.friendlyName }).forEach { (name, label) ->
+                CtrlChip(label, state.active == name, { if (!busy && state.active != name) confirm = name to label })
+            }
+        }
+    }
+    confirm?.let { (name, label) ->
+        GuardedWindowDialog()
+        com.vknxworks.frigatectrl.ui.components.CtrlAlertDialog(
+            onDismissRequest = { if (!busy) confirm = null },
+            title = { Text(stringResource(R.string.profile_confirm_title, label)) },
+            text = { Text(stringResource(if (name == null) R.string.profile_confirm_none else R.string.profile_confirm_body)) },
+            confirmButton = {
+                androidx.compose.material3.TextButton(
+                    {
+                        busy = true
+                        scope.launch {
+                            val socket = com.vknxworks.frigatectrl.data.FrigateSocket(App.api)
+                            try {
+                                socket.publish("profile/set", name ?: "none")
+                                // Frigate applies the profile and then says which one is active.
+                                var now: String? = state.active
+                                for (attempt in 0 until 6) {
+                                    kotlinx.coroutines.delay(700)
+                                    now = runCatching { App.api.activeProfile() }.getOrDefault(now)
+                                    if (now == name) break
+                                }
+                                if (now == name) {
+                                    onChanged(name)
+                                } else {
+                                    android.widget.Toast.makeText(ctx, R.string.profile_failed, android.widget.Toast.LENGTH_LONG).show()
+                                }
+                            } finally {
+                                socket.close()
+                                busy = false
+                                confirm = null
+                            }
+                        }
+                    },
+                    enabled = !busy,
+                ) { Text(stringResource(R.string.profile_switch), color = CtrlColors.AccentText) }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton({ confirm = null }, enabled = !busy) { Text(stringResource(R.string.cancel), color = CtrlColors.Text) }
+            },
+        )
+    }
+}
+
+/** Confirmations hide other apps' floating windows, like the app's other confirmation dialogs. */
+@Composable
+private fun GuardedWindowDialog() = com.vknxworks.frigatectrl.GuardedWindow()
 
 @Composable
 private fun Header(host: String, cameraCount: Int?, alertCount: Int, onYou: () -> Unit) {

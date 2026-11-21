@@ -75,6 +75,11 @@
             </intent-filter>
         </service>
 
+        <!-- The "Mark reviewed" and "Snooze 1 h" buttons on FrigateCtrl's own alert notifications. Not exported. -->
+        <receiver
+            android:name=".notify.AlertActionReceiver"
+            android:exported="false" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.clips"

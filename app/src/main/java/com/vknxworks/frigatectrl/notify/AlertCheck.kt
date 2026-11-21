@@ -58,8 +58,13 @@ object AlertCheck {
             .filter { r -> keyOf(r) !in seen && !(r.severity == "detection" && keyOf(r.copy(severity = "alert")) in seen) }
             .sortedByDescending { it.start }
             .toList()
-        wanted.forEachIndexed { i, r ->
-            if (i < MAX_POSTS) AlertNotifier.post(context, r, s)
+        var posted = 0
+        wanted.forEach { r ->
+            // A snoozed camera's alerts are only marked as seen, so they don't arrive late once the snooze ends.
+            if (!s.isSnoozed(r.camera, nowMs) && posted < MAX_POSTS) {
+                AlertNotifier.post(context, r, s)
+                posted++
+            }
             seen[keyOf(r)] = r.start.toLong()
         }
         s.saveSeen(seen, nowSec)

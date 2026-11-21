@@ -14,12 +14,17 @@ Part of the [Ctrl series](#the-ctrl-series) by VKNXWorks.
 
 - **Camera grid** with live snapshots, camera-group filters and a badge for new alerts
 - **Live view** about one second behind, with sound, zoom and picture-in-picture
+- **Live wall** of all your cameras side by side, and **Birdseye** when Frigate restreams it
+- **Explore**: every tracked object with its thumbnail, filtered by camera, object and time, and searched by description when your server has semantic search on
 - **Two-way talk** on cameras with a speaker
 - **PTZ controls**: joystick, zoom, focus and presets
-- **History** with a precise timeline you can pinch to zoom, showing recordings, motion and alerts
+- **History** with a precise timeline you can pinch to zoom, showing recordings, motion and alerts, and scrub pictures from Frigate's preview clips that follow your finger
 - **Events list**: swipe to mark reviewed, mark all, filter by unreviewed or alerts
 - **Save or share clips** of any event or time range
 - **Alert notifications** with the snapshot, camera, objects and time; tap one to open that moment in History. A background check every 15 minutes or more, and optional instant push through your own ntfy server
+- **Notification buttons**: mark an alert reviewed or snooze its camera for an hour, straight from the notification
+- **Frigate 0.18 ready**: switch the server's profile and run a motion search over part of a camera's picture (both only shown on 0.18 or newer)
+- **Back up and restore settings** to a file that never holds the server address, a login or the PIN
 - **Notification filters**: per camera and per object, alerts only or alerts and detections, quiet hours and a test notification
 - **Server exports**: export a range from the History timeline (real time or 25× time-lapse) on your Frigate server, follow its progress right there (with a percentage on Frigate 0.18 and newer) and save it to your gallery when it's ready; play, save, share, rename or delete exports from the Exports tab
 - **Camera switches**: camera on/off, detection, recording, snapshots, audio detection and notifications
@@ -113,6 +118,7 @@ Turn them on under **Settings > Notifications** (tap your profile picture, then 
 
 - **Background check:** FrigateCtrl asks your Frigate server for new alerts (and detections, if you choose) every 15, 30 or 60 minutes or less often. Android can delay it to save battery. Only alerts from the moment you turn notifications on are notified.
 - **Each notification** shows the snapshot, the camera, what was seen (person, car, ...) and the time. Tapping it opens that camera's History a few seconds before the alert. On the lock screen only "New alert" shows.
+- **Buttons:** **Mark reviewed** tells Frigate you have seen the alert and removes the notification; **Snooze 1 h** stops notifications from that camera for an hour on this phone (Settings > Notifications lists snoozed cameras; tap one to end it).
 - **Filters:** switch cameras and objects off, pick alerts only or alerts and detections, and set quiet hours (alerts arrive silently). Alerts and detections have their own channels in Android's settings for sound and importance.
 - **With the app lock on**, alerts wait until you unlock FrigateCtrl, because your login is encrypted with your PIN. Turn on **Alerts while locked** on the same page to keep your login encrypted with the phone's key only, so alerts arrive while the app is locked. Those alerts show the camera, objects and time but no camera picture while FrigateCtrl is locked.
 

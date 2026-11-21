@@ -68,6 +68,24 @@ class NotifySettings(context: Context) {
         get() = _quietTo
         set(v) { _quietTo = v.coerceIn(0, 23); sp.edit().putInt(K_QUIET_TO, _quietTo).apply() }
 
+    private var _snoozed by mutableStateOf(Snooze.decode(sp.getString(K_SNOOZED, "").orEmpty()))
+    /** Cameras snoozed from a notification, with when each snooze ends (wall-clock milliseconds). */
+    val snoozedCameras: Map<String, Long> get() = _snoozed
+
+    fun isSnoozed(camera: String, nowMs: Long = System.currentTimeMillis()): Boolean = Snooze.isSnoozed(_snoozed, camera, nowMs)
+
+    /** No notifications from [camera] until [untilMs]. */
+    fun snooze(camera: String, untilMs: Long) {
+        _snoozed = Snooze.with(_snoozed, camera, untilMs, System.currentTimeMillis())
+        sp.edit().putString(K_SNOOZED, Snooze.encode(_snoozed)).apply()
+    }
+
+    /** Ends the snooze of [camera] now. */
+    fun endSnooze(camera: String) {
+        _snoozed = Snooze.active(_snoozed - camera, System.currentTimeMillis())
+        sp.edit().putString(K_SNOOZED, Snooze.encode(_snoozed)).apply()
+    }
+
     /** Whether quiet hours are on and the current hour is inside them (the range may run past midnight). */
     fun inQuietHours(now: Calendar = Calendar.getInstance()): Boolean {
         if (!quietHours || quietFrom == quietTo) return false
@@ -119,6 +137,7 @@ class NotifySettings(context: Context) {
         _enabled = false; _push = false; _detections = false; _interval = 15
         _mutedCameras = emptySet(); _mutedLabels = emptySet()
         _quiet = false; _quietFrom = 23; _quietTo = 7; _lastCheck = 0L
+        _snoozed = emptyMap()
     }
 
     private companion object {
@@ -131,6 +150,7 @@ class NotifySettings(context: Context) {
         const val K_QUIET = "quiet"
         const val K_QUIET_FROM = "quiet_from"
         const val K_QUIET_TO = "quiet_to"
+        const val K_SNOOZED = "snoozed_cameras"
         const val K_LAST_CHECK = "last_check"
         const val K_SEEN = "seen"
         const val K_SECRET = "link_secret"
