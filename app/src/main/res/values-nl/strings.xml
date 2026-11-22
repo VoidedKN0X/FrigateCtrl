@@ -409,17 +409,6 @@
     <string name="export_delete_title">Export wissen?</string>
     <string name="export_delete_body">%1$s wordt gewist van de Frigate-server. Kopieën die je op je telefoon bewaarde, blijven.</string>
     <string name="error_admin_needed">Je Frigate-gebruiker heeft hiervoor de adminrol nodig</string>
-    <string name="group_troubleshooting">Probleemoplossing</string>
-    <string name="crash_report">Laatste crashrapport</string>
-    <string name="crash_footer">FrigateCtrl is gestopt door een fout. Het rapport blijft op deze telefoon en wordt nergens naartoe gestuurd; kopieer het in een foutmelding als je wilt.</string>
-    <string name="crash_intro">Wat er misging, met het tijdstip, de versie van de app en van Android en het model van je telefoon. Serverlogins en tokens worden weggelaten.</string>
-    <string name="crash_copy">Kopiëren</string>
-    <string name="crash_copied">Crashrapport gekopieerd</string>
-    <string name="crash_delete">Wissen</string>
-    <string name="live_report">Laatste rapport van de liveweergave</string>
-    <string name="live_report_intro">Hoe de laatste liveweergave verliep op deze telefoon: de gebruikte decoders en video- en audioformaten, verloren beelden en elke nieuwe verbinding met de reden. Je serveradres wordt weggelaten.</string>
-    <string name="live_report_copied">Rapport van de liveweergave gekopieerd</string>
-    <string name="live_report_footer">Rapporten blijven op deze telefoon en worden nergens naartoe gestuurd; kopieer er een in een foutmelding als je wilt.</string>
     <string name="live_sound_off_freezes">Geluid uit: met geluid bleef de video op deze telefoon haperen</string>
     <string name="close">Sluiten</string>
     <!-- Export progress -->

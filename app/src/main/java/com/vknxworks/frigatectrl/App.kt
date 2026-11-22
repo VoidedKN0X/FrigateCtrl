@@ -2,7 +2,6 @@ package com.vknxworks.frigatectrl
 
 import android.content.Context
 import androidx.annotation.StringRes
-import com.vknxworks.frigatectrl.data.CrashReport
 import com.vknxworks.frigatectrl.data.FrigateApi
 import com.vknxworks.frigatectrl.data.LockSettings
 import com.vknxworks.frigatectrl.data.Prefs
@@ -38,9 +37,8 @@ object App {
     @Synchronized
     fun init(ctx: Context) {
         if (::prefs.isInitialized) return
-        // On-device only: the last crash's stack trace for Settings > Troubleshooting. Nothing is sent anywhere.
-        CrashReport.install(ctx)
         appContext = ctx.applicationContext
+        deleteOldReports(ctx.applicationContext)
         vault = LockVault(ctx.applicationContext, "frigatectrl")
         prefs = Prefs(ctx.applicationContext, vault)
         api = FrigateApi(prefs)
@@ -48,5 +46,14 @@ object App {
         lock = LockSettings(ctx.applicationContext)
         notify = NotifySettings(ctx.applicationContext)
         AlertNotifier.createChannels(ctx.applicationContext)
+    }
+
+    // Versions up to 3.12.1 kept the last crash report and the last live view report in these files; neither is
+    // made any more, so whatever an older version left on the phone is deleted (nothing happens when they're gone).
+    private fun deleteOldReports(ctx: Context) {
+        Thread {
+            runCatching { java.io.File(ctx.noBackupFilesDir, "last_crash.txt").delete() }
+            runCatching { java.io.File(ctx.noBackupFilesDir, "last_live_view.txt").delete() }
+        }.start()
     }
 }

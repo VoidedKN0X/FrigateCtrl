@@ -61,8 +61,6 @@ import com.vknxworks.frigatectrl.ui.lock.PinRequests
 import com.vknxworks.frigatectrl.ui.lock.resetBiometricKey
 import com.vknxworks.frigatectrl.ui.clearImageCache
 import com.vknxworks.frigatectrl.data.Clips
-import com.vknxworks.frigatectrl.data.CrashReport
-import com.vknxworks.frigatectrl.data.LiveReport
 import com.vknxworks.frigatectrl.ui.CameraScreen
 import com.vknxworks.frigatectrl.ui.PipState
 import com.vknxworks.frigatectrl.ui.CamerasScreen
@@ -224,9 +222,6 @@ private fun Root(activity: FragmentActivity, lockVm: AppLockViewModel = viewMode
         // Nothing from the old server stays behind: cached thumbnails and temporary clips.
         clearImageCache()
         val appCtx = activity.applicationContext
-        // A crash report can name the old server in an error message.
-        CrashReport.delete(appCtx)
-        LiveReport.delete(appCtx)
         Thread { Clips.cleanup(appCtx, all = true) }.start()
         route = "setup"
     }

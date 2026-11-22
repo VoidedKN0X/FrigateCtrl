@@ -423,17 +423,6 @@
     <string name="export_delete_title">Export löschen?</string>
     <string name="export_delete_body">%1$s wird vom Frigate-Server gelöscht. Kopien, die du auf deinem Handy gespeichert hast, bleiben erhalten.</string>
     <string name="error_admin_needed">Dein Frigate-Benutzer braucht dafür die Admin-Rolle</string>
-    <string name="group_troubleshooting">Fehlerbehebung</string>
-    <string name="crash_report">Letzter Absturzbericht</string>
-    <string name="crash_footer">FrigateCtrl wurde wegen eines Fehlers beendet. Der Bericht bleibt auf diesem Handy und wird nie gesendet; kopiere ihn bei Bedarf in einen Fehlerbericht.</string>
-    <string name="crash_intro">Was schiefgelaufen ist, mit Uhrzeit, App- und Android-Version und deinem Handymodell. Serveranmeldungen und Tokens sind ausgenommen.</string>
-    <string name="crash_copy">Kopieren</string>
-    <string name="crash_copied">Absturzbericht kopiert</string>
-    <string name="crash_delete">Löschen</string>
-    <string name="live_report">Letzter Liveansicht-Bericht</string>
-    <string name="live_report_intro">Wie die letzte Liveansicht auf diesem Handy lief: die verwendeten Decoder sowie Video- und Audioformate, verlorene Bilder und jede Neuverbindung mit Grund. Deine Serveradresse ist ausgenommen.</string>
-    <string name="live_report_copied">Liveansicht-Bericht kopiert</string>
-    <string name="live_report_footer">Berichte bleiben auf diesem Handy und werden nie gesendet; kopiere einen bei Bedarf in einen Fehlerbericht.</string>
     <string name="live_sound_off_freezes">Ton aus: Das Video fror auf diesem Handy mit Ton immer wieder ein</string>
     <string name="close">Schließen</string>
     <!-- Export progress -->

@@ -16,7 +16,7 @@ Every new version needs a detailed entry at the top of `CHANGELOG.md`, under a h
 
 ## Languages
 
-English (`values/strings.xml`), Dutch (`values-nl/strings.xml`, Belgian Dutch, informal "je"), French (`values-fr/strings.xml`, polite "vous") and German (`values-de/strings.xml`, informal "du"). Android picks by the phone's language (`res/xml/locales_config.xml` lists all four for the per-app language setting); there is no in-app switch. A new string needs all four files. The live view and crash reports (`LiveReport`, `CrashReport`) are for bug reports and stay in English.
+English (`values/strings.xml`), Dutch (`values-nl/strings.xml`, Belgian Dutch, informal "je"), French (`values-fr/strings.xml`, polite "vous") and German (`values-de/strings.xml`, informal "du"). Android picks by the phone's language (`res/xml/locales_config.xml` lists all four for the per-app language setting); there is no in-app switch. A new string needs all four files.
 
 ## Build toolchain
 

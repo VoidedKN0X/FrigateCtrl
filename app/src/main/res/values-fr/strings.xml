@@ -423,17 +423,6 @@
     <string name="export_delete_title">Supprimer l\'export ?</string>
     <string name="export_delete_body">%1$s est supprimé du serveur Frigate. Les copies enregistrées sur votre téléphone sont conservées.</string>
     <string name="error_admin_needed">Votre utilisateur Frigate a besoin du rôle admin pour cela</string>
-    <string name="group_troubleshooting">Dépannage</string>
-    <string name="crash_report">Dernier rapport de plantage</string>
-    <string name="crash_footer">FrigateCtrl s\'est arrêté à cause d\'une erreur. Le rapport reste sur ce téléphone et n\'est jamais envoyé ; copiez-le dans un rapport de bug si vous le souhaitez.</string>
-    <string name="crash_intro">Ce qui s\'est mal passé, avec l\'heure, les versions de l\'application et d\'Android et le modèle de votre téléphone. Les connexions et jetons du serveur sont exclus.</string>
-    <string name="crash_copy">Copier</string>
-    <string name="crash_copied">Rapport de plantage copié</string>
-    <string name="crash_delete">Supprimer</string>
-    <string name="live_report">Dernier rapport de vue en direct</string>
-    <string name="live_report_intro">Comment s\'est passée la dernière vue en direct sur ce téléphone : les décodeurs et formats vidéo et audio utilisés, les images perdues et chaque reconnexion avec sa raison. L\'adresse de votre serveur est exclue.</string>
-    <string name="live_report_copied">Rapport de vue en direct copié</string>
-    <string name="live_report_footer">Les rapports restent sur ce téléphone et ne sont jamais envoyés ; copiez-en un dans un rapport de bug si vous le souhaitez.</string>
     <string name="live_sound_off_freezes">Son coupé : la vidéo se figeait avec le son sur ce téléphone</string>
     <string name="close">Fermer</string>
     <!-- Export progress -->

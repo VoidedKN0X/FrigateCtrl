@@ -32,22 +32,18 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.media3.common.C
-import androidx.media3.common.Format
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.HttpDataSource
-import androidx.media3.exoplayer.DecoderReuseEvaluation
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.extractor.Extractor
 import androidx.media3.extractor.ExtractorsFactory
 import androidx.media3.extractor.mp4.FragmentedMp4Extractor
-import com.vknxworks.frigatectrl.data.LiveReport
 import com.vknxworks.frigatectrl.data.MseWebSocketDataSource
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
@@ -88,11 +84,6 @@ fun LiveView(
     var audioNoteDismissed by remember(camera, streamName) { mutableStateOf(false) }
     // Muted: the audio track is turned off entirely, so no audio decoder runs and the video doesn't depend on it.
     val audioOff = muted || audioForcedOff
-    // On-device report about this live view (decoders, formats, reconnects); never sent anywhere.
-    val report = remember(camera, streamName) { LiveReport.Session(camera) }
-    report.muted = muted
-    report.audioOffAfterFreezes = audioForcedOff
-    DisposableEffect(report) { onDispose { report.save(ctx) } }
 
     val player = remember(camera, streamName, attempt, mode, background) {
         if (mode < 1 && !background) buildLivePlayer(ctx, audioOff) else null
@@ -100,7 +91,6 @@ fun LiveView(
 
     DisposableEffect(player) {
         if (player == null) return@DisposableEffect onDispose {}
-        report.markUsed()
         val label = ctx.getString(R.string.video)
         val listener = object : Player.Listener {
             override fun onRenderedFirstFrame() { rendered = true }
@@ -108,60 +98,20 @@ fun LiveView(
                 // A live stream never really ends: if it does, the connection was dropped. Reconnect instead of
                 // staying frozen on the last frame (or move on to snapshots if it never showed a picture).
                 if (state == Player.STATE_ENDED) {
-                    if (rendered) {
-                        report.reconnect("stream ended (closed by the server)")
-                        report.save(ctx)
-                        attempt++
-                    } else {
-                        report.reconnect("stream ended before the first frame: snapshots")
-                        report.save(ctx)
-                        mode++
-                    }
+                    if (rendered) attempt++ else mode++
                 }
             }
             override fun onPlayerError(error: PlaybackException) {
                 if (rendered) {
                     // Was working and dropped — just reconnect the same way.
-                    report.reconnect("error: ${reportReason(error)}")
-                    report.save(ctx)
                     attempt++
                 } else {
-                    report.reconnect("error before the first frame: ${reportReason(error)}: snapshots")
-                    report.save(ctx)
                     notes = notes + "$label: ${describe(ctx, error)}"
                     mode++
                 }
             }
         }
-        val analytics = object : AnalyticsListener {
-            override fun onVideoDecoderInitialized(
-                eventTime: AnalyticsListener.EventTime,
-                decoderName: String,
-                initializedTimestampMs: Long,
-                initializationDurationMs: Long,
-            ) { report.videoDecoder = decoderName }
-            override fun onAudioDecoderInitialized(
-                eventTime: AnalyticsListener.EventTime,
-                decoderName: String,
-                initializedTimestampMs: Long,
-                initializationDurationMs: Long,
-            ) { report.audioDecoder = decoderName }
-            override fun onVideoInputFormatChanged(
-                eventTime: AnalyticsListener.EventTime,
-                format: Format,
-                decoderReuseEvaluation: DecoderReuseEvaluation?,
-            ) { report.videoFormat = videoFormatText(format) }
-            override fun onAudioInputFormatChanged(
-                eventTime: AnalyticsListener.EventTime,
-                format: Format,
-                decoderReuseEvaluation: DecoderReuseEvaluation?,
-            ) { report.audioFormat = audioFormatText(format) }
-            override fun onDroppedVideoFrames(eventTime: AnalyticsListener.EventTime, droppedFrames: Int, elapsedMs: Long) {
-                report.droppedFrames += droppedFrames
-            }
-        }
         player.addListener(listener)
-        player.addAnalyticsListener(analytics)
         val src = URLEncoder.encode(streamName, "UTF-8")
         // Frigate only exposes go2rtc's live video as the MSE websocket, so read fMP4 straight from it.
         val source = ProgressiveMediaSource.Factory(
@@ -173,7 +123,6 @@ fun LiveView(
         player.playWhenReady = true
         onDispose {
             player.removeListener(listener)
-            player.removeAnalyticsListener(analytics)
             player.release()
         }
     }
@@ -194,7 +143,7 @@ fun LiveView(
     }
 
     // Stop streaming (and sound) while the app is in the background; reconnect at the live edge when it returns.
-    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { background = true; report.save(ctx) }
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { background = true }
     LifecycleEventEffect(Lifecycle.Event.ON_START) { background = false }
 
     // No picture after a while → try the next method.
@@ -248,16 +197,9 @@ fun LiveView(
                 // turning the sound off.
                 val decoderStuck = player.playbackState == Player.STATE_READY
                 if (decoderStuck) frameStalls++
-                report.reconnect(
-                    "no new video frame for ${FRAME_STALL_MS / 1000} s " +
-                        if (decoderStuck) "(frame stall $frameStalls)" else "(while buffering)"
-                )
                 if (frameStalls >= 2 && !audioForcedOff && !muted) {
                     audioForcedOff = true
-                    report.audioOffAfterFreezes = true
-                    report.reconnect("sound turned off for this camera after repeated frame stalls")
                 }
-                report.save(ctx)
                 attempt++
                 return@LaunchedEffect
             }
@@ -266,8 +208,6 @@ fun LiveView(
             if (player.playWhenReady && pos == lastPos) {
                 if (stuckSince == 0L) stuckSince = now
                 if (now - stuckSince >= STALL_MS) {
-                    report.reconnect("position stopped for ${STALL_MS / 1000} s")
-                    report.save(ctx)
                     attempt++
                     return@LaunchedEffect
                 }
@@ -341,46 +281,6 @@ private fun buildLivePlayer(ctx: Context, audioOff: Boolean): ExoPlayer {
             .build()
     }
     return player
-}
-
-private fun videoFormatText(f: Format): String = buildString {
-    append(f.sampleMimeType ?: "?")
-    f.codecs?.let { append(' ').append(it) }
-    if (f.width > 0 && f.height > 0) append(' ').append(f.width).append('x').append(f.height)
-    if (f.frameRate > 0f) append(' ').append(String.format(java.util.Locale.US, "%.1f fps", f.frameRate))
-}
-
-private fun audioFormatText(f: Format): String = buildString {
-    append(f.sampleMimeType ?: "?")
-    f.codecs?.let { append(' ').append(it) }
-    if (f.sampleRate > 0) append(' ').append(f.sampleRate).append(" Hz")
-    if (f.channelCount > 0) append(' ').append(f.channelCount).append(" ch")
-}
-
-/**
- * Why playback stopped, for the live view report. Only messages FrigateCtrl itself writes are kept, never
- * messages from the network stack, which can name the server.
- */
-@OptIn(UnstableApi::class)
-private fun reportReason(e: PlaybackException): String {
-    val code = e.errorCodeName.removePrefix("ERROR_CODE_").lowercase().replace('_', ' ')
-    var c: Throwable? = e
-    while (c != null) {
-        if (c is HttpDataSource.InvalidResponseCodeException) return "$code (HTTP ${c.responseCode})"
-        val m = c.message
-        if (m != null) {
-            when {
-                m == "the live stream was closed by the server" || m == "the live stream fell behind" ||
-                    m == "no data from the live stream" || m == "connection failed" ||
-                    m.startsWith("login rejected") || m.startsWith("stream not found") ||
-                    m.matches(Regex("HTTP \\d+")) -> return "$code ($m)"
-                m.startsWith("go2rtc:") -> return "$code (go2rtc error)"
-            }
-        }
-        c = c.cause
-    }
-    val root = generateSequence(e as Throwable) { it.cause }.last()
-    return if (root === e) code else "$code (${root.javaClass.simpleName})"
 }
 
 @OptIn(UnstableApi::class)

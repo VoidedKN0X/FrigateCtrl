@@ -2,9 +2,7 @@ package com.vknxworks.frigatectrl.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -27,7 +25,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.ListItem
@@ -87,18 +84,9 @@ import com.vknxworks.frigatectrl.ui.lock.showBiometricPrompt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.unit.sp
-import com.vknxworks.frigatectrl.data.CrashReport
-import com.vknxworks.frigatectrl.data.LiveReport
 import com.vknxworks.frigatectrl.ui.components.CtrlAlertDialog
-import com.vknxworks.frigatectrl.ui.theme.CtrlType
 import com.vknxworks.frigatectrl.App
 import androidx.compose.runtime.LaunchedEffect
 import com.vknxworks.frigatectrl.notify.AlertNotifier
@@ -118,20 +106,6 @@ fun SettingsScreen(onBack: () -> Unit, onNotifications: () -> Unit = {}) {
     val ctx = LocalContext.current
     val lock = App.lock
     val bioAvailable = remember { biometricAvailable(ctx) }
-    var crash by remember { mutableStateOf(CrashReport.read(ctx)) }
-    val crashTime = remember(crash) {
-        CrashReport.time(ctx).takeIf { it > 0 }?.let {
-            java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT).format(java.util.Date(it))
-        }
-    }
-    var showCrash by remember { mutableStateOf(false) }
-    var liveReport by remember { mutableStateOf(LiveReport.read(ctx)) }
-    val liveReportTime = remember(liveReport) {
-        LiveReport.time(ctx).takeIf { it > 0 }?.let {
-            java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT).format(java.util.Date(it))
-        }
-    }
-    var showLiveReport by remember { mutableStateOf(false) }
 
     // The Appearance group (theme and wallpaper colours) is gone: every Ctrl app is dark only now.
     Column(Modifier.fillMaxSize().background(CtrlColors.Background)) {
@@ -270,92 +244,8 @@ fun SettingsScreen(onBack: () -> Unit, onNotifications: () -> Unit = {}) {
             }
 
             SettingsBackupSection()
-
-            // Only there after FrigateCtrl stopped because of an error, or after a live view: reports stay on this phone.
-            if (crash != null || liveReport != null) {
-                Section(
-                    stringResource(R.string.group_troubleshooting),
-                    footer = stringResource(if (crash != null) R.string.crash_footer else R.string.live_report_footer),
-                ) {
-                    if (crash != null) {
-                        GroupRow(
-                            stringResource(R.string.crash_report),
-                            crashTime,
-                            icon = Icons.Outlined.BugReport,
-                            showChevron = true,
-                            onClick = { showCrash = true },
-                        )
-                    }
-                    if (liveReport != null) {
-                        GroupRow(
-                            stringResource(R.string.live_report),
-                            liveReportTime,
-                            icon = Icons.Outlined.BugReport,
-                            showChevron = true,
-                            onClick = { showLiveReport = true },
-                        )
-                    }
-                }
-            }
         }
     }
-
-    val report = crash
-    if (showCrash && report != null) {
-        CrashReportDialog(
-            report,
-            onCopy = { copySensitive(ctx, report); Toast.makeText(ctx, R.string.crash_copied, Toast.LENGTH_SHORT).show() },
-            onDelete = { CrashReport.delete(ctx); crash = null; showCrash = false },
-            onDismiss = { showCrash = false },
-        )
-    }
-    val live = liveReport
-    if (showLiveReport && live != null) {
-        CrashReportDialog(
-            live,
-            onCopy = { copySensitive(ctx, live, R.string.live_report); Toast.makeText(ctx, R.string.live_report_copied, Toast.LENGTH_SHORT).show() },
-            onDelete = { LiveReport.delete(ctx); liveReport = null; showLiveReport = false },
-            onDismiss = { showLiveReport = false },
-            title = R.string.live_report,
-            intro = R.string.live_report_intro,
-        )
-    }
-}
-
-/** The last crash report in full, to copy into a bug report, or delete. */
-@Composable
-private fun CrashReportDialog(
-    report: String,
-    onCopy: () -> Unit,
-    onDelete: () -> Unit,
-    onDismiss: () -> Unit,
-    title: Int = R.string.crash_report,
-    intro: Int = R.string.crash_intro,
-) {
-    CtrlAlertDialog(
-        onDismissRequest = onDismiss,
-        icon = { Icon(Icons.Outlined.BugReport, null) },
-        title = { Text(stringResource(title)) },
-        text = {
-            Column {
-                Text(stringResource(intro), style = MaterialTheme.typography.bodySmall)
-                Spacer(Modifier.height(10.dp))
-                SelectionContainer(
-                    Modifier.heightIn(max = 320.dp).verticalScroll(rememberScrollState())
-                        .horizontalScroll(rememberScrollState()),
-                ) {
-                    Text(report, style = CtrlType.Mono, fontSize = 10.sp, lineHeight = 13.sp, color = CtrlColors.Text, softWrap = false)
-                }
-            }
-        },
-        confirmButton = { TextButton(onCopy) { Text(stringResource(R.string.crash_copy), color = CtrlColors.AccentText) } },
-        dismissButton = {
-            Row {
-                TextButton(onDelete) { Text(stringResource(R.string.crash_delete), color = CtrlColors.Error) }
-                TextButton(onDismiss) { Text(stringResource(R.string.close), color = CtrlColors.Text) }
-            }
-        },
-    )
 }
 
 /** The settings as they are now, by the keys of [com.vknxworks.frigatectrl.data.SettingsBackup]. */
@@ -550,14 +440,6 @@ private fun SettingsBackupSection() {
             },
         )
     }
-}
-
-/** Copied as sensitive, so Android doesn't preview it. */
-private fun copySensitive(ctx: android.content.Context, text: String, label: Int = R.string.crash_report) {
-    val cm = ctx.getSystemService(android.content.ClipboardManager::class.java) ?: return
-    val clip = android.content.ClipData.newPlainText(ctx.getString(label), text)
-    clip.description.extras = android.os.PersistableBundle().apply { putBoolean("android.content.extra.IS_SENSITIVE", true) }
-    runCatching { cm.setPrimaryClip(clip) }
 }
 
 // Settings rows look the same as in every Ctrl app (see ui/settings/SettingsKit.kt).
