@@ -141,14 +141,20 @@ object AlertNotifier {
             .setContentIntent(openIntent(context, r, settings.linkSecret))
         // "Mark reviewed" and "Snooze 1 h" (see [AlertActionReceiver]); not on the test notification, which
         // stands for no real review item.
+        // Both need the phone unlocked first: on the lock screen, someone holding the phone must not be able to
+        // silence a camera or clear its alert.
         if (!test) {
             b.addAction(
-                0, context.getString(R.string.nt_action_reviewed),
-                AlertActionReceiver.intent(context, AlertActionReceiver.ACTION_REVIEWED, r.camera, r.id, settings.linkSecret),
+                NotificationCompat.Action.Builder(
+                    0, context.getString(R.string.nt_action_reviewed),
+                    AlertActionReceiver.intent(context, AlertActionReceiver.ACTION_REVIEWED, r.camera, r.id, settings.linkSecret),
+                ).setAuthenticationRequired(true).build(),
             )
             b.addAction(
-                0, context.getString(R.string.nt_action_snooze),
-                AlertActionReceiver.intent(context, AlertActionReceiver.ACTION_SNOOZE, r.camera, r.id, settings.linkSecret),
+                NotificationCompat.Action.Builder(
+                    0, context.getString(R.string.nt_action_snooze),
+                    AlertActionReceiver.intent(context, AlertActionReceiver.ACTION_SNOOZE, r.camera, r.id, settings.linkSecret),
+                ).setAuthenticationRequired(true).build(),
             )
         }
         if (img != null) {

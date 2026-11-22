@@ -81,7 +81,7 @@
     <string name="theme">Thema</string>
     <string name="lock_fingerprint_title">FrigateCtrl ontgrendelen</string>
     <string name="lock_fingerprint_subtitle">Bevestig dat jij het bent om je camera\'s te zien</string>
-    <string name="lock_forgot_body">De pincode kan niet teruggehaald worden, want je login is ermee versleuteld. FrigateCtrl meldt je af en vergeet de server, de app-vergrendeling en alles wat van de server bewaard is. Je Frigate-server verandert niet.</string>
+    <string name="lock_forgot_body">De pincode kan niet teruggehaald worden, want je login is ermee versleuteld. FrigateCtrl meldt je af en vergeet de server, de app-vergrendeling en alles wat van de server bewaard is. Je Frigate-server verandert niet. Heeft je telefoon een schermvergrendeling, dan bevestig je eerst daarmee.</string>
     <string name="lock_forgot_confirm">Afmelden en opnieuw beginnen</string>
     <string name="lock_choose_intro">Minstens %1$d cijfers, anders dan de pincode van je telefoon. Als je hem vergeet, kom je alleen terug binnen door je af te melden en opnieuw aan te melden.</string>
     <string name="lock_migrate_intro">Een pincode moet nu minstens %1$d cijfers hebben, anders dan de pincode van je telefoon. Je login wordt ermee versleuteld zolang de app vergrendeld is.</string>
@@ -498,4 +498,8 @@
     <string name="backup_none">geen</string>
     <string name="backup_muted_cameras">Camera\'s die niets melden</string>
     <string name="backup_muted_labels">Objecten die niets melden</string>
+    <string name="nt_snooze_locked">Ontgrendel eerst FrigateCtrl om deze camera te sluimeren</string>
+    <string name="lock_reset_prompt_title">App-vergrendeling van FrigateCtrl resetten</string>
+    <string name="lock_reset_prompt_subtitle">Bevestig met de schermvergrendeling van je telefoon dat jij het bent</string>
+    <string name="lock_reset_prompt_failed">De schermvergrendeling kon niet getoond worden</string>
 </resources>

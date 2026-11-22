@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import com.vknxworks.frigatectrl.App
 import com.vknxworks.frigatectrl.R
 import com.vknxworks.frigatectrl.data.MotionHit
+import com.vknxworks.frigatectrl.data.MotionPoll
 import com.vknxworks.frigatectrl.data.MotionSearchStatus
 import com.vknxworks.frigatectrl.notify.AlertNotifier
 import com.vknxworks.frigatectrl.ui.components.CtrlButton
@@ -98,11 +99,21 @@ fun MotionSearchScreen(camera: String, onBack: () -> Unit, onOpenAt: (Double) ->
                 val now = nowSec()
                 id = App.api.startMotionSearch(camera, now - hours * 3600.0, now, left, top, right, bottom)
                 jobId = id
+                val startedAt = android.os.SystemClock.elapsedRealtime()
+                var unreadable = 0
                 while (true) {
                     val s = App.api.motionSearchStatus(camera, id)
                     if (s != null) status = s
                     if (s != null && !s.running) {
                         if (s.status == "failed") error = s.message ?: ctx.getString(R.string.motion_search_failed)
+                        break
+                    }
+                    // An answer that can't be read (a proxy page, no status) again and again, or a search that
+                    // runs far too long: stop with an error instead of a spinner that never ends.
+                    unreadable = if (s == null) unreadable + 1 else 0
+                    if (MotionPoll.giveUp(unreadable, android.os.SystemClock.elapsedRealtime() - startedAt)) {
+                        withContext(NonCancellable) { runCatching { App.api.cancelMotionSearch(camera, id) } }
+                        error = ctx.getString(R.string.motion_search_failed)
                         break
                     }
                     delay(1500)

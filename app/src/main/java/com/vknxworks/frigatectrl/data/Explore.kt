@@ -172,3 +172,13 @@ object Frigate018 {
     /** Job ids are made by the server; only plain ones are put back in a request path. */
     fun jobIdOk(id: String): Boolean = id.isNotEmpty() && id.length <= 80 && id.all { it.isLetterOrDigit() || it in "_-." }
 }
+
+/** When the motion search screen stops waiting for Frigate's answer. */
+object MotionPoll {
+    /** Status answers in a row that couldn't be read (not JSON, no status). About 15 s at one every 1.5 s. */
+    const val MAX_UNREADABLE = 10
+    /** A search that is still running after this long is given up. */
+    const val MAX_MS = 30 * 60_000L
+
+    fun giveUp(unreadableInARow: Int, elapsedMs: Long): Boolean = unreadableInARow >= MAX_UNREADABLE || elapsedMs >= MAX_MS
+}

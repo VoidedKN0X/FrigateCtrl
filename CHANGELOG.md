@@ -4,6 +4,22 @@ What changed in each FrigateCtrl version. Every release on the [Releases page](h
 
 To publish a new version: bump `versionCode` and `versionName` in `app/build.gradle.kts`, add a section here, and push to `main`. Pushes without a version bump only build; they don't make a release.
 
+## Unreleased
+
+### Security
+
+- **Notification buttons can't silence a camera from the lock screen any more.** On a locked phone (with notification content shown on the lock screen, Android's default), anyone holding the phone could tap **Snooze 1 h** on an alert and mute that camera for an hour, or **Mark reviewed** to clear it. Both buttons now ask for the phone's PIN, pattern, password or fingerprint first. And with FrigateCtrl's own app lock on and locked, **Snooze 1 h** now says "Unlock FrigateCtrl first to snooze this camera" instead of snoozing, as **Mark reviewed** already did.
+- **"Forgot PIN?" now asks for the phone's own screen lock first.** Resetting the app lock logs you out and forgets the server, so it shouldn't be open to anyone who picks up your unlocked phone. After you confirm, FrigateCtrl asks for the phone's PIN, pattern, password or a fingerprint; only then is the lock reset. Cancelling leaves everything as it was. A phone without a screen lock keeps the old confirmation alone.
+
+### Fixed
+
+- **Motion search no longer spins forever on an answer it can't read.** If Frigate's status answer couldn't be read (for example a reverse proxy returning a web page), the motion search kept asking every 1.5 seconds for as long as the screen was open, with a spinner and no message. It now stops after about 15 seconds of unreadable answers (or after 30 minutes in any case), asks Frigate to cancel the search and shows "Motion search failed".
+- **Memory freed when leaving History during a scrub.** Leaving History right after scrubbing, while a preview clip was still being fetched or decoded, kept that clip (up to 24 MB) and its video decoder in memory until Android cleaned up later. It is now freed as soon as that last lookup finishes.
+
+### Changed
+
+- **Smaller app.** The release build no longer keeps all of the app's data code unshrunk "in case something reflects on it" (nothing does: answers from Frigate are read by hand), and no longer keeps file names and line numbers for crash reports (the crash report was removed in 3.12.2). Cameras, History and notifications should work exactly as before; this needs a check on a phone.
+
 ## v3.12.2 (2026-11-22)
 
 Built and checked by CI only: nothing in this release had been run on a phone when it was published.

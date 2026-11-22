@@ -85,7 +85,7 @@
     <string name="theme">Thème</string>
     <string name="lock_fingerprint_title">Déverrouiller FrigateCtrl</string>
     <string name="lock_fingerprint_subtitle">Confirmez votre identité pour voir vos caméras</string>
-    <string name="lock_forgot_body">Le code PIN ne peut pas être récupéré, car votre connexion est chiffrée avec lui. FrigateCtrl va se déconnecter et oublier le serveur, le verrouillage et tout ce qui a été conservé du serveur. Votre serveur Frigate n\'est pas modifié.</string>
+    <string name="lock_forgot_body">Le code PIN ne peut pas être récupéré, car votre connexion est chiffrée avec lui. FrigateCtrl va se déconnecter et oublier le serveur, le verrouillage et tout ce qui a été conservé du serveur. Votre serveur Frigate n\'est pas modifié. Si votre téléphone a un verrouillage d\'écran, vous le confirmerez d\'abord avec celui-ci.</string>
     <string name="lock_forgot_confirm">Se déconnecter et réinitialiser</string>
     <string name="lock_choose_intro">Au moins %1$d chiffres, différent du code PIN de votre téléphone. Si vous l\'oubliez, la seule solution est de vous déconnecter puis de vous reconnecter.</string>
     <string name="lock_migrate_intro">Les codes PIN doivent maintenant compter au moins %1$d chiffres, différents du code PIN de votre téléphone. Votre connexion est chiffrée avec lui tant que l\'application est verrouillée.</string>
@@ -514,4 +514,8 @@
     <string name="backup_none">aucun</string>
     <string name="backup_muted_cameras">Caméras qui ne notifient pas</string>
     <string name="backup_muted_labels">Objets qui ne notifient pas</string>
+    <string name="nt_snooze_locked">Déverrouillez d\'abord FrigateCtrl pour mettre en pause les alertes de cette caméra</string>
+    <string name="lock_reset_prompt_title">Réinitialiser le verrouillage de FrigateCtrl</string>
+    <string name="lock_reset_prompt_subtitle">Utilisez le verrouillage d\'écran de votre téléphone pour confirmer votre identité</string>
+    <string name="lock_reset_prompt_failed">Impossible d\'afficher le verrouillage d\'écran</string>
 </resources>

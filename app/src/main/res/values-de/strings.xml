@@ -85,7 +85,7 @@
     <string name="theme">Design</string>
     <string name="lock_fingerprint_title">FrigateCtrl entsperren</string>
     <string name="lock_fingerprint_subtitle">Bestätige, dass du es bist, um deine Kameras zu sehen</string>
-    <string name="lock_forgot_body">Die PIN kann nicht wiederhergestellt werden, weil deine Anmeldung damit verschlüsselt ist. FrigateCtrl meldet sich ab und vergisst den Server, die App-Sperre und alles, was vom Server gespeichert wurde. Dein Frigate-Server wird nicht verändert.</string>
+    <string name="lock_forgot_body">Die PIN kann nicht wiederhergestellt werden, weil deine Anmeldung damit verschlüsselt ist. FrigateCtrl meldet sich ab und vergisst den Server, die App-Sperre und alles, was vom Server gespeichert wurde. Dein Frigate-Server wird nicht verändert. Wenn dein Handy eine Displaysperre hat, bestätigst du zuerst damit.</string>
     <string name="lock_forgot_confirm">Abmelden und zurücksetzen</string>
     <string name="lock_choose_intro">Mindestens %1$d Ziffern, anders als die PIN deines Handys. Wenn du sie vergisst, kommst du nur durch Abmelden und erneutes Anmelden wieder hinein.</string>
     <string name="lock_migrate_intro">PINs brauchen jetzt mindestens %1$d Ziffern und müssen sich von der PIN deines Handys unterscheiden. Solange die App gesperrt ist, ist deine Anmeldung damit verschlüsselt.</string>
@@ -514,4 +514,8 @@
     <string name="backup_none">keine</string>
     <string name="backup_muted_cameras">Kameras, die nicht benachrichtigen</string>
     <string name="backup_muted_labels">Objekte, die nicht benachrichtigen</string>
+    <string name="nt_snooze_locked">Entsperre zuerst FrigateCtrl, um die Benachrichtigungen dieser Kamera zu pausieren</string>
+    <string name="lock_reset_prompt_title">App-Sperre von FrigateCtrl zurücksetzen</string>
+    <string name="lock_reset_prompt_subtitle">Bestätige mit der Displaysperre deines Handys, dass du es bist</string>
+    <string name="lock_reset_prompt_failed">Displaysperre konnte nicht angezeigt werden</string>
 </resources>

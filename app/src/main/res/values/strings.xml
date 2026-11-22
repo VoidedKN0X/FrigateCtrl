@@ -84,7 +84,7 @@
     <string name="theme">Theme</string>
     <string name="lock_fingerprint_title">Unlock FrigateCtrl</string>
     <string name="lock_fingerprint_subtitle">Confirm it\'s you to see your cameras</string>
-    <string name="lock_forgot_body">The PIN can\'t be recovered, because your login is encrypted with it. FrigateCtrl will log out and forget the server, the app lock and anything kept from the server. Your Frigate server isn\'t changed.</string>
+    <string name="lock_forgot_body">The PIN can\'t be recovered, because your login is encrypted with it. FrigateCtrl will log out and forget the server, the app lock and anything kept from the server. Your Frigate server isn\'t changed. If your phone has a screen lock, you\'ll confirm with it first.</string>
     <string name="lock_forgot_confirm">Log out and reset</string>
     <string name="lock_choose_intro">At least %1$d digits, different from your phone\'s PIN. If you forget it, the only way back in is to log out and log in again.</string>
     <string name="lock_migrate_intro">PINs now need at least %1$d digits, different from your phone\'s PIN. Your login is encrypted with it while the app is locked.</string>
@@ -515,4 +515,8 @@
     <string name="backup_none">none</string>
     <string name="backup_muted_cameras">Cameras that don\'t notify</string>
     <string name="backup_muted_labels">Objects that don\'t notify</string>
+    <string name="nt_snooze_locked">Unlock FrigateCtrl first to snooze this camera</string>
+    <string name="lock_reset_prompt_title">Reset FrigateCtrl\'s app lock</string>
+    <string name="lock_reset_prompt_subtitle">Use your phone\'s screen lock to confirm it\'s you</string>
+    <string name="lock_reset_prompt_failed">Couldn\'t show the screen lock prompt</string>
 </resources>

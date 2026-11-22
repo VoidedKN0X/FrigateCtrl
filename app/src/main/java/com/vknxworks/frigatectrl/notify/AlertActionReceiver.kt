@@ -34,6 +34,11 @@ class AlertActionReceiver : BroadcastReceiver() {
         val reviewId = intent.getStringExtra(AlertNotifier.EXTRA_REVIEW)?.takeIf { reviewIdOk(it) } ?: return
         when (action) {
             ACTION_SNOOZE -> {
+                // FrigateCtrl's own app lock is on and locked: silencing a camera needs it unlocked too.
+                if (App.vault.enabled && !App.vault.isOpen) {
+                    toast(context, context.getString(R.string.nt_snooze_locked))
+                    return
+                }
                 val camera = intent.getStringExtra(AlertNotifier.EXTRA_CAMERA)?.takeIf { cameraName.matches(it) } ?: return
                 App.notify.snooze(camera, System.currentTimeMillis() + Snooze.DURATION_MS)
                 AlertNotifier.cancel(context, reviewId)

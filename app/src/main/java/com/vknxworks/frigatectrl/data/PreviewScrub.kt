@@ -73,6 +73,16 @@ class PreviewScrubber(private val api: FrigateApi, private val camera: String) {
 
     /** The preview picture for [t], or null when Frigate has no preview for that moment. */
     suspend fun frameAt(t: Double): Bitmap? = lock.withLock {
+        try {
+            frameAtLocked(t)
+        } finally {
+            // The screen was left while this lookup held the lock: free the clip now that it's done.
+            if (released) closeClip()
+        }
+    }
+
+    private suspend fun frameAtLocked(t: Double): Bitmap? {
+        if (released) return null
         if (t < listedFrom || t >= listedTo) {
             val from = t - LIST_SPAN
             val to = t + LIST_SPAN
@@ -82,13 +92,13 @@ class PreviewScrubber(private val api: FrigateApi, private val camera: String) {
         }
         val clip = PreviewPick.clipFor(clips, t)
         if (clip != null && clip.src !in unusable) {
-            fromClip(clip, t)?.let { return@withLock it }
+            fromClip(clip, t)?.let { return it }
         }
         // No clip for this moment (the hour that is still being recorded): one of the cached frames.
         val names = runCatching { api.previewFrames(camera, t - FRAME_SPAN, t + 2) }.getOrDefault(emptyList())
-        val name = PreviewPick.frameFor(names, camera, t)?.takeIf { PreviewPick.safeFrameName(it) } ?: return@withLock null
-        val bytes = api.bytes(api.previewFrameUrl(name)) ?: return@withLock null
-        withContext(Dispatchers.Default) {
+        val name = PreviewPick.frameFor(names, camera, t)?.takeIf { PreviewPick.safeFrameName(it) } ?: return null
+        val bytes = api.bytes(api.previewFrameUrl(name)) ?: return null
+        return withContext(Dispatchers.Default) {
             runCatching { android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size) }.getOrNull()
         }
     }
@@ -121,10 +131,16 @@ class PreviewScrubber(private val api: FrigateApi, private val camera: String) {
 
     /** Lets go of the clip in memory. Call when the screen that scrubs is left. */
     fun release() {
+        released = true
         if (lock.tryLock()) {
             try { closeClip() } finally { lock.unlock() }
         }
+        // Otherwise a lookup is running: it frees the clip itself when it ends (see frameAt).
     }
+
+    /** The screen that scrubs was left. Set without the lock, read by the lookup that holds it. */
+    @Volatile
+    private var released = false
 
     private companion object {
         /** Preview clips are listed for this long before and after the scrubbed moment. */

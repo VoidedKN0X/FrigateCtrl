@@ -54,4 +54,12 @@ class ExploreAndPreviewTest {
         assertTrue(Frigate018.jobIdOk("motion_search-12.ab"))
         assertFalse(Frigate018.jobIdOk("a/b"))
     }
+
+    @Test
+    fun motionSearchPollingGivesUp() {
+        assertFalse(MotionPoll.giveUp(0, 0))
+        assertFalse(MotionPoll.giveUp(MotionPoll.MAX_UNREADABLE - 1, 60_000))
+        assertTrue(MotionPoll.giveUp(MotionPoll.MAX_UNREADABLE, 60_000))
+        assertTrue(MotionPoll.giveUp(0, MotionPoll.MAX_MS))
+    }
 }
